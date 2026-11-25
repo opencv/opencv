@@ -36,217 +36,146 @@ void resizeNN_( const Mat& src, Mat& dst, double fx, double fy );
 const int INTER_RESIZE_COEF_BITS=11;
 const int INTER_RESIZE_COEF_SCALE=1 << INTER_RESIZE_COEF_BITS;
 
-//==============================================================================
-// Nearest-neighbor "byte-offset row gather" helpers (file-local).
-//
-// These gather N consecutive destination elements from a single uchar source
-// row, where each destination lane picks its bytes using a per-lane *byte*
-// offset (x_ofs[]). They are candidate universal intrinsics, but are kept local
-// to resize for now per upstream guidance (opencv/opencv#29444): new universal
-// intrinsics need cross-architecture review before being promoted into the
-// public intrin*.hpp headers. Only the x86 256/512-bit dispatch paths that
-// benefit from a hardware gather are specialized here; narrower/other targets
-// (including LoongArch LASX) use the generic vx_lut* paths at the call sites.
-//==============================================================================
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+// Nearest-neighbor row kernels. x_ofs[] holds non-decreasing byte offsets into the source row.
 
-#if CV_AVX2
-// AVX2 256-bit helper: gather 16 ushort values from a uchar row using byte
-// offsets. Dual 32-bit gather + shuffle, from the legacy resizeNN2_AVX2 kernel.
-static inline __m256i resizeNN_lut_u16_byteofs_ymm(const uchar* S, const int* byte_ofs)
+// Pixels below the returned end have x_ofs[x] + pad inside the row.
+static inline int resizeNN_vec_end(const int* x_ofs, int width, int row_bytes, int pad)
 {
-    static const __m256i shuffle_mask = _mm256_set_epi8(15,14,11,10,13,12,9,8,7,6,3,2,5,4,1,0,
-                                                        15,14,11,10,13,12,9,8,7,6,3,2,5,4,1,0);
-    static const __m256i permute_mask = _mm256_set_epi32(7, 5, 3, 1, 6, 4, 2, 0);
-    const uchar* S2 = S - 2;
-    __m256i indices = _mm256_loadu_si256((const __m256i*)byte_ofs);
-    __m256i pixels1 = _mm256_i32gather_epi32((const int*)S, indices, 1);
-    __m256i indices2 = _mm256_loadu_si256((const __m256i*)(byte_ofs + 8));
-    __m256i pixels2 = _mm256_i32gather_epi32((const int*)S2, indices2, 1);
-    __m256i unpacked = _mm256_blend_epi16(pixels1, pixels2, 0xaa);
-    __m256i bytes_shuffled = _mm256_shuffle_epi8(unpacked, shuffle_mask);
-    return _mm256_permutevar8x32_epi32(bytes_shuffled, permute_mask);
-}
-#endif
-
-#if CV_AVX2 && !CV_SIMD512
-// AVX2 (256-bit) dispatch: return width-native (v_uint16x16 / v_uint32x8).
-static inline v_uint16 resizeNN_lut_u16_byteofs(const uchar* S, const int* byte_ofs)
-{
-    return v_reinterpret_as_u16(v_int8x32(resizeNN_lut_u16_byteofs_ymm(S, byte_ofs)));
-}
-static inline v_uint32 resizeNN_lut_u32_byteofs(const uchar* S, const int* byte_ofs)
-{
-    return v_reinterpret_as_u32(v_int32x8(_mm256_i32gather_epi32((const int*)S,
-        _mm256_loadu_si256((const __m256i*)byte_ofs), 1)));
-}
-#endif // CV_AVX2 && !CV_SIMD512
-
-#if CV_SIMD512
-// AVX-512 dispatch. For the u16/u32 gathers we deliberately issue two 256-bit
-// gathers and combine: a full-width AVX-512 vpgather can downclock Intel cores
-// and is slower than the AVX2 path for these NN gathers.
-static inline v_uint32 resizeNN_lut_u32_byteofs(const uchar* S, const int* byte_ofs)
-{
-    __m256i g0 = _mm256_i32gather_epi32((const int*)S, _mm256_loadu_si256((const __m256i*)byte_ofs), 1);
-    __m256i g1 = _mm256_i32gather_epi32((const int*)S, _mm256_loadu_si256((const __m256i*)(byte_ofs + 8)), 1);
-    return v_uint32x16(_v512_combine(g0, g1));
-}
-static inline v_uint16 resizeNN_lut_u16_byteofs(const uchar* S, const int* byte_ofs)
-{
-    __m256i lo = resizeNN_lut_u16_byteofs_ymm(S, byte_ofs);
-    __m256i hi = resizeNN_lut_u16_byteofs_ymm(S, byte_ofs + 16);
-    return v_uint16x32(_v512_combine(lo, hi));
+    int end = width;
+    while (end > 0 && x_ofs[end - 1] + pad >= row_bytes)
+        end--;
+    return end;
 }
 
 #if CV_AVX_512VBMI
-// AVX-512 VBMI (ICL) u8 gather: when the 64 byte offsets span <= 255 bytes we
-// can gather a whole 64-lane vector with a single windowed v512_lut permute;
-// otherwise fall back to the generic per-index gather.
-static inline int resizeNN_hmin_epi32(__m512i v)
+// When the 64 byte offsets span at most 256 bytes, one 256-byte source window permuted with
+// vpermb (v512_lut with byte indices) replaces the per-index LUT. The window is slid back
+// to end at the row end when needed, so row_bytes must be >= 256.
+static inline bool resizeNN_lut_u8_window(const uchar* S, const int* x_ofs, int row_bytes, v_uint8x64& out)
 {
-    __m256i lo = _mm512_castsi512_si256(v);
-    __m256i hi = _mm512_extracti64x4_epi64(v, 1);
-    __m256i m = _mm256_min_epi32(lo, hi);
-    __m128i q = _mm_min_epi32(_mm256_castsi256_si128(m), _mm256_extracti128_si256(m, 1));
-    q = _mm_min_epi32(q, _mm_shuffle_epi32(q, _MM_SHUFFLE(1, 0, 3, 2)));
-    q = _mm_min_epi32(q, _mm_shuffle_epi32(q, _MM_SHUFFLE(2, 3, 0, 1)));
-    return _mm_cvtsi128_si32(q);
-}
-static inline int resizeNN_hmax_epi32(__m512i v)
-{
-    __m256i lo = _mm512_castsi512_si256(v);
-    __m256i hi = _mm512_extracti64x4_epi64(v, 1);
-    __m256i m = _mm256_max_epi32(lo, hi);
-    __m128i q = _mm_max_epi32(_mm256_castsi256_si128(m), _mm256_extracti128_si256(m, 1));
-    q = _mm_max_epi32(q, _mm_shuffle_epi32(q, _MM_SHUFFLE(1, 0, 3, 2)));
-    q = _mm_max_epi32(q, _mm_shuffle_epi32(q, _MM_SHUFFLE(2, 3, 0, 1)));
-    return _mm_cvtsi128_si32(q);
-}
-static inline v_uint8x64 resizeNN_pack_rel64_byte_idx(__m512i r0, __m512i r1, __m512i r2, __m512i r3)
-{
-    __m128i p0 = _mm512_cvtepi32_epi8(r0);
-    __m128i p1 = _mm512_cvtepi32_epi8(r1);
-    __m128i p2 = _mm512_cvtepi32_epi8(r2);
-    __m128i p3 = _mm512_cvtepi32_epi8(r3);
-    return v_uint8x64(_mm512_inserti32x4(_mm512_inserti32x4(_mm512_inserti32x4(
-        _mm512_castsi128_si512(p0), p1, 1), p2, 2), p3, 3));
-}
-// v512_lut(uchar*, v_uint8x64) always reads 256 bytes from its table, so the window is
-// slid back to end at the row end when needed; row_bytes must be >= 256.
-static inline bool resizeNN_try_lut_u8_byteofs_vbmi(const uchar* S, const int* byte_ofs,
-                                                    int row_bytes, v_uint8x64& out)
-{
-    __m512i ofs0 = _mm512_loadu_si512((const __m512i*)byte_ofs);
-    __m512i ofs1 = _mm512_loadu_si512((const __m512i*)(byte_ofs + 16));
-    __m512i ofs2 = _mm512_loadu_si512((const __m512i*)(byte_ofs + 32));
-    __m512i ofs3 = _mm512_loadu_si512((const __m512i*)(byte_ofs + 48));
-    int min_ofs = resizeNN_hmin_epi32(_mm512_min_epi32(_mm512_min_epi32(ofs0, ofs1), _mm512_min_epi32(ofs2, ofs3)));
-    int max_ofs = resizeNN_hmax_epi32(_mm512_max_epi32(_mm512_max_epi32(ofs0, ofs1), _mm512_max_epi32(ofs2, ofs3)));
+    const v_int32x16 o0 = v512_load(x_ofs), o1 = v512_load(x_ofs + 16);
+    const v_int32x16 o2 = v512_load(x_ofs + 32), o3 = v512_load(x_ofs + 48);
+    const int min_ofs = v_reduce_min(v_min(v_min(o0, o1), v_min(o2, o3)));
+    const int max_ofs = v_reduce_max(v_max(v_max(o0, o1), v_max(o2, o3)));
     if (max_ofs - min_ofs > 255)
         return false;
     const int base = std::min(min_ofs, row_bytes - 256);
-    __m512i basev = _mm512_set1_epi32(base);
-    out = v512_lut(S + base, resizeNN_pack_rel64_byte_idx(
-        _mm512_sub_epi32(ofs0, basev), _mm512_sub_epi32(ofs1, basev),
-        _mm512_sub_epi32(ofs2, basev), _mm512_sub_epi32(ofs3, basev)));
+    const v_int32x16 vb = v512_setall_s32(base);
+    const v_uint8x64 idx = v_pack_u(v_pack(v_sub(o0, vb), v_sub(o1, vb)),
+                                    v_pack(v_sub(o2, vb), v_sub(o3, vb)));
+    out = v512_lut(S + base, idx);
     return true;
 }
-#endif // CV_AVX_512VBMI
-#endif // CV_SIMD512
-
-#endif // CV_SIMD || CV_SIMD_SCALABLE
-
-// [beg, end) is the pixel range whose reads [x_ofs[x] - lo_pad, x_ofs[x] + hi_pad]
-// stay inside the source row; x_ofs[] must be non-decreasing.
-static inline void resizeNN_gather_range(const int* x_ofs, int width, int row_bytes,
-                                         int lo_pad, int hi_pad, int& beg, int& end)
-{
-    beg = 0;
-    while (beg < width && x_ofs[beg] < lo_pad)
-        beg++;
-    end = width;
-    while (end > beg && x_ofs[end - 1] + hi_pad >= row_bytes)
-        end--;
-}
-
-// Vector range for resizeNN_row_u8: the AVX-512 gather reads 4 bytes per lane.
-static inline void resizeNN_vec_range_u8(const int* x_ofs, int width, int row_bytes, int& beg, int& end)
-{
-    beg = 0; end = width;
-#if CV_SIMD512
-    resizeNN_gather_range(x_ofs, width, row_bytes, 0, 3, beg, end);
-#else
-    CV_UNUSED(x_ofs); CV_UNUSED(row_bytes);
 #endif
-}
 
-// Vector range for resizeNN_row_u16: the x86 byte-offset gathers read 4 bytes at
-// both S + ofs and S + ofs - 2.
-static inline void resizeNN_vec_range_u16(const int* x_ofs, int width, int row_bytes, int& beg, int& end)
-{
-    beg = 0; end = width;
-#if (CV_SIMD || CV_SIMD_SCALABLE) && CV_AVX2
-    resizeNN_gather_range(x_ofs, width, row_bytes, 2, 3, beg, end);
-#else
-    CV_UNUSED(x_ofs); CV_UNUSED(row_bytes);
-#endif
-}
-
+// Some backends build the 8-bit and 16-bit LUTs from 32-bit loads, so vend must keep
+// x_ofs[x] + 3 inside the row.
 static CV_ALWAYS_INLINE void resizeNN_row_u8(uchar* D, const uchar* S, const int* x_ofs, int width,
-                                   int row_bytes, int vbeg, int vend)
+                                             int row_bytes, int vend)
 {
     int x = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    const int n = VTraits<v_uint8>::vlanes();
-    for (; x < vbeg; x++)
-        D[x] = S[x_ofs[x]];
 #if CV_AVX_512VBMI
-    // Short rows are copied into a 256+ byte buffer so the VBMI window always fits.
-    CV_DECL_ALIGNED(64) uchar sbuf[320];
+    const int n = VTraits<v_uint8x64>::vlanes();
+    // Short rows are copied into a 256-byte buffer so the window always fits.
+    CV_DECL_ALIGNED(64) uchar sbuf[256];
     if (row_bytes < 256 && width >= n)
     {
         memcpy(sbuf, S, row_bytes);
         S = sbuf;
         row_bytes = 256;
-        vbeg = 0;
         vend = width;
     }
     for (; x <= width - n; x += n)
     {
         v_uint8x64 r;
-        if (resizeNN_try_lut_u8_byteofs_vbmi(S, x_ofs + x, row_bytes, r))
+        if (resizeNN_lut_u8_window(S, x_ofs + x, row_bytes, r))
             v_store(D + x, r);
         else if (x + n <= vend)
-            v_store(D + x, v_reinterpret_as_u8(v512_lut((const schar*)S, x_ofs + x)));
+            v_store(D + x, v512_lut(S, x_ofs + x));
         else
             break;
     }
-#else
+#elif (CV_SIMD || CV_SIMD_SCALABLE)
     CV_UNUSED(row_bytes);
+    const int n = VTraits<v_uint8>::vlanes();
     for (; x <= vend - n; x += n)
         v_store(D + x, vx_lut(S, x_ofs + x));
-#endif
 #else
-    CV_UNUSED(row_bytes); CV_UNUSED(vbeg); CV_UNUSED(vend);
+    CV_UNUSED(row_bytes); CV_UNUSED(vend);
 #endif
     for (; x < width; x++)
         D[x] = S[x_ofs[x]];
+}
+
+static CV_ALWAYS_INLINE void resizeNN_row_u16(uchar* D, const uchar* S, const int* x_ofs, int width, int vend)
+{
+    ushort* D16 = (ushort*)D;
+    int x = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int n = VTraits<v_uint16>::vlanes();
+    for (; x <= vend - n; x += n)
+        v_store(D16 + x, v_reinterpret_as_u16(vx_lut_pairs(S, x_ofs + x)));
+#else
+    CV_UNUSED(vend);
+#endif
+    for (; x < width; x++)
+        D16[x] = *(const ushort*)(S + x_ofs[x]);
+}
+
+static CV_ALWAYS_INLINE void resizeNN_row_u32(uchar* D, const uchar* S, const int* x_ofs, int width)
+{
+    uint32_t* D32 = (uint32_t*)D;
+    int x = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int n = VTraits<v_uint32>::vlanes();
+    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) idx[VTraits<v_uint32>::max_nlanes];
+    for (; x <= width - n; x += n)
+    {
+        v_store_aligned(idx, v_shr<2>(vx_load(x_ofs + x)));
+        v_store(D32 + x, vx_lut((const uint32_t*)S, idx));
+    }
+#endif
+    for (; x < width; x++)
+        D32[x] = *(const uint32_t*)(S + x_ofs[x]);
+}
+
+static CV_ALWAYS_INLINE void resizeNN_row_u64(uchar* D, const uchar* S, const int* x_ofs, int width)
+{
+    uint64_t* D64 = (uint64_t*)D;
+    int x = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int n = VTraits<v_uint64>::vlanes();
+    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) idx[VTraits<v_uint64>::max_nlanes];
+    for (; x <= width - n; x += n)
+    {
+        for (int i = 0; i < n; i++)
+            idx[i] = x_ofs[x + i] >> 3;
+        v_store(D64 + x, vx_lut((const uint64_t*)S, idx));
+    }
+#endif
+    for (; x < width; x++)
+        D64[x] = *(const uint64_t*)(S + x_ofs[x]);
 }
 
 // Pixels below vend are copied as 16 bytes: the extra 4 bytes are overwritten by the next
 // pixel, so vend must exclude the last pixel and any x_ofs[x] + 16 > row_bytes.
 static inline int resizeNN_vec_end_px12(const int* x_ofs, int width, int row_bytes)
 {
-    int beg = 0, end = width;
 #if CV_SIMD128 && !CV_SIMD_SCALABLE
-    resizeNN_gather_range(x_ofs, width, row_bytes, 0, 15, beg, end);
-    end = std::min(end, width - 1);
+    return std::max(std::min(resizeNN_vec_end(x_ofs, width, row_bytes, 15), width - 1), 0);
 #else
-    CV_UNUSED(x_ofs); CV_UNUSED(row_bytes);
-    end = 0;
+    CV_UNUSED(x_ofs); CV_UNUSED(width); CV_UNUSED(row_bytes);
+    return 0;
 #endif
-    return std::max(end, 0);
+}
+
+static inline int resizeNN_vec_end_for(const int* x_ofs, int width, int row_bytes, int pix_size)
+{
+    if (pix_size == 1 || pix_size == 2)
+        return resizeNN_vec_end(x_ofs, width, row_bytes, 3);
+    if (pix_size == 12)
+        return resizeNN_vec_end_px12(x_ofs, width, row_bytes);
+    return 0;
 }
 
 static CV_ALWAYS_INLINE void resizeNN_row_px12(uchar* D, const uchar* S, const int* x_ofs,
@@ -265,29 +194,6 @@ static CV_ALWAYS_INLINE void resizeNN_row_px12(uchar* D, const uchar* S, const i
         int* _tD = (int*)D;
         _tD[0] = _tS[0]; _tD[1] = _tS[1]; _tD[2] = _tS[2];
     }
-}
-
-static CV_ALWAYS_INLINE void resizeNN_row_u16(uchar* D, const uchar* S, const int* x_ofs, int width,
-                                    int vbeg, int vend)
-{
-    ushort* D16 = (ushort*)D;
-    int x = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    const int n = VTraits<v_uint16>::vlanes();
-    for (; x < vbeg; x++)
-        D16[x] = *(const ushort*)(S + x_ofs[x]);
-#if CV_AVX2
-    for (; x <= vend - n; x += n)
-        v_store(D16 + x, resizeNN_lut_u16_byteofs(S, x_ofs + x));
-#else
-    for (; x <= vend - n; x += n)
-        v_store(D16 + x, v_reinterpret_as_u16(vx_lut_pairs(S, x_ofs + x)));
-#endif
-#else
-    CV_UNUSED(vbeg); CV_UNUSED(vend);
-#endif
-    for (; x < width; x++)
-        D16[x] = *(const ushort*)(S + x_ofs[x]);
 }
 
 static inline void interpolateCubic( float x, float* coeffs )
@@ -352,173 +258,9 @@ template<typename ST, typename DT, int bits> struct FixedPtCast
 *                                         Resize                                         *
 \****************************************************************************************/
 
-namespace nn_rational_detail {
-
-// fx/fy are the requested scale factors: explicit factors that merely round to these
-// sizes (e.g. 1.34 for 10 -> 13) map pixels differently and must not take this path.
-static inline bool is_rational_up(int src_w, int dst_w, int src_h, int dst_h,
-                                  double fx, double fy, int num, int den)
-{
-    const double r = (double)num / den;
-    return fx == r && fy == r &&
-           src_w > 0 && dst_w > src_w && (int64)dst_w * den == (int64)src_w * num &&
-           src_h > 0 && dst_h > src_h && (int64)dst_h * den == (int64)src_h * num;
-}
-
-// One element T represents a whole pixel: ushort for 2x u8 channels (cn2),
-// uint32_t for 4x u8 channels (cn4). The replication pattern is identical.
-// The first pixel of each group is the only one whose exact source index is an
-// integer, so cvFloor(x*ifx) can land one below it; take it from the same
-// formula as the generic path so the output stays identical.
-template<typename T> static inline void nn_row_up_13_10(T* D, const T* S, int sw, double ifx)
-{
-    for( int sx = 0, x = 0; sx < sw; sx += 10, x += 13 )
-    {
-        const T s0 = S[sx], s1 = S[sx + 1], s2 = S[sx + 2], s3 = S[sx + 3], s4 = S[sx + 4];
-        const T s5 = S[sx + 5], s6 = S[sx + 6], s7 = S[sx + 7], s8 = S[sx + 8], s9 = S[sx + 9];
-        D[0] = S[cvFloor(x * ifx)]; D[1] = s0;
-        D[2] = s1;
-        D[3] = s2;
-        D[4] = s3; D[5] = s3;
-        D[6] = s4;
-        D[7] = s5;
-        D[8] = s6; D[9] = s6;
-        D[10] = s7;
-        D[11] = s8;
-        D[12] = s9;
-        D += 13;
-    }
-}
-
-template<typename T> static inline void nn_row_up_12_5(T* D, const T* S, int sw, double ifx)
-{
-    for( int sx = 0, x = 0; sx < sw; sx += 5, x += 12 )
-    {
-        const T v0 = S[sx], v1 = S[sx + 1], v2 = S[sx + 2], v3 = S[sx + 3], v4 = S[sx + 4];
-        D[0] = S[cvFloor(x * ifx)]; D[1] = v0; D[2] = v0;
-        D[3] = v1; D[4] = v1;
-        D[5] = v2; D[6] = v2; D[7] = v2;
-        D[8] = v3; D[9] = v3;
-        D[10] = v4; D[11] = v4;
-        D += 12;
-    }
-}
-
-template<typename T> static inline void nn_row_up_17_5(T* D, const T* S, int sw, double ifx)
-{
-    for( int sx = 0, x = 0; sx < sw; sx += 5, x += 17 )
-    {
-        const T v0 = S[sx], v1 = S[sx + 1], v2 = S[sx + 2], v3 = S[sx + 3], v4 = S[sx + 4];
-        D[0] = S[cvFloor(x * ifx)]; D[1] = v0; D[2] = v0; D[3] = v0;
-        D[4] = v1; D[5] = v1; D[6] = v1;
-        D[7] = v2; D[8] = v2; D[9] = v2; D[10] = v2;
-        D[11] = v3; D[12] = v3; D[13] = v3;
-        D[14] = v4; D[15] = v4; D[16] = v4;
-        D += 17;
-    }
-}
-
-template<typename T, void (*RowFunc)(T*, const T*, int, double)>
-class resizeNNRationalUpInvoker_ : public ParallelLoopBody
-{
-public:
-    resizeNNRationalUpInvoker_(const Mat& _src, Mat &_dst, double _ifx, double _ify) :
-        src(_src), dst(_dst), ifx(_ifx), ify(_ify) {}
-
-    virtual void operator() (const Range& range) const CV_OVERRIDE
-    {
-        const int sw = src.cols, sh = src.rows;
-        for( int y = range.start; y < range.end; y++ )
-        {
-            T* D = (T*)dst.ptr(y);
-            const int sy = std::min(cvFloor(y * ify), sh - 1);
-            const T* S = (const T*)src.ptr(sy);
-            RowFunc(D, S, sw, ifx);
-        }
-    }
-
-private:
-    const Mat& src;
-    Mat& dst;
-    double ifx, ify;
-
-    resizeNNRationalUpInvoker_(const resizeNNRationalUpInvoker_&);
-    resizeNNRationalUpInvoker_& operator=(const resizeNNRationalUpInvoker_&);
-};
-
-template<typename T, void (*RowFunc)(T*, const T*, int, double)>
-static void resizeNNRationalUp_(const Mat& src, Mat& dst, double ifx, double ify)
-{
-    Range range(0, dst.rows);
-    resizeNNRationalUpInvoker_<T, RowFunc> invoker(src, dst, ifx, ify);
-    parallel_for_(range, invoker, dst.total()/(double)(1<<16));
-}
-
-}  // namespace nn_rational_detail
-
 namespace nn_bitexact_detail {
 static void resizeNN_bitexact2xUp_(const Mat& src, Mat& dst);
 }
-
-class resizeNNUpPixInvoker_ : public ParallelLoopBody
-{
-public:
-    resizeNNUpPixInvoker_(const Mat& _src, Mat &_dst, const int* _sx_ofs, double _ify, int _pix_size) :
-        ParallelLoopBody(), src(_src), dst(_dst), sx_ofs(_sx_ofs), ify(_ify), pix_size(_pix_size)
-    {
-    }
-
-    virtual void operator() (const Range& range) const CV_OVERRIDE
-    {
-        Size ssize = src.size(), dsize = dst.size();
-        const int width = dsize.width;
-
-        for( int y = range.start; y < range.end; y++ )
-        {
-            uchar* D = dst.ptr(y);
-            const int sy = std::min(cvFloor(y*ify), ssize.height-1);
-            const uchar* S = src.ptr(sy);
-            int x = 0;
-
-            if( pix_size == 2 )
-            {
-                const ushort* S16 = (const ushort*)S;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-                for( ; x <= width - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes() )
-                    v_store((ushort*)D + x, vx_lut(S16, sx_ofs + x));
-#endif
-                for( ; x < width; x++ )
-                    ((ushort*)D)[x] = S16[sx_ofs[x]];
-            }
-            else if( pix_size == 4 )
-            {
-                if( src.depth() == CV_32F )
-                {
-                    const float* SF = (const float*)S;
-                    float* DF = (float*)D;
-                    for( ; x < width; x++ )
-                        DF[x] = SF[sx_ofs[x]];
-                }
-                else
-                {
-                    const uint32_t* S32 = (const uint32_t*)S;
-                    for( ; x < width; x++ )
-                        ((uint32_t*)D)[x] = S32[sx_ofs[x]];
-                }
-            }
-        }
-    }
-
-private:
-    const Mat& src;
-    Mat& dst;
-    const int* sx_ofs;
-    double ify;
-    int pix_size;
-
-    resizeNNUpPixInvoker_(const resizeNNUpPixInvoker_&);
-    resizeNNUpPixInvoker_& operator=(const resizeNNUpPixInvoker_&);
-};
 
 class resizeNNInvoker_ : public ParallelLoopBody
 {
@@ -534,28 +276,34 @@ public:
         const int pix_size = (int)src.elemSize();
         const int width = dsize.width;
         const int row_bytes = ssize.width * pix_size;
-        int vbeg = 0, vend = width;
-        if( pix_size == 1 )
-            resizeNN_vec_range_u8(x_ofs, width, row_bytes, vbeg, vend);
-        else if( pix_size == 2 )
-            resizeNN_vec_range_u16(x_ofs, width, row_bytes, vbeg, vend);
-        else if( pix_size == 12 )
-            vend = resizeNN_vec_end_px12(x_ofs, width, row_bytes);
+        const int vend = resizeNN_vec_end_for(x_ofs, width, row_bytes, pix_size);
+
+        const size_t dst_row_bytes = (size_t)width * pix_size;
+        const uchar* prevD = 0;
+        int prev_sy = -1;
 
         for( int y = range.start; y < range.end; y++ )
         {
             uchar* D = dst.ptr(y);
             const int sy = std::min(cvFloor(y*ify), ssize.height-1);
+            if( sy == prev_sy )
+            {
+                memcpy(D, prevD, dst_row_bytes);
+                continue;
+            }
+            prevD = D;
+            prev_sy = sy;
+
             const uchar* S = src.ptr(sy);
             int x = 0;
 
             switch( pix_size )
             {
             case 1:
-                resizeNN_row_u8(D, S, x_ofs, width, row_bytes, vbeg, vend);
+                resizeNN_row_u8(D, S, x_ofs, width, row_bytes, vend);
                 break;
             case 2:
-                resizeNN_row_u16(D, S, x_ofs, width, vbeg, vend);
+                resizeNN_row_u16(D, S, x_ofs, width, vend);
                 break;
             case 3:
                 for( ; x < width; x++, D += 3 )
@@ -565,22 +313,7 @@ public:
                 }
                 break;
             case 4:
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-#if CV_AVX2
-                for( ; x <= width - VTraits<v_uint32>::vlanes(); x += VTraits<v_uint32>::vlanes() )
-                    v_store((uint32_t*)D + x, resizeNN_lut_u32_byteofs(S, x_ofs + x));
-#else
-                for( ; x <= width - VTraits<v_uint32>::vlanes(); x += VTraits<v_uint32>::vlanes() )
-                {
-                    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) sx_idx[VTraits<v_uint32>::max_nlanes];
-                    for( int i = 0; i < VTraits<v_uint32>::vlanes(); i++ )
-                        sx_idx[i] = x_ofs[x + i] >> 2;
-                    v_store((uint32_t*)D + x, vx_lut((const uint32_t*)S, sx_idx));
-                }
-#endif
-#endif
-                for( ; x < width; x++ )
-                    ((uint32_t*)D)[x] = *(const uint32_t*)(S + x_ofs[x]);
+                resizeNN_row_u32(D, S, x_ofs, width);
                 break;
             case 6:
                 for( ; x < width; x++, D += 6 )
@@ -591,17 +324,7 @@ public:
                 }
                 break;
             case 8:
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-                for( ; x <= width - VTraits<v_uint64>::vlanes(); x += VTraits<v_uint64>::vlanes() )
-                {
-                    int CV_DECL_ALIGNED(64) sx_idx[VTraits<v_uint64>::max_nlanes];
-                    for( int i = 0; i < VTraits<v_uint64>::vlanes(); i++ )
-                        sx_idx[i] = x_ofs[x + i] >> 3;
-                    v_store((uint64_t*)D + x, vx_lut((const uint64_t*)S, sx_idx));
-                }
-#endif
-                for( ; x < width; x++ )
-                    ((uint64_t*)D)[x] = *(const uint64_t*)(S + x_ofs[x]);
+                resizeNN_row_u64(D, S, x_ofs, width);
                 break;
             case 12:
                 resizeNN_row_px12(D, S, x_ofs, width, vend);
@@ -640,60 +363,6 @@ void resizeNN_( const Mat& src, Mat& dst, double fx, double fy )
     Size ssize = src.size(), dsize = dst.size();
     const double ifx = 1./fx, ify = 1./fy;
     const int pix_size = (int)src.elemSize();
-
-    using namespace nn_rational_detail;
-
-    if( pix_size == 2 )
-    {
-        if( is_rational_up(ssize.width, dsize.width, ssize.height, dsize.height, fx, fy, 12, 5) )
-        {
-            resizeNNRationalUp_<ushort, nn_row_up_12_5<ushort> >(src, dst, ifx, ify);
-            return;
-        }
-        if( is_rational_up(ssize.width, dsize.width, ssize.height, dsize.height, fx, fy, 17, 5) )
-        {
-            resizeNNRationalUp_<ushort, nn_row_up_17_5<ushort> >(src, dst, ifx, ify);
-            return;
-        }
-        if( is_rational_up(ssize.width, dsize.width, ssize.height, dsize.height, fx, fy, 13, 10) )
-        {
-            resizeNNRationalUp_<ushort, nn_row_up_13_10<ushort> >(src, dst, ifx, ify);
-            return;
-        }
-    }
-    else if( pix_size == 4 )
-    {
-        if( is_rational_up(ssize.width, dsize.width, ssize.height, dsize.height, fx, fy, 12, 5) )
-        {
-            resizeNNRationalUp_<uint32_t, nn_row_up_12_5<uint32_t> >(src, dst, ifx, ify);
-            return;
-        }
-        if( is_rational_up(ssize.width, dsize.width, ssize.height, dsize.height, fx, fy, 17, 5) )
-        {
-            resizeNNRationalUp_<uint32_t, nn_row_up_17_5<uint32_t> >(src, dst, ifx, ify);
-            return;
-        }
-        if( is_rational_up(ssize.width, dsize.width, ssize.height, dsize.height, fx, fy, 13, 10) )
-        {
-            resizeNNRationalUp_<uint32_t, nn_row_up_13_10<uint32_t> >(src, dst, ifx, ify);
-            return;
-        }
-    }
-
-    if( fx >= 1.0 && pix_size == 4 )
-    {
-        AutoBuffer<int> sx_ofs(dsize.width);
-        for( int x = 0; x < dsize.width; x++ )
-        {
-            const int sx = cvFloor(x*ifx);
-            sx_ofs[x] = std::min(sx, ssize.width-1);
-        }
-
-        Range range(0, dsize.height);
-        resizeNNUpPixInvoker_ invoker(src, dst, sx_ofs.data(), ify, pix_size);
-        parallel_for_(range, invoker, dst.total()/(double)(1<<16));
-        return;
-    }
 
     AutoBuffer<int> _x_ofs(dsize.width);
     int* x_ofs = _x_ofs.data();
@@ -872,11 +541,7 @@ public:
         const int pix_size = (int)src.elemSize();
         const int sh = ssize.height;
         const int row_bytes = ssize.width * pix_size;
-        int vbeg = 0, vend = dsize.width;
-        if (pix_size == 1)
-            resizeNN_vec_range_u8(x_ofs, dsize.width, row_bytes, vbeg, vend);
-        else if (pix_size == 2)
-            resizeNN_vec_range_u16(x_ofs, dsize.width, row_bytes, vbeg, vend);
+        const int vend = resizeNN_vec_end_for(x_ofs, dsize.width, row_bytes, pix_size);
 
         for (int y = range.start; y < range.end; y++)
         {
@@ -888,31 +553,16 @@ public:
             switch (pix_size)
             {
             case 1:
-                resizeNN_row_u8(D, S, x_ofs, dsize.width, row_bytes, vbeg, vend);
+                resizeNN_row_u8(D, S, x_ofs, dsize.width, row_bytes, vend);
                 break;
             case 2:
-                resizeNN_row_u16(D, S, x_ofs, dsize.width, vbeg, vend);
+                resizeNN_row_u16(D, S, x_ofs, dsize.width, vend);
                 break;
             case 3:
                 nn_bitexact_row_cn3_down(D, S, dsize.width, sx_mul, sx_add, ssize.width);
                 break;
             case 4:
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-#if CV_AVX2
-                for (; x <= dsize.width - VTraits<v_uint32>::vlanes(); x += VTraits<v_uint32>::vlanes())
-                    v_store((uint32_t*)D + x, resizeNN_lut_u32_byteofs(S, x_ofs + x));
-#else
-                for (; x <= dsize.width - VTraits<v_uint32>::vlanes(); x += VTraits<v_uint32>::vlanes())
-                {
-                    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) sx_idx[VTraits<v_uint32>::max_nlanes];
-                    for (int i = 0; i < VTraits<v_uint32>::vlanes(); i++)
-                        sx_idx[i] = x_ofs[x + i] >> 2;
-                    v_store((uint32_t*)D + x, vx_lut((const uint32_t*)S, sx_idx));
-                }
-#endif
-#endif
-                for (; x < dsize.width; x++)
-                    ((uint32_t*)D)[x] = *(const uint32_t*)(S + x_ofs[x]);
+                resizeNN_row_u32(D, S, x_ofs, dsize.width);
                 break;
             default:
                 for (; x < dsize.width; x++, D += pix_size)
@@ -975,13 +625,7 @@ public:
         Size ssize = src.size(), dsize = dst.size();
         int pix_size = (int)src.elemSize();
         const int row_bytes = ssize.width * pix_size;
-        int vbeg = 0, vend = dsize.width;
-        if( pix_size == 1 )
-            resizeNN_vec_range_u8(x_ofs, dsize.width, row_bytes, vbeg, vend);
-        else if( pix_size == 2 )
-            resizeNN_vec_range_u16(x_ofs, dsize.width, row_bytes, vbeg, vend);
-        else if( pix_size == 12 )
-            vend = resizeNN_vec_end_px12(x_ofs, dsize.width, row_bytes);
+        const int vend = resizeNN_vec_end_for(x_ofs, dsize.width, row_bytes, pix_size);
         for( int y = range.start; y < range.end; y++ )
         {
             uchar* D = dst.ptr(y);
@@ -993,10 +637,10 @@ public:
             switch( pix_size )
             {
             case 1:
-                resizeNN_row_u8(D, S, x_ofs, dsize.width, row_bytes, vbeg, vend);
+                resizeNN_row_u8(D, S, x_ofs, dsize.width, row_bytes, vend);
                 break;
             case 2:
-                resizeNN_row_u16(D, S, x_ofs, dsize.width, vbeg, vend);
+                resizeNN_row_u16(D, S, x_ofs, dsize.width, vend);
                 break;
             case 3:
                 for( ; x < dsize.width; x++, D += 3 )
@@ -1006,22 +650,7 @@ public:
                 }
                 break;
             case 4:
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-#if CV_AVX2
-                for( ; x <= dsize.width - VTraits<v_uint32>::vlanes(); x += VTraits<v_uint32>::vlanes() )
-                    v_store((uint32_t*)D + x, resizeNN_lut_u32_byteofs(S, x_ofs + x));
-#else
-                for( ; x <= dsize.width - VTraits<v_uint32>::vlanes(); x += VTraits<v_uint32>::vlanes() )
-                {
-                    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) sx_idx[VTraits<v_uint32>::max_nlanes];
-                    for( int i = 0; i < VTraits<v_uint32>::vlanes(); i++ )
-                        sx_idx[i] = x_ofs[x + i] >> 2;
-                    v_store((uint32_t*)D + x, vx_lut((const uint32_t*)S, sx_idx));
-                }
-#endif
-#endif
-                for( ; x < dsize.width; x++ )
-                    *((uint32_t*)D + x) = *(const uint32_t*)(S + x_ofs[x]);
+                resizeNN_row_u32(D, S, x_ofs, dsize.width);
                 break;
             case 6:
                 for( ; x < dsize.width; x++, D += 6 )
@@ -1032,17 +661,7 @@ public:
                 }
                 break;
             case 8:
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-                for( ; x <= dsize.width - VTraits<v_uint64>::vlanes(); x += VTraits<v_uint64>::vlanes() )
-                {
-                    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) sx_idx[VTraits<v_uint64>::max_nlanes];
-                    for( int i = 0; i < VTraits<v_uint64>::vlanes(); i++ )
-                        sx_idx[i] = x_ofs[x + i] >> 3;
-                    v_store((uint64_t*)D + x, vx_lut((const uint64_t*)S, sx_idx));
-                }
-#endif
-                for( ; x < dsize.width; x++ )
-                    *((uint64_t*)D + x) = *(const uint64_t*)(S + x_ofs[x]);
+                resizeNN_row_u64(D, S, x_ofs, dsize.width);
                 break;
             case 12:
                 resizeNN_row_px12(D, S, x_ofs, dsize.width, vend);
@@ -2345,10 +1964,14 @@ template<typename T> struct area_fast_wt { typedef int type; };
 template<> struct area_fast_wt<float> { typedef float type; };
 template<> struct area_fast_wt<double> { typedef double type; };
 
+template<typename T> struct area_fast_max_scale { enum { value = 4 }; };
+// area_fast_u8_nxn keeps the column sums of up to 257 rows of 8U in 16 bits.
+template<> struct area_fast_max_scale<uchar> { enum { value = 257 }; };
+
 template<typename T>
 static inline bool is_fast_scale(int scale_x, int scale_y, int cn)
 {
-    if (scale_x != scale_y || scale_x < 2 || (scale_x > 4 && scale_x != 10))
+    if (scale_x != scale_y || scale_x < 2 || scale_x > area_fast_max_scale<T>::value)
         return false;
     if (cn != 1 && cn != 3 && cn != 4)
         return false;
@@ -2389,10 +2012,6 @@ static int area_fast_tail_nxn_cn1(const T* S, T* D, int w, int dx, int scale, in
 {
     typedef typename area_fast_wt<T>::type WT;
     const int area = scale * scale;
-    const T* rows[10] = { S, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    rows[1] = (const T*)((const uchar*)S + step);
-    for (int ri = 2; ri < scale; ++ri)
-        rows[ri] = (const T*)((const uchar*)rows[ri - 1] + step);
 
     for (; dx < w; ++dx)
     {
@@ -2400,7 +2019,7 @@ static int area_fast_tail_nxn_cn1(const T* S, T* D, int w, int dx, int scale, in
         WT sum = 0;
         for (int ry = 0; ry < scale; ++ry)
             for (int k = 0; k < scale; ++k)
-                sum += rows[ry][sx + k];
+                sum += ((const T*)((const uchar*)S + (size_t)ry * step))[sx + k];
         D[dx] = area_fast_round<T>(sum, area);
     }
     return dx;
@@ -2411,10 +2030,6 @@ static int area_fast_tail_nxn_cn3(const T* S, T* D, int w, int dx, int scale, in
 {
     typedef typename area_fast_wt<T>::type WT;
     const int area = scale * scale;
-    const T* rows[10] = { S, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    rows[1] = (const T*)((const uchar*)S + step);
-    for (int ri = 2; ri < scale; ++ri)
-        rows[ri] = (const T*)((const uchar*)rows[ri - 1] + step);
 
     for (; dx < w; dx += 3)
     {
@@ -2424,7 +2039,7 @@ static int area_fast_tail_nxn_cn3(const T* S, T* D, int w, int dx, int scale, in
             WT sum = 0;
             for (int ry = 0; ry < scale; ++ry)
                 for (int k = 0; k < scale; ++k)
-                    sum += rows[ry][sx + k * 3 + c];
+                    sum += ((const T*)((const uchar*)S + (size_t)ry * step))[sx + k * 3 + c];
             D[dx + c] = area_fast_round<T>(sum, area);
         }
     }
@@ -2436,10 +2051,6 @@ static int area_fast_tail_nxn_cn4(const T* S, T* D, int w, int dx, int scale, in
 {
     typedef typename area_fast_wt<T>::type WT;
     const int area = scale * scale;
-    const T* rows[10] = { S, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    rows[1] = (const T*)((const uchar*)S + step);
-    for (int ri = 2; ri < scale; ++ri)
-        rows[ri] = (const T*)((const uchar*)rows[ri - 1] + step);
 
     for (; dx < w; dx += 4)
     {
@@ -2449,7 +2060,7 @@ static int area_fast_tail_nxn_cn4(const T* S, T* D, int w, int dx, int scale, in
             WT sum = 0;
             for (int ry = 0; ry < scale; ++ry)
                 for (int k = 0; k < scale; ++k)
-                    sum += rows[ry][sx + k * 4 + c];
+                    sum += ((const T*)((const uchar*)S + (size_t)ry * step))[sx + k * 4 + c];
             D[dx + c] = area_fast_round<T>(sum, area);
         }
     }
@@ -2562,138 +2173,54 @@ static int area_fast_tail_nxn(const T* S, T* D, int w, int dx, int scale, int cn
     return area_fast_tail_nxn_cn4(S, D, w, dx, scale, step);
 }
 
-static inline uint32_t area_fast_sum10(const uchar* q)
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+// Any integer scale: sum the scale source rows column-wise into vsum, then add scale
+// neighbouring columns per channel. vsum must hold w*scale elements, scale <= 257.
+static int area_fast_u8_nxn(const uchar* S, uchar* D, int w, int step, int scale, int cn,
+                            ushort* vsum)
 {
-    return (uint32_t)q[0] + q[1] + q[2] + q[3] + q[4] +
-           q[5] + q[6] + q[7] + q[8] + q[9];
-}
-
-
-static inline void area_fast_sum10_cn3_pixel(const uchar* q, uint32_t& sb, uint32_t& sg, uint32_t& sr)
-{
-    sb += q[0]+q[3]+q[6]+q[9]+q[12]+q[15]+q[18]+q[21]+q[24]+q[27];
-    sg += q[1]+q[4]+q[7]+q[10]+q[13]+q[16]+q[19]+q[22]+q[25]+q[28];
-    sr += q[2]+q[5]+q[8]+q[11]+q[14]+q[17]+q[20]+q[23]+q[26]+q[29];
-}
-
-static inline void area_fast_sum10_cn4_pixel(const uchar* q, uint32_t& sb, uint32_t& sg, uint32_t& sr, uint32_t& sa)
-{
-    sb += q[0]+q[4]+q[8]+q[12]+q[16]+q[20]+q[24]+q[28]+q[32]+q[36];
-    sg += q[1]+q[5]+q[9]+q[13]+q[17]+q[21]+q[25]+q[29]+q[33]+q[37];
-    sr += q[2]+q[6]+q[10]+q[14]+q[18]+q[22]+q[26]+q[30]+q[34]+q[38];
-    sa += q[3]+q[7]+q[11]+q[15]+q[19]+q[23]+q[27]+q[31]+q[35]+q[39];
-}
-
-#if CV_SIMD || CV_NEON
-
-static inline int area_fast_10x10_pix_block()
-{
-    return 8;
-}
-
-static int area_fast_u8_cn1_10x10(const uchar* S, uchar* D, int w, int step, int dx)
-{
-    const int scale = 10;
-    const uchar* rows[10] = { S, S + step, S + 2 * step, S + 3 * step, S + 4 * step,
-                              S + 5 * step, S + 6 * step, S + 7 * step, S + 8 * step, S + 9 * step };
-    const int pixBlock = area_fast_10x10_pix_block();
-
-    for (; dx <= w - pixBlock; dx += pixBlock)
+    const int sw = w * scale;
+    const int n = VTraits<v_uint8>::vlanes(), h = VTraits<v_uint16>::vlanes();
+    int i = 0;
+    for (; i <= sw - n; i += n)
     {
-        const int sx = dx * scale;
-        uint32_t sums[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-
-        for (int ri = 0; ri < scale; ++ri)
+        v_uint16 lo = vx_setzero_u16(), hi = vx_setzero_u16();
+        const uchar* p = S + i;
+        for (int r = 0; r < scale; ++r, p += step)
         {
-            const uchar* row = rows[ri] + sx;
-            sums[0] += area_fast_sum10(row + 0);
-            sums[1] += area_fast_sum10(row + 10);
-            sums[2] += area_fast_sum10(row + 20);
-            sums[3] += area_fast_sum10(row + 30);
-            sums[4] += area_fast_sum10(row + 40);
-            sums[5] += area_fast_sum10(row + 50);
-            sums[6] += area_fast_sum10(row + 60);
-            sums[7] += area_fast_sum10(row + 70);
+            v_uint16 l, u;
+            v_expand(vx_load(p), l, u);
+            lo = v_add(lo, l);
+            hi = v_add(hi, u);
         }
-
-        for (int i = 0; i < pixBlock; ++i)
-            D[dx + i] = area_fast_round<uchar>((int)sums[i], 100);
+        v_store(vsum + i, lo);
+        v_store(vsum + i + h, hi);
     }
-    return dx;
-}
+    for (; i < sw; ++i)
+    {
+        int s = 0;
+        const uchar* p = S + i;
+        for (int r = 0; r < scale; ++r, p += step)
+            s += *p;
+        vsum[i] = (ushort)s;
+    }
 
-static int area_fast_u8_cn3_10x10(const uchar* S, uchar* D, int w, int step, int dx)
-{
-    const int scale = 10;
     const int area = scale * scale;
-    const uchar* rows[10] = { S, S + step, S + 2 * step, S + 3 * step, S + 4 * step,
-                              S + 5 * step, S + 6 * step, S + 7 * step, S + 8 * step, S + 9 * step };
-    const int pixBlock = area_fast_10x10_pix_block();
-    const int chBlock = pixBlock * 3;
-
-    for (; dx <= w - chBlock; dx += chBlock)
+    const int span = scale * cn;
+    for (int dx = 0; dx < w; dx += cn)
     {
-        const int sx = dx * scale;
-        uint32_t sb[8] = {}, sg[8] = {}, sr[8] = {};
-
-        for (int pi = 0; pi < pixBlock; ++pi)
+        const ushort* q = vsum + (dx / cn) * span;
+        for (int c = 0; c < cn; ++c)
         {
-            for (int ri = 0; ri < scale; ++ri)
-            {
-                const uchar* q = rows[ri] + sx + pi * scale * 3;
-                area_fast_sum10_cn3_pixel(q, sb[pi], sg[pi], sr[pi]);
-            }
-        }
-
-        uchar* p = D + dx;
-        for (int pi = 0; pi < pixBlock; ++pi)
-        {
-            p[0] = area_fast_round<uchar>((int)sb[pi], area);
-            p[1] = area_fast_round<uchar>((int)sg[pi], area);
-            p[2] = area_fast_round<uchar>((int)sr[pi], area);
-            p += 3;
+            int s = 0;
+            for (int k = c; k < span; k += cn)
+                s += q[k];
+            D[dx + c] = area_fast_round<uchar>(s, area);
         }
     }
-    return dx;
+    return w;
 }
-
-static int area_fast_u8_cn4_10x10(const uchar* S, uchar* D, int w, int step, int dx)
-{
-    const int scale = 10;
-    const int area = scale * scale;
-    const uchar* rows[10] = { S, S + step, S + 2 * step, S + 3 * step, S + 4 * step,
-                              S + 5 * step, S + 6 * step, S + 7 * step, S + 8 * step, S + 9 * step };
-    const int pixBlock = area_fast_10x10_pix_block();
-    const int chBlock = pixBlock * 4;
-
-    for (; dx <= w - chBlock; dx += chBlock)
-    {
-        const int sx = dx * scale;
-        uint32_t sb[8] = {}, sg[8] = {}, sr[8] = {}, sa[8] = {};
-
-        for (int pi = 0; pi < pixBlock; ++pi)
-        {
-            for (int ri = 0; ri < scale; ++ri)
-            {
-                const uchar* q = rows[ri] + sx + pi * scale * 4;
-                area_fast_sum10_cn4_pixel(q, sb[pi], sg[pi], sr[pi], sa[pi]);
-            }
-        }
-
-        uint32_t* p = reinterpret_cast<uint32_t*>(D + dx);
-        for (int pi = 0; pi < pixBlock; ++pi)
-        {
-            const uint32_t b = area_fast_round<uchar>((int)sb[pi], area);
-            const uint32_t g = area_fast_round<uchar>((int)sg[pi], area);
-            const uint32_t r = area_fast_round<uchar>((int)sr[pi], area);
-            const uint32_t a = area_fast_round<uchar>((int)sa[pi], area);
-            p[pi] = b | (g << 8) | (r << 16) | (a << 24);
-        }
-    }
-    return dx;
-}
-
-#endif // CV_SIMD || CV_NEON
+#endif
 
 #if CV_SIMD && !CV_NEON
 static inline v_uint32 area_fast_byte_sum_u32(v_uint32 v)
@@ -2706,40 +2233,6 @@ static inline v_uint32 area_fast_byte_sum_u32(v_uint32 v)
 static inline int area_fast_4x4_pix_block()
 {
     return VTraits<v_uint32>::vlanes();
-}
-
-static inline int area_fast_nxn_pix_block(int scale)
-{
-    const int blk = VTraits<v_uint8>::vlanes() / scale;
-    return std::min(blk, VTraits<v_uint32>::vlanes());
-}
-
-static inline v_uint32 area_fast_hsum_u8_groups(const uchar* p, int scale, int n)
-{
-    CV_DECL_ALIGNED(64) uint32_t tmp[16];
-    const int nmax = VTraits<v_uint32>::vlanes();
-    int i = 0;
-
-    if (scale == 10)
-    {
-        for (; i < n && i < nmax; ++i)
-            tmp[i] = area_fast_sum10(p + (size_t)i * 10);
-        for (; i < nmax; ++i)
-            tmp[i] = 0;
-        return vx_load(tmp);
-    }
-
-    for (i = 0; i < n && i < nmax; ++i)
-    {
-        int s = 0;
-        const uchar* q = p + (size_t)i * scale;
-        for (int k = 0; k < scale; ++k)
-            s += q[k];
-        tmp[i] = (uint32_t)s;
-    }
-    for (; i < nmax; ++i)
-        tmp[i] = 0;
-    return vx_load(tmp);
 }
 
 static inline v_uint32 area_fast_plane_row_quads(const v_uint8& plane)
@@ -3081,8 +2574,10 @@ public:
 
     int operator() (const uchar* S, uchar* D, int w) const
     {
-        if (scale_x != scale_y || scale_x < 2 || (scale_x > 4 && scale_x != 10))
+        if (scale_x != scale_y || scale_x < 2)
             return 0;
+        if (scale_x == 3 || scale_x > 4)
+            return area_fast_nxn(S, D, w);
 
         int dx = 0;
         const uchar* S0 = S, * S1 = S0 + step;
@@ -3108,16 +2603,6 @@ public:
                                       vaddq_u32(vshlq_n_u32(neon_round_area(sr, 16), 16), vshlq_n_u32(neon_round_area(sa, 16), 24)));
             vst1q_u32(reinterpret_cast<uint32_t*>(dst), px);
         };
-
-        if (scale_x == 10 && scale_y == 10)
-        {
-            if (cn == 1)
-                return area_fast_detail::area_fast_u8_cn1_10x10(S, D, w, step, dx);
-            if (cn == 3)
-                return area_fast_detail::area_fast_u8_cn3_10x10(S, D, w, step, dx);
-            if (cn == 4)
-                return area_fast_detail::area_fast_u8_cn4_10x10(S, D, w, step, dx);
-        }
 
         if (scale_x == 4 && scale_y == 4 && cn == 1)
         {
@@ -3292,8 +2777,18 @@ public:
     }
 
 private:
+    int area_fast_nxn(const uchar* S, uchar* D, int w) const
+    {
+        if (scale_x > area_fast_detail::area_fast_max_scale<uchar>::value ||
+            (cn != 1 && cn != 3 && cn != 4))
+            return 0;
+        vsum.resize((size_t)w * scale_x);
+        return area_fast_detail::area_fast_u8_nxn(S, D, w, step, scale_x, cn, vsum.data());
+    }
+
     int scale_x, scale_y;
     int cn, step;
+    mutable std::vector<ushort> vsum;
 };
 
 class ResizeAreaFastVec_SIMD_16u
@@ -3468,20 +2963,12 @@ public:
 
     int operator() (const uchar* S, uchar* D, int w) const
     {
-        if (scale_x != scale_y || scale_x < 2 || (scale_x > 4 && scale_x != 10))
+        if (scale_x != scale_y || scale_x < 2)
             return 0;
+        if (scale_x == 3 || scale_x > 4)
+            return area_fast_nxn(S, D, w);
 
         int dx = 0;
-
-        if (scale_x == 10 && scale_y == 10)
-        {
-            if (cn == 1)
-                return area_fast_detail::area_fast_u8_cn1_10x10(S, D, w, step, dx);
-            if (cn == 3)
-                return area_fast_detail::area_fast_u8_cn3_10x10(S, D, w, step, dx);
-            if (cn == 4)
-                return area_fast_detail::area_fast_u8_cn4_10x10(S, D, w, step, dx);
-        }
 
         if (scale_x == 4 && scale_y == 4)
         {
@@ -3608,9 +3095,19 @@ public:
     }
 
 private:
+    int area_fast_nxn(const uchar* S, uchar* D, int w) const
+    {
+        if (scale_x > area_fast_detail::area_fast_max_scale<uchar>::value ||
+            (cn != 1 && cn != 3 && cn != 4))
+            return 0;
+        vsum.resize((size_t)w * scale_x);
+        return area_fast_detail::area_fast_u8_nxn(S, D, w, step, scale_x, cn, vsum.data());
+    }
+
     int scale_x, scale_y;
     int cn;
     int step;
+    mutable std::vector<ushort> vsum;
 };
 
 class ResizeAreaFastVec_SIMD_16u
@@ -4200,2001 +3697,6 @@ inline void muladd(const WT* buf, int width, WT beta, WT* sum) {
 
 }  // namespace inter_area
 
-namespace area_rational_detail {
-
-static inline int igcd(int a, int b)
-{
-    a = std::abs(a);
-    b = std::abs(b);
-    while (b)
-    {
-        int t = a % b;
-        a = b;
-        b = t;
-    }
-    return a;
-}
-
-static inline bool is_rational_10_3(int src_w, int dst_w, int src_h, int dst_h,
-                                    double scale_x, double scale_y)
-{
-    const int gw = igcd(src_w, dst_w);
-    const int gh = igcd(src_h, dst_h);
-    if (src_w / gw != 10 || dst_w / gw != 3 || src_h / gh != 10 || dst_h / gh != 3)
-        return false;
-    return std::abs(scale_x - 10.0 / 3.0) < 1e-6 && std::abs(scale_y - 10.0 / 3.0) < 1e-6;
-}
-
-static inline bool is_rational_5_3(int src_w, int dst_w, int src_h, int dst_h,
-                                   double scale_x, double scale_y)
-{
-    const int gw = igcd(src_w, dst_w);
-    const int gh = igcd(src_h, dst_h);
-    if (src_w / gw != 5 || dst_w / gw != 3 || src_h / gh != 5 || dst_h / gh != 3)
-        return false;
-    return std::abs(scale_x - 5.0 / 3.0) < 1e-6 && std::abs(scale_y - 5.0 / 3.0) < 1e-6;
-}
-
-static inline int ihoriz_phase0_at_b(const uchar* p)
-{
-    return 3 * p[0] + 3 * p[3] + 3 * p[6] + p[9];
-}
-
-static inline int ihoriz_phase0_at_g(const uchar* p)
-{
-    return 3 * p[1] + 3 * p[4] + 3 * p[7] + p[10];
-}
-
-static inline int ihoriz_phase0_at_r(const uchar* p)
-{
-    return 3 * p[2] + 3 * p[5] + 3 * p[8] + p[11];
-}
-
-static inline int ihoriz_phase1_at_b(const uchar* p)
-{
-    return 2 * p[0] + 3 * p[3] + 3 * p[6] + 2 * p[9];
-}
-
-static inline int ihoriz_phase1_at_g(const uchar* p)
-{
-    return 2 * p[1] + 3 * p[4] + 3 * p[7] + 2 * p[10];
-}
-
-static inline int ihoriz_phase1_at_r(const uchar* p)
-{
-    return 2 * p[2] + 3 * p[5] + 3 * p[8] + 2 * p[11];
-}
-
-static inline int ihoriz_phase2_at_b(const uchar* p)
-{
-    return p[0] + 3 * p[3] + 3 * p[6] + 3 * p[9];
-}
-
-static inline int ihoriz_phase2_at_g(const uchar* p)
-{
-    return p[1] + 3 * p[4] + 3 * p[7] + 3 * p[10];
-}
-
-static inline int ihoriz_phase2_at_r(const uchar* p)
-{
-    return p[2] + 3 * p[5] + 3 * p[8] + 3 * p[11];
-}
-
-static inline int ihoriz_phase0_cn1(const uchar* p)
-{
-    return 3 * p[0] + 3 * p[1] + 3 * p[2] + p[3];
-}
-
-static inline int ihoriz_phase1_cn1(const uchar* p)
-{
-    return 2 * p[0] + 3 * p[1] + 3 * p[2] + 2 * p[3];
-}
-
-static inline int ihoriz_phase2_cn1(const uchar* p)
-{
-    return p[0] + 3 * p[1] + 3 * p[2] + 3 * p[3];
-}
-
-static inline int ihoriz_phase0_cn4(const uchar* p, int c)
-{
-    return 3 * p[c] + 3 * p[4 + c] + 3 * p[8 + c] + p[12 + c];
-}
-
-static inline int ihoriz_phase1_cn4(const uchar* p, int c)
-{
-    return 2 * p[c] + 3 * p[4 + c] + 3 * p[8 + c] + 2 * p[12 + c];
-}
-
-static inline int ihoriz_phase2_cn4(const uchar* p, int c)
-{
-    return p[c] + 3 * p[4 + c] + 3 * p[8 + c] + 3 * p[12 + c];
-}
-
-static inline void vert_weights_r10_3(int dy, int vw[4])
-{
-    switch (dy % 3)
-    {
-    case 0:
-        vw[0] = 3; vw[1] = 3; vw[2] = 3; vw[3] = 1;
-        break;
-    case 1:
-        vw[0] = 2; vw[1] = 3; vw[2] = 3; vw[3] = 2;
-        break;
-    default:
-        vw[0] = 1; vw[1] = 3; vw[2] = 3; vw[3] = 3;
-        break;
-    }
-}
-
-static inline float vw_dot4(const int vw[4], int h0, int h1, int h2, int h3)
-{
-    return (vw[0] * h0 + vw[1] * h1 + vw[2] * h2 + vw[3] * h3) * 0.01f;
-}
-
-static inline void accum_dst_period_r10_3_u8c1(float* sum, int di,
-                                                 const uchar* rows[4], const int vw[4])
-{
-    sum[di + 0] = vw_dot4(vw, ihoriz_phase0_cn1(rows[0]), ihoriz_phase0_cn1(rows[1]),
-                          ihoriz_phase0_cn1(rows[2]), ihoriz_phase0_cn1(rows[3]));
-    sum[di + 1] = vw_dot4(vw, ihoriz_phase1_cn1(rows[0] + 3), ihoriz_phase1_cn1(rows[1] + 3),
-                          ihoriz_phase1_cn1(rows[2] + 3), ihoriz_phase1_cn1(rows[3] + 3));
-    sum[di + 2] = vw_dot4(vw, ihoriz_phase2_cn1(rows[0] + 6), ihoriz_phase2_cn1(rows[1] + 6),
-                          ihoriz_phase2_cn1(rows[2] + 6), ihoriz_phase2_cn1(rows[3] + 6));
-}
-
-static inline void accum_dst_period_r10_3_u8c4(float* sum, int di,
-                                                 const uchar* rows[4], const int vw[4])
-{
-    for (int c = 0; c < 4; ++c)
-    {
-        sum[di + c] = vw_dot4(vw, ihoriz_phase0_cn4(rows[0], c), ihoriz_phase0_cn4(rows[1], c),
-                              ihoriz_phase0_cn4(rows[2], c), ihoriz_phase0_cn4(rows[3], c));
-        sum[di + 4 + c] = vw_dot4(vw, ihoriz_phase1_cn4(rows[0] + 12, c), ihoriz_phase1_cn4(rows[1] + 12, c),
-                                  ihoriz_phase1_cn4(rows[2] + 12, c), ihoriz_phase1_cn4(rows[3] + 12, c));
-        sum[di + 8 + c] = vw_dot4(vw, ihoriz_phase2_cn4(rows[0] + 24, c), ihoriz_phase2_cn4(rows[1] + 24, c),
-                                  ihoriz_phase2_cn4(rows[2] + 24, c), ihoriz_phase2_cn4(rows[3] + 24, c));
-    }
-}
-
-static inline void accum_dst_period_r10_3_u8c3(float* sum, int di,
-                                                 const uchar* rows[4], const int vw[4])
-{
-    sum[di + 0] = vw_dot4(vw, ihoriz_phase0_at_b(rows[0]), ihoriz_phase0_at_b(rows[1]),
-                          ihoriz_phase0_at_b(rows[2]), ihoriz_phase0_at_b(rows[3]));
-    sum[di + 1] = vw_dot4(vw, ihoriz_phase0_at_g(rows[0]), ihoriz_phase0_at_g(rows[1]),
-                          ihoriz_phase0_at_g(rows[2]), ihoriz_phase0_at_g(rows[3]));
-    sum[di + 2] = vw_dot4(vw, ihoriz_phase0_at_r(rows[0]), ihoriz_phase0_at_r(rows[1]),
-                          ihoriz_phase0_at_r(rows[2]), ihoriz_phase0_at_r(rows[3]));
-
-    sum[di + 3] = vw_dot4(vw, ihoriz_phase1_at_b(rows[0] + 9), ihoriz_phase1_at_b(rows[1] + 9),
-                          ihoriz_phase1_at_b(rows[2] + 9), ihoriz_phase1_at_b(rows[3] + 9));
-    sum[di + 4] = vw_dot4(vw, ihoriz_phase1_at_g(rows[0] + 9), ihoriz_phase1_at_g(rows[1] + 9),
-                          ihoriz_phase1_at_g(rows[2] + 9), ihoriz_phase1_at_g(rows[3] + 9));
-    sum[di + 5] = vw_dot4(vw, ihoriz_phase1_at_r(rows[0] + 9), ihoriz_phase1_at_r(rows[1] + 9),
-                          ihoriz_phase1_at_r(rows[2] + 9), ihoriz_phase1_at_r(rows[3] + 9));
-
-    sum[di + 6] = vw_dot4(vw, ihoriz_phase2_at_b(rows[0] + 18), ihoriz_phase2_at_b(rows[1] + 18),
-                          ihoriz_phase2_at_b(rows[2] + 18), ihoriz_phase2_at_b(rows[3] + 18));
-    sum[di + 7] = vw_dot4(vw, ihoriz_phase2_at_g(rows[0] + 18), ihoriz_phase2_at_g(rows[1] + 18),
-                          ihoriz_phase2_at_g(rows[2] + 18), ihoriz_phase2_at_g(rows[3] + 18));
-    sum[di + 8] = vw_dot4(vw, ihoriz_phase2_at_r(rows[0] + 18), ihoriz_phase2_at_r(rows[1] + 18),
-                          ihoriz_phase2_at_r(rows[2] + 18), ihoriz_phase2_at_r(rows[3] + 18));
-}
-
-template<typename AccumPeriodFn>
-static void accum_dst_row_r10_3_u8(float* sum, int dy, const Mat& src, int dst_width,
-                                   int periodBytes, int outStride, AccumPeriodFn accumPeriod)
-{
-    const int sy0 = (dy * 10) / 3;
-    const uchar* rows[4] = {
-        src.ptr<uchar>(sy0), src.ptr<uchar>(std::min(sy0 + 1, src.rows - 1)),
-        src.ptr<uchar>(std::min(sy0 + 2, src.rows - 1)), src.ptr<uchar>(std::min(sy0 + 3, src.rows - 1))
-    };
-    int vw[4];
-    vert_weights_r10_3(dy, vw);
-
-    int k = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    const int kBlock = 4;
-    for (; k + kBlock <= dst_width / 3; k += kBlock)
-    {
-        for (int t = 0; t < kBlock; ++t)
-        {
-            const int off = periodBytes * (k + t);
-            const uchar* r[4] = { rows[0] + off, rows[1] + off, rows[2] + off, rows[3] + off };
-            accumPeriod(sum, outStride * (k + t), r, vw);
-        }
-    }
-#endif
-    for (; k < dst_width / 3; ++k)
-    {
-        const int off = periodBytes * k;
-        const uchar* r[4] = { rows[0] + off, rows[1] + off, rows[2] + off, rows[3] + off };
-        accumPeriod(sum, outStride * k, r, vw);
-    }
-}
-
-static void accum_dst_row_r10_3_u8c1(float* sum, int dy, const Mat& src, int dst_width)
-{
-    accum_dst_row_r10_3_u8(sum, dy, src, dst_width, 10, 3, accum_dst_period_r10_3_u8c1);
-
-    const int sy0 = (dy * 10) / 3;
-    const uchar* rows[4] = {
-        src.ptr<uchar>(sy0), src.ptr<uchar>(std::min(sy0 + 1, src.rows - 1)),
-        src.ptr<uchar>(std::min(sy0 + 2, src.rows - 1)), src.ptr<uchar>(std::min(sy0 + 3, src.rows - 1))
-    };
-    int vw[4];
-    vert_weights_r10_3(dy, vw);
-
-    int k = dst_width / 3;
-    for (int dx = k * 3; dx < dst_width; ++dx)
-    {
-        const int si = (dx * 10) / 3;
-        int h[4];
-        for (int ri = 0; ri < 4; ++ri)
-        {
-            const uchar* p = rows[ri] + si;
-            switch (dx % 3)
-            {
-            case 0: h[ri] = ihoriz_phase0_cn1(p); break;
-            case 1: h[ri] = ihoriz_phase1_cn1(p); break;
-            default: h[ri] = ihoriz_phase2_cn1(p); break;
-            }
-        }
-        sum[dx] = vw_dot4(vw, h[0], h[1], h[2], h[3]);
-    }
-}
-
-static void accum_dst_row_r10_3_u8c3(float* sum, int dy, const Mat& src, int dst_width)
-{
-    accum_dst_row_r10_3_u8(sum, dy, src, dst_width, 30, 9, accum_dst_period_r10_3_u8c3);
-
-    const int sy0 = (dy * 10) / 3;
-    const uchar* rows[4] = {
-        src.ptr<uchar>(sy0), src.ptr<uchar>(std::min(sy0 + 1, src.rows - 1)),
-        src.ptr<uchar>(std::min(sy0 + 2, src.rows - 1)), src.ptr<uchar>(std::min(sy0 + 3, src.rows - 1))
-    };
-    int vw[4];
-    vert_weights_r10_3(dy, vw);
-
-    int k = dst_width / 3;
-    for (int dx = k * 3; dx < dst_width; ++dx)
-    {
-        const int di = dx * 3;
-        const int si = ((dx * 10) / 3) * 3;
-        int hb[4], hg[4], hr[4];
-        for (int ri = 0; ri < 4; ++ri)
-        {
-            const uchar* p = rows[ri] + si;
-            switch (dx % 3)
-            {
-            case 0:
-                hb[ri] = ihoriz_phase0_at_b(p);
-                hg[ri] = ihoriz_phase0_at_g(p);
-                hr[ri] = ihoriz_phase0_at_r(p);
-                break;
-            case 1:
-                hb[ri] = ihoriz_phase1_at_b(p);
-                hg[ri] = ihoriz_phase1_at_g(p);
-                hr[ri] = ihoriz_phase1_at_r(p);
-                break;
-            default:
-                hb[ri] = ihoriz_phase2_at_b(p);
-                hg[ri] = ihoriz_phase2_at_g(p);
-                hr[ri] = ihoriz_phase2_at_r(p);
-                break;
-            }
-        }
-        sum[di + 0] = vw_dot4(vw, hb[0], hb[1], hb[2], hb[3]);
-        sum[di + 1] = vw_dot4(vw, hg[0], hg[1], hg[2], hg[3]);
-        sum[di + 2] = vw_dot4(vw, hr[0], hr[1], hr[2], hr[3]);
-    }
-}
-
-static void accum_dst_row_r10_3_u8c4(float* sum, int dy, const Mat& src, int dst_width)
-{
-    accum_dst_row_r10_3_u8(sum, dy, src, dst_width, 40, 12, accum_dst_period_r10_3_u8c4);
-
-    const int sy0 = (dy * 10) / 3;
-    const uchar* rows[4] = {
-        src.ptr<uchar>(sy0), src.ptr<uchar>(std::min(sy0 + 1, src.rows - 1)),
-        src.ptr<uchar>(std::min(sy0 + 2, src.rows - 1)), src.ptr<uchar>(std::min(sy0 + 3, src.rows - 1))
-    };
-    int vw[4];
-    vert_weights_r10_3(dy, vw);
-
-    int k = dst_width / 3;
-    for (int dx = k * 3; dx < dst_width; ++dx)
-    {
-        const int di = dx * 4;
-        const int si = ((dx * 10) / 3) * 4;
-        int h[4][4];
-        for (int ri = 0; ri < 4; ++ri)
-        {
-            const uchar* p = rows[ri] + si;
-            for (int c = 0; c < 4; ++c)
-            {
-                switch (dx % 3)
-                {
-                case 0: h[ri][c] = ihoriz_phase0_cn4(p, c); break;
-                case 1: h[ri][c] = ihoriz_phase1_cn4(p, c); break;
-                default: h[ri][c] = ihoriz_phase2_cn4(p, c); break;
-                }
-            }
-        }
-        for (int c = 0; c < 4; ++c)
-            sum[di + c] = vw_dot4(vw, h[0][c], h[1][c], h[2][c], h[3][c]);
-    }
-}
-
-class ResizeAreaRational10_3_Invoker : public ParallelLoopBody
-{
-public:
-    ResizeAreaRational10_3_Invoker(const Mat& _src, Mat& _dst, int _cn)
-        : src(&_src), dst(&_dst), cn(_cn)
-    {
-    }
-
-    virtual void operator() (const Range& range) const CV_OVERRIDE
-    {
-        const int dst_width = dst->cols;
-        const int width_cn = dst_width * cn;
-        AutoBuffer<float> _sum(width_cn);
-        float* sum = _sum.data();
-
-        for (int dy = range.start; dy < range.end; ++dy)
-        {
-            if (cn == 1)
-                accum_dst_row_r10_3_u8c1(sum, dy, *src, dst_width);
-            else if (cn == 3)
-                accum_dst_row_r10_3_u8c3(sum, dy, *src, dst_width);
-            else
-                accum_dst_row_r10_3_u8c4(sum, dy, *src, dst_width);
-            inter_area::saturate_store(sum, width_cn, dst->ptr<uchar>(dy));
-        }
-    }
-
-private:
-    const Mat* src;
-    Mat* dst;
-    int cn;
-};
-
-static void resizeAreaRational10_3_u8_(const Mat& src, Mat& dst)
-{
-    const int cn = src.channels();
-    parallel_for_(Range(0, dst.rows),
-                  ResizeAreaRational10_3_Invoker(src, dst, cn),
-                  dst.total() / ((double)(1 << 16)));
-}
-
-static inline float vw_dot2_r5_3(const int vw[2], int h0, int h1)
-{
-    return (vw[0] * h0 + vw[1] * h1) * 0.04f;
-}
-
-static inline float vw_dot3_r5_3(const int vw[3], int h0, int h1, int h2)
-{
-    return (vw[0] * h0 + vw[1] * h1 + vw[2] * h2) * 0.04f;
-}
-
-static inline void vert_weights_r5_3(int dy, int vw[3], int& nrows)
-{
-    switch (dy % 3)
-    {
-    case 0:
-        vw[0] = 3; vw[1] = 2; nrows = 2;
-        break;
-    case 1:
-        vw[0] = 1; vw[1] = 3; vw[2] = 1; nrows = 3;
-        break;
-    default:
-        vw[0] = 2; vw[1] = 3; nrows = 2;
-        break;
-    }
-}
-
-static inline int ihoriz_phase0_cn1_r5_3(const uchar* p)
-{
-    return 3 * p[0] + 2 * p[1];
-}
-
-static inline int ihoriz_phase1_cn1_r5_3(const uchar* p)
-{
-    return p[0] + 3 * p[1] + p[2];
-}
-
-static inline int ihoriz_phase2_cn1_r5_3(const uchar* p)
-{
-    return 2 * p[0] + 3 * p[1];
-}
-
-static inline int ihoriz_phase0_at_b_r5_3(const uchar* p)
-{
-    return 3 * p[0] + 2 * p[3];
-}
-
-static inline int ihoriz_phase0_at_g_r5_3(const uchar* p)
-{
-    return 3 * p[1] + 2 * p[4];
-}
-
-static inline int ihoriz_phase0_at_r_r5_3(const uchar* p)
-{
-    return 3 * p[2] + 2 * p[5];
-}
-
-static inline int ihoriz_phase1_at_b_r5_3(const uchar* p)
-{
-    return p[0] + 3 * p[3] + p[6];
-}
-
-static inline int ihoriz_phase1_at_g_r5_3(const uchar* p)
-{
-    return p[1] + 3 * p[4] + p[7];
-}
-
-static inline int ihoriz_phase1_at_r_r5_3(const uchar* p)
-{
-    return p[2] + 3 * p[5] + p[8];
-}
-
-static inline int ihoriz_phase2_at_b_r5_3(const uchar* p)
-{
-    return 2 * p[0] + 3 * p[3];
-}
-
-static inline int ihoriz_phase2_at_g_r5_3(const uchar* p)
-{
-    return 2 * p[1] + 3 * p[4];
-}
-
-static inline int ihoriz_phase2_at_r_r5_3(const uchar* p)
-{
-    return 2 * p[2] + 3 * p[5];
-}
-
-static inline int ihoriz_phase0_cn4_r5_3(const uchar* p, int c)
-{
-    return 3 * p[c] + 2 * p[4 + c];
-}
-
-static inline int ihoriz_phase1_cn4_r5_3(const uchar* p, int c)
-{
-    return p[c] + 3 * p[4 + c] + p[8 + c];
-}
-
-static inline int ihoriz_phase2_cn4_r5_3(const uchar* p, int c)
-{
-    return 2 * p[c] + 3 * p[4 + c];
-}
-
-static inline void accum_dst_period_r5_3_u8c1_2row(float* sum, int di,
-                                                    const uchar* rows[3], const int vw[2])
-{
-    sum[di + 0] = vw_dot2_r5_3(vw, ihoriz_phase0_cn1_r5_3(rows[0]), ihoriz_phase0_cn1_r5_3(rows[1]));
-    sum[di + 1] = vw_dot2_r5_3(vw, ihoriz_phase1_cn1_r5_3(rows[0] + 1), ihoriz_phase1_cn1_r5_3(rows[1] + 1));
-    sum[di + 2] = vw_dot2_r5_3(vw, ihoriz_phase2_cn1_r5_3(rows[0] + 3), ihoriz_phase2_cn1_r5_3(rows[1] + 3));
-}
-
-static inline void accum_dst_period_r5_3_u8c1_3row(float* sum, int di,
-                                                    const uchar* rows[3], const int vw[3])
-{
-    sum[di + 0] = vw_dot3_r5_3(vw, ihoriz_phase0_cn1_r5_3(rows[0]), ihoriz_phase0_cn1_r5_3(rows[1]),
-                               ihoriz_phase0_cn1_r5_3(rows[2]));
-    sum[di + 1] = vw_dot3_r5_3(vw, ihoriz_phase1_cn1_r5_3(rows[0] + 1), ihoriz_phase1_cn1_r5_3(rows[1] + 1),
-                               ihoriz_phase1_cn1_r5_3(rows[2] + 1));
-    sum[di + 2] = vw_dot3_r5_3(vw, ihoriz_phase2_cn1_r5_3(rows[0] + 3), ihoriz_phase2_cn1_r5_3(rows[1] + 3),
-                               ihoriz_phase2_cn1_r5_3(rows[2] + 3));
-}
-
-static inline void accum_dst_period_r5_3_u8c3_2row(float* sum, int di,
-                                                    const uchar* rows[3], const int vw[2])
-{
-    sum[di + 0] = vw_dot2_r5_3(vw, ihoriz_phase0_at_b_r5_3(rows[0]), ihoriz_phase0_at_b_r5_3(rows[1]));
-    sum[di + 1] = vw_dot2_r5_3(vw, ihoriz_phase0_at_g_r5_3(rows[0]), ihoriz_phase0_at_g_r5_3(rows[1]));
-    sum[di + 2] = vw_dot2_r5_3(vw, ihoriz_phase0_at_r_r5_3(rows[0]), ihoriz_phase0_at_r_r5_3(rows[1]));
-
-    sum[di + 3] = vw_dot2_r5_3(vw, ihoriz_phase1_at_b_r5_3(rows[0] + 3), ihoriz_phase1_at_b_r5_3(rows[1] + 3));
-    sum[di + 4] = vw_dot2_r5_3(vw, ihoriz_phase1_at_g_r5_3(rows[0] + 3), ihoriz_phase1_at_g_r5_3(rows[1] + 3));
-    sum[di + 5] = vw_dot2_r5_3(vw, ihoriz_phase1_at_r_r5_3(rows[0] + 3), ihoriz_phase1_at_r_r5_3(rows[1] + 3));
-
-    sum[di + 6] = vw_dot2_r5_3(vw, ihoriz_phase2_at_b_r5_3(rows[0] + 9), ihoriz_phase2_at_b_r5_3(rows[1] + 9));
-    sum[di + 7] = vw_dot2_r5_3(vw, ihoriz_phase2_at_g_r5_3(rows[0] + 9), ihoriz_phase2_at_g_r5_3(rows[1] + 9));
-    sum[di + 8] = vw_dot2_r5_3(vw, ihoriz_phase2_at_r_r5_3(rows[0] + 9), ihoriz_phase2_at_r_r5_3(rows[1] + 9));
-}
-
-static inline void accum_dst_period_r5_3_u8c3_3row(float* sum, int di,
-                                                    const uchar* rows[3], const int vw[3])
-{
-    sum[di + 0] = vw_dot3_r5_3(vw, ihoriz_phase0_at_b_r5_3(rows[0]), ihoriz_phase0_at_b_r5_3(rows[1]),
-                               ihoriz_phase0_at_b_r5_3(rows[2]));
-    sum[di + 1] = vw_dot3_r5_3(vw, ihoriz_phase0_at_g_r5_3(rows[0]), ihoriz_phase0_at_g_r5_3(rows[1]),
-                               ihoriz_phase0_at_g_r5_3(rows[2]));
-    sum[di + 2] = vw_dot3_r5_3(vw, ihoriz_phase0_at_r_r5_3(rows[0]), ihoriz_phase0_at_r_r5_3(rows[1]),
-                               ihoriz_phase0_at_r_r5_3(rows[2]));
-
-    sum[di + 3] = vw_dot3_r5_3(vw, ihoriz_phase1_at_b_r5_3(rows[0] + 3), ihoriz_phase1_at_b_r5_3(rows[1] + 3),
-                               ihoriz_phase1_at_b_r5_3(rows[2] + 3));
-    sum[di + 4] = vw_dot3_r5_3(vw, ihoriz_phase1_at_g_r5_3(rows[0] + 3), ihoriz_phase1_at_g_r5_3(rows[1] + 3),
-                               ihoriz_phase1_at_g_r5_3(rows[2] + 3));
-    sum[di + 5] = vw_dot3_r5_3(vw, ihoriz_phase1_at_r_r5_3(rows[0] + 3), ihoriz_phase1_at_r_r5_3(rows[1] + 3),
-                               ihoriz_phase1_at_r_r5_3(rows[2] + 3));
-
-    sum[di + 6] = vw_dot3_r5_3(vw, ihoriz_phase2_at_b_r5_3(rows[0] + 9), ihoriz_phase2_at_b_r5_3(rows[1] + 9),
-                               ihoriz_phase2_at_b_r5_3(rows[2] + 9));
-    sum[di + 7] = vw_dot3_r5_3(vw, ihoriz_phase2_at_g_r5_3(rows[0] + 9), ihoriz_phase2_at_g_r5_3(rows[1] + 9),
-                               ihoriz_phase2_at_g_r5_3(rows[2] + 9));
-    sum[di + 8] = vw_dot3_r5_3(vw, ihoriz_phase2_at_r_r5_3(rows[0] + 9), ihoriz_phase2_at_r_r5_3(rows[1] + 9),
-                               ihoriz_phase2_at_r_r5_3(rows[2] + 9));
-}
-
-static inline void accum_dst_period_r5_3_u8c4_2row(float* sum, int di,
-                                                    const uchar* rows[3], const int vw[2])
-{
-    for (int c = 0; c < 4; ++c)
-    {
-        sum[di + c] = vw_dot2_r5_3(vw, ihoriz_phase0_cn4_r5_3(rows[0], c), ihoriz_phase0_cn4_r5_3(rows[1], c));
-        sum[di + 4 + c] = vw_dot2_r5_3(vw, ihoriz_phase1_cn4_r5_3(rows[0] + 4, c), ihoriz_phase1_cn4_r5_3(rows[1] + 4, c));
-        sum[di + 8 + c] = vw_dot2_r5_3(vw, ihoriz_phase2_cn4_r5_3(rows[0] + 12, c), ihoriz_phase2_cn4_r5_3(rows[1] + 12, c));
-    }
-}
-
-static inline void accum_dst_period_r5_3_u8c4_3row(float* sum, int di,
-                                                    const uchar* rows[3], const int vw[3])
-{
-    for (int c = 0; c < 4; ++c)
-    {
-        sum[di + c] = vw_dot3_r5_3(vw, ihoriz_phase0_cn4_r5_3(rows[0], c), ihoriz_phase0_cn4_r5_3(rows[1], c),
-                                   ihoriz_phase0_cn4_r5_3(rows[2], c));
-        sum[di + 4 + c] = vw_dot3_r5_3(vw, ihoriz_phase1_cn4_r5_3(rows[0] + 4, c), ihoriz_phase1_cn4_r5_3(rows[1] + 4, c),
-                                       ihoriz_phase1_cn4_r5_3(rows[2] + 4, c));
-        sum[di + 8 + c] = vw_dot3_r5_3(vw, ihoriz_phase2_cn4_r5_3(rows[0] + 12, c), ihoriz_phase2_cn4_r5_3(rows[1] + 12, c),
-                                       ihoriz_phase2_cn4_r5_3(rows[2] + 12, c));
-    }
-}
-
-template<typename AccumPeriodFn2, typename AccumPeriodFn3>
-static void accum_dst_row_r5_3_u8_period(float* sum, int dy, const Mat& src, int dst_width,
-                                         int periodBytes, int outStride, int nrows, const int* vw,
-                                         AccumPeriodFn2 accum2, AccumPeriodFn3 accum3)
-{
-    const int sy0 = (dy * 5) / 3;
-    const uchar* rows[3] = {
-        src.ptr<uchar>(sy0), src.ptr<uchar>(std::min(sy0 + 1, src.rows - 1)), src.ptr<uchar>(std::min(sy0 + 2, src.rows - 1))
-    };
-
-    int k = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    const int kBlock = 4;
-    for (; k + kBlock <= dst_width / 3; k += kBlock)
-    {
-        for (int t = 0; t < kBlock; ++t)
-        {
-            const int off = periodBytes * (k + t);
-            const uchar* r[3] = { rows[0] + off, rows[1] + off, rows[2] + off };
-            if (nrows == 2)
-                accum2(sum, outStride * (k + t), r, (const int*)vw);
-            else
-                accum3(sum, outStride * (k + t), r, (const int*)vw);
-        }
-    }
-#endif
-    for (; k < dst_width / 3; ++k)
-    {
-        const int off = periodBytes * k;
-        const uchar* r[3] = { rows[0] + off, rows[1] + off, rows[2] + off };
-        if (nrows == 2)
-            accum2(sum, outStride * k, r, (const int*)vw);
-        else
-            accum3(sum, outStride * k, r, (const int*)vw);
-    }
-}
-
-static void accum_dst_row_r5_3_u8c1(float* sum, int dy, const Mat& src, int dst_width)
-{
-    int vw[3], nrows;
-    vert_weights_r5_3(dy, vw, nrows);
-
-    accum_dst_row_r5_3_u8_period(sum, dy, src, dst_width, 5, 3, nrows, vw,
-                                 accum_dst_period_r5_3_u8c1_2row, accum_dst_period_r5_3_u8c1_3row);
-
-    const int sy0 = (dy * 5) / 3;
-    const uchar* rows[3] = {
-        src.ptr<uchar>(sy0), src.ptr<uchar>(std::min(sy0 + 1, src.rows - 1)), src.ptr<uchar>(std::min(sy0 + 2, src.rows - 1))
-    };
-
-    int k = dst_width / 3;
-    for (int dx = k * 3; dx < dst_width; ++dx)
-    {
-        const int si = (dx * 5) / 3;
-        int h[3];
-        for (int ri = 0; ri < nrows; ++ri)
-        {
-            const uchar* p = rows[ri] + si;
-            switch (dx % 3)
-            {
-            case 0: h[ri] = ihoriz_phase0_cn1_r5_3(p); break;
-            case 1: h[ri] = ihoriz_phase1_cn1_r5_3(p); break;
-            default: h[ri] = ihoriz_phase2_cn1_r5_3(p); break;
-            }
-        }
-        if (nrows == 2)
-            sum[dx] = vw_dot2_r5_3(vw, h[0], h[1]);
-        else
-            sum[dx] = vw_dot3_r5_3(vw, h[0], h[1], h[2]);
-    }
-}
-
-static void accum_dst_row_r5_3_u8c3(float* sum, int dy, const Mat& src, int dst_width)
-{
-    int vw[3], nrows;
-    vert_weights_r5_3(dy, vw, nrows);
-
-    accum_dst_row_r5_3_u8_period(sum, dy, src, dst_width, 15, 9, nrows, vw,
-                                 accum_dst_period_r5_3_u8c3_2row, accum_dst_period_r5_3_u8c3_3row);
-
-    const int sy0 = (dy * 5) / 3;
-    const uchar* rows[3] = {
-        src.ptr<uchar>(sy0), src.ptr<uchar>(std::min(sy0 + 1, src.rows - 1)), src.ptr<uchar>(std::min(sy0 + 2, src.rows - 1))
-    };
-
-    int k = dst_width / 3;
-    for (int dx = k * 3; dx < dst_width; ++dx)
-    {
-        const int di = dx * 3;
-        const int si = ((dx * 5) / 3) * 3;
-        int hb[3], hg[3], hr[3];
-        for (int ri = 0; ri < nrows; ++ri)
-        {
-            const uchar* p = rows[ri] + si;
-            switch (dx % 3)
-            {
-            case 0:
-                hb[ri] = ihoriz_phase0_at_b_r5_3(p);
-                hg[ri] = ihoriz_phase0_at_g_r5_3(p);
-                hr[ri] = ihoriz_phase0_at_r_r5_3(p);
-                break;
-            case 1:
-                hb[ri] = ihoriz_phase1_at_b_r5_3(p);
-                hg[ri] = ihoriz_phase1_at_g_r5_3(p);
-                hr[ri] = ihoriz_phase1_at_r_r5_3(p);
-                break;
-            default:
-                hb[ri] = ihoriz_phase2_at_b_r5_3(p);
-                hg[ri] = ihoriz_phase2_at_g_r5_3(p);
-                hr[ri] = ihoriz_phase2_at_r_r5_3(p);
-                break;
-            }
-        }
-        if (nrows == 2)
-        {
-            sum[di + 0] = vw_dot2_r5_3(vw, hb[0], hb[1]);
-            sum[di + 1] = vw_dot2_r5_3(vw, hg[0], hg[1]);
-            sum[di + 2] = vw_dot2_r5_3(vw, hr[0], hr[1]);
-        }
-        else
-        {
-            sum[di + 0] = vw_dot3_r5_3(vw, hb[0], hb[1], hb[2]);
-            sum[di + 1] = vw_dot3_r5_3(vw, hg[0], hg[1], hg[2]);
-            sum[di + 2] = vw_dot3_r5_3(vw, hr[0], hr[1], hr[2]);
-        }
-    }
-}
-
-static void accum_dst_row_r5_3_u8c4(float* sum, int dy, const Mat& src, int dst_width)
-{
-    int vw[3], nrows;
-    vert_weights_r5_3(dy, vw, nrows);
-
-    accum_dst_row_r5_3_u8_period(sum, dy, src, dst_width, 20, 12, nrows, vw,
-                                 accum_dst_period_r5_3_u8c4_2row, accum_dst_period_r5_3_u8c4_3row);
-
-    const int sy0 = (dy * 5) / 3;
-    const uchar* rows[3] = {
-        src.ptr<uchar>(sy0), src.ptr<uchar>(std::min(sy0 + 1, src.rows - 1)), src.ptr<uchar>(std::min(sy0 + 2, src.rows - 1))
-    };
-
-    int k = dst_width / 3;
-    for (int dx = k * 3; dx < dst_width; ++dx)
-    {
-        const int di = dx * 4;
-        const int si = ((dx * 5) / 3) * 4;
-        int h[3][4];
-        for (int ri = 0; ri < nrows; ++ri)
-        {
-            const uchar* p = rows[ri] + si;
-            for (int c = 0; c < 4; ++c)
-            {
-                switch (dx % 3)
-                {
-                case 0: h[ri][c] = ihoriz_phase0_cn4_r5_3(p, c); break;
-                case 1: h[ri][c] = ihoriz_phase1_cn4_r5_3(p, c); break;
-                default: h[ri][c] = ihoriz_phase2_cn4_r5_3(p, c); break;
-                }
-            }
-        }
-        for (int c = 0; c < 4; ++c)
-        {
-            if (nrows == 2)
-                sum[di + c] = vw_dot2_r5_3(vw, h[0][c], h[1][c]);
-            else
-                sum[di + c] = vw_dot3_r5_3(vw, h[0][c], h[1][c], h[2][c]);
-        }
-    }
-}
-
-class ResizeAreaRational5_3_Invoker : public ParallelLoopBody
-{
-public:
-    ResizeAreaRational5_3_Invoker(const Mat& _src, Mat& _dst, int _cn)
-        : src(&_src), dst(&_dst), cn(_cn)
-    {
-    }
-
-    virtual void operator() (const Range& range) const CV_OVERRIDE
-    {
-        const int dst_width = dst->cols;
-        const int width_cn = dst_width * cn;
-        AutoBuffer<float> _sum(width_cn);
-        float* sum = _sum.data();
-
-        for (int dy = range.start; dy < range.end; ++dy)
-        {
-            if (cn == 1)
-                accum_dst_row_r5_3_u8c1(sum, dy, *src, dst_width);
-            else if (cn == 3)
-                accum_dst_row_r5_3_u8c3(sum, dy, *src, dst_width);
-            else
-                accum_dst_row_r5_3_u8c4(sum, dy, *src, dst_width);
-            inter_area::saturate_store(sum, width_cn, dst->ptr<uchar>(dy));
-        }
-    }
-
-private:
-    const Mat* src;
-    Mat* dst;
-    int cn;
-};
-
-static void resizeAreaRational5_3_u8_(const Mat& src, Mat& dst)
-{
-    const int cn = src.channels();
-    parallel_for_(Range(0, dst.rows),
-                  ResizeAreaRational5_3_Invoker(src, dst, cn),
-                  dst.total() / ((double)(1 << 16)));
-}
-
-// --- 32FC rational fast paths (per-pixel fused H+V, same geometry as u8) ---
-
-static inline float fhoriz_phase0_cn1_f32(const float* p)
-{
-    return 3.f * p[0] + 3.f * p[1] + 3.f * p[2] + p[3];
-}
-
-static inline float fhoriz_phase1_cn1_f32(const float* p)
-{
-    return 2.f * p[0] + 3.f * p[1] + 3.f * p[2] + 2.f * p[3];
-}
-
-static inline float fhoriz_phase2_cn1_f32(const float* p)
-{
-    return p[0] + 3.f * p[1] + 3.f * p[2] + 3.f * p[3];
-}
-
-static inline float fhoriz_phase0_cn1_r5_3_f32(const float* p)
-{
-    return 3.f * p[0] + 2.f * p[1];
-}
-
-static inline float fhoriz_phase1_cn1_r5_3_f32(const float* p)
-{
-    return p[0] + 3.f * p[1] + p[2];
-}
-
-static inline float fhoriz_phase2_cn1_r5_3_f32(const float* p)
-{
-    return 2.f * p[0] + 3.f * p[1];
-}
-
-static inline float fhoriz_phase0_cn4_f32(const float* p, int c)
-{
-    return 3.f * p[c] + 3.f * p[4 + c] + 3.f * p[8 + c] + p[12 + c];
-}
-
-static inline float fhoriz_phase1_cn4_f32(const float* p, int c)
-{
-    return 2.f * p[c] + 3.f * p[4 + c] + 3.f * p[8 + c] + 2.f * p[12 + c];
-}
-
-static inline float fhoriz_phase2_cn4_f32(const float* p, int c)
-{
-    return p[c] + 3.f * p[4 + c] + 3.f * p[8 + c] + 3.f * p[12 + c];
-}
-
-static inline float fhoriz_phase0_cn4_r5_3_f32(const float* p, int c)
-{
-    return 3.f * p[c] + 2.f * p[4 + c];
-}
-
-static inline float fhoriz_phase1_cn4_r5_3_f32(const float* p, int c)
-{
-    return p[c] + 3.f * p[4 + c] + p[8 + c];
-}
-
-static inline float fhoriz_phase2_cn4_r5_3_f32(const float* p, int c)
-{
-    return 2.f * p[c] + 3.f * p[4 + c];
-}
-
-static inline float fhoriz_phase0_at_c_f32(const float* p, int c)
-{
-    return 3.f * p[c] + 3.f * p[3 + c] + 3.f * p[6 + c] + p[9 + c];
-}
-
-static inline float fhoriz_phase1_at_c_f32(const float* p, int c)
-{
-    return 2.f * p[c] + 3.f * p[3 + c] + 3.f * p[6 + c] + 2.f * p[9 + c];
-}
-
-static inline float fhoriz_phase2_at_c_f32(const float* p, int c)
-{
-    return p[c] + 3.f * p[3 + c] + 3.f * p[6 + c] + 3.f * p[9 + c];
-}
-
-static inline float fhoriz_phase0_at_c_r5_3_f32(const float* p, int c)
-{
-    return 3.f * p[c] + 2.f * p[3 + c];
-}
-
-static inline float fhoriz_phase1_at_c_r5_3_f32(const float* p, int c)
-{
-    return p[c] + 3.f * p[3 + c] + p[6 + c];
-}
-
-static inline float fhoriz_phase2_at_c_r5_3_f32(const float* p, int c)
-{
-    return 2.f * p[c] + 3.f * p[3 + c];
-}
-
-static inline float fvw_dot4_f32(const int vw[4], float h0, float h1, float h2, float h3)
-{
-    return (vw[0] * h0 + vw[1] * h1 + vw[2] * h2 + vw[3] * h3) * 0.01f;
-}
-
-static inline float fvw_dot2_r5_3_f32(const int vw[2], float h0, float h1)
-{
-    return (vw[0] * h0 + vw[1] * h1) * 0.04f;
-}
-
-static inline float fvw_dot3_r5_3_f32(const int vw[3], float h0, float h1, float h2)
-{
-    return (vw[0] * h0 + vw[1] * h1 + vw[2] * h2) * 0.04f;
-}
-
-static inline float eval_r10_3_f32_cn1(int dx, int dy, const Mat& src)
-{
-    const int sy0 = (dy * 10) / 3;
-    int vw[4];
-    vert_weights_r10_3(dy, vw);
-    const int si = (dx * 10) / 3;
-    float h[4];
-    for (int ri = 0; ri < 4; ++ri)
-    {
-        const float* p = src.ptr<float>(sy0 + ri) + si;
-        switch (dx % 3)
-        {
-        case 0: h[ri] = fhoriz_phase0_cn1_f32(p); break;
-        case 1: h[ri] = fhoriz_phase1_cn1_f32(p); break;
-        default: h[ri] = fhoriz_phase2_cn1_f32(p); break;
-        }
-    }
-    return fvw_dot4_f32(vw, h[0], h[1], h[2], h[3]);
-}
-
-static inline void eval_r10_3_f32_cn3_px(int dx, int dy, const Mat& src, float* dst3)
-{
-    const int sy0 = (dy * 10) / 3;
-    int vw[4];
-    vert_weights_r10_3(dy, vw);
-    const int si = ((dx * 10) / 3) * 3;
-    float h[3][4];
-    for (int ri = 0; ri < 4; ++ri)
-    {
-        const float* p = src.ptr<float>(sy0 + ri) + si;
-        switch (dx % 3)
-        {
-        case 0:
-            h[0][ri] = fhoriz_phase0_at_c_f32(p, 0);
-            h[1][ri] = fhoriz_phase0_at_c_f32(p, 1);
-            h[2][ri] = fhoriz_phase0_at_c_f32(p, 2);
-            break;
-        case 1:
-            h[0][ri] = fhoriz_phase1_at_c_f32(p, 0);
-            h[1][ri] = fhoriz_phase1_at_c_f32(p, 1);
-            h[2][ri] = fhoriz_phase1_at_c_f32(p, 2);
-            break;
-        default:
-            h[0][ri] = fhoriz_phase2_at_c_f32(p, 0);
-            h[1][ri] = fhoriz_phase2_at_c_f32(p, 1);
-            h[2][ri] = fhoriz_phase2_at_c_f32(p, 2);
-            break;
-        }
-    }
-    for (int c = 0; c < 3; ++c)
-        dst3[c] = fvw_dot4_f32(vw, h[c][0], h[c][1], h[c][2], h[c][3]);
-}
-
-static inline void eval_r10_3_f32_cn4_px(int dx, int dy, const Mat& src, float* dst4)
-{
-    const int sy0 = (dy * 10) / 3;
-    int vw[4];
-    vert_weights_r10_3(dy, vw);
-    const int si = ((dx * 10) / 3) * 4;
-    float h[4][4];
-    for (int ri = 0; ri < 4; ++ri)
-    {
-        const float* p = src.ptr<float>(sy0 + ri) + si;
-        switch (dx % 3)
-        {
-        case 0:
-            h[0][ri] = fhoriz_phase0_cn4_f32(p, 0);
-            h[1][ri] = fhoriz_phase0_cn4_f32(p, 1);
-            h[2][ri] = fhoriz_phase0_cn4_f32(p, 2);
-            h[3][ri] = fhoriz_phase0_cn4_f32(p, 3);
-            break;
-        case 1:
-            h[0][ri] = fhoriz_phase1_cn4_f32(p, 0);
-            h[1][ri] = fhoriz_phase1_cn4_f32(p, 1);
-            h[2][ri] = fhoriz_phase1_cn4_f32(p, 2);
-            h[3][ri] = fhoriz_phase1_cn4_f32(p, 3);
-            break;
-        default:
-            h[0][ri] = fhoriz_phase2_cn4_f32(p, 0);
-            h[1][ri] = fhoriz_phase2_cn4_f32(p, 1);
-            h[2][ri] = fhoriz_phase2_cn4_f32(p, 2);
-            h[3][ri] = fhoriz_phase2_cn4_f32(p, 3);
-            break;
-        }
-    }
-    for (int c = 0; c < 4; ++c)
-        dst4[c] = fvw_dot4_f32(vw, h[c][0], h[c][1], h[c][2], h[c][3]);
-}
-
-static inline float eval_r5_3_f32_cn1(int dx, int dy, const Mat& src)
-{
-    const int sy0 = (dy * 5) / 3;
-    int vw[3], nrows;
-    vert_weights_r5_3(dy, vw, nrows);
-    const int si = (dx * 5) / 3;
-    float h[3];
-    for (int ri = 0; ri < nrows; ++ri)
-    {
-        const float* p = src.ptr<float>(sy0 + ri) + si;
-        switch (dx % 3)
-        {
-        case 0: h[ri] = fhoriz_phase0_cn1_r5_3_f32(p); break;
-        case 1: h[ri] = fhoriz_phase1_cn1_r5_3_f32(p); break;
-        default: h[ri] = fhoriz_phase2_cn1_r5_3_f32(p); break;
-        }
-    }
-    return (nrows == 2) ? fvw_dot2_r5_3_f32(vw, h[0], h[1]) : fvw_dot3_r5_3_f32(vw, h[0], h[1], h[2]);
-}
-
-static inline void eval_r5_3_f32_cn3_px(int dx, int dy, const Mat& src, float* dst3)
-{
-    const int sy0 = (dy * 5) / 3;
-    int vw[3], nrows;
-    vert_weights_r5_3(dy, vw, nrows);
-    const int si = ((dx * 5) / 3) * 3;
-    float h[3][3];
-    for (int ri = 0; ri < nrows; ++ri)
-    {
-        const float* p = src.ptr<float>(sy0 + ri) + si;
-        switch (dx % 3)
-        {
-        case 0:
-            h[0][ri] = fhoriz_phase0_at_c_r5_3_f32(p, 0);
-            h[1][ri] = fhoriz_phase0_at_c_r5_3_f32(p, 1);
-            h[2][ri] = fhoriz_phase0_at_c_r5_3_f32(p, 2);
-            break;
-        case 1:
-            h[0][ri] = fhoriz_phase1_at_c_r5_3_f32(p, 0);
-            h[1][ri] = fhoriz_phase1_at_c_r5_3_f32(p, 1);
-            h[2][ri] = fhoriz_phase1_at_c_r5_3_f32(p, 2);
-            break;
-        default:
-            h[0][ri] = fhoriz_phase2_at_c_r5_3_f32(p, 0);
-            h[1][ri] = fhoriz_phase2_at_c_r5_3_f32(p, 1);
-            h[2][ri] = fhoriz_phase2_at_c_r5_3_f32(p, 2);
-            break;
-        }
-    }
-    for (int c = 0; c < 3; ++c)
-        dst3[c] = (nrows == 2) ? fvw_dot2_r5_3_f32(vw, h[c][0], h[c][1]) :
-                                   fvw_dot3_r5_3_f32(vw, h[c][0], h[c][1], h[c][2]);
-}
-
-static inline void eval_r5_3_f32_cn4_px(int dx, int dy, const Mat& src, float* dst4)
-{
-    const int sy0 = (dy * 5) / 3;
-    int vw[3], nrows;
-    vert_weights_r5_3(dy, vw, nrows);
-    const int si = ((dx * 5) / 3) * 4;
-    float h[4][3];
-    for (int ri = 0; ri < nrows; ++ri)
-    {
-        const float* p = src.ptr<float>(sy0 + ri) + si;
-        switch (dx % 3)
-        {
-        case 0:
-            h[0][ri] = fhoriz_phase0_cn4_r5_3_f32(p, 0);
-            h[1][ri] = fhoriz_phase0_cn4_r5_3_f32(p, 1);
-            h[2][ri] = fhoriz_phase0_cn4_r5_3_f32(p, 2);
-            h[3][ri] = fhoriz_phase0_cn4_r5_3_f32(p, 3);
-            break;
-        case 1:
-            h[0][ri] = fhoriz_phase1_cn4_r5_3_f32(p, 0);
-            h[1][ri] = fhoriz_phase1_cn4_r5_3_f32(p, 1);
-            h[2][ri] = fhoriz_phase1_cn4_r5_3_f32(p, 2);
-            h[3][ri] = fhoriz_phase1_cn4_r5_3_f32(p, 3);
-            break;
-        default:
-            h[0][ri] = fhoriz_phase2_cn4_r5_3_f32(p, 0);
-            h[1][ri] = fhoriz_phase2_cn4_r5_3_f32(p, 1);
-            h[2][ri] = fhoriz_phase2_cn4_r5_3_f32(p, 2);
-            h[3][ri] = fhoriz_phase2_cn4_r5_3_f32(p, 3);
-            break;
-        }
-    }
-    for (int c = 0; c < 4; ++c)
-        dst4[c] = (nrows == 2) ? fvw_dot2_r5_3_f32(vw, h[c][0], h[c][1]) :
-                                   fvw_dot3_r5_3_f32(vw, h[c][0], h[c][1], h[c][2]);
-}
-
-static inline void accum_dst_period_r10_3_f32c1(float* D, int di,
-                                                  const float* rows[4], const int vw[4])
-{
-    D[di + 0] = fvw_dot4_f32(vw, fhoriz_phase0_cn1_f32(rows[0]), fhoriz_phase0_cn1_f32(rows[1]),
-                             fhoriz_phase0_cn1_f32(rows[2]), fhoriz_phase0_cn1_f32(rows[3]));
-    D[di + 1] = fvw_dot4_f32(vw, fhoriz_phase1_cn1_f32(rows[0] + 3), fhoriz_phase1_cn1_f32(rows[1] + 3),
-                             fhoriz_phase1_cn1_f32(rows[2] + 3), fhoriz_phase1_cn1_f32(rows[3] + 3));
-    D[di + 2] = fvw_dot4_f32(vw, fhoriz_phase2_cn1_f32(rows[0] + 6), fhoriz_phase2_cn1_f32(rows[1] + 6),
-                             fhoriz_phase2_cn1_f32(rows[2] + 6), fhoriz_phase2_cn1_f32(rows[3] + 6));
-}
-
-static inline void accum_dst_period_r10_3_f32c3(float* D, int di,
-                                                  const float* rows[4], const int vw[4])
-{
-    D[di + 0] = fvw_dot4_f32(vw, fhoriz_phase0_at_c_f32(rows[0], 0), fhoriz_phase0_at_c_f32(rows[1], 0),
-                             fhoriz_phase0_at_c_f32(rows[2], 0), fhoriz_phase0_at_c_f32(rows[3], 0));
-    D[di + 1] = fvw_dot4_f32(vw, fhoriz_phase0_at_c_f32(rows[0], 1), fhoriz_phase0_at_c_f32(rows[1], 1),
-                             fhoriz_phase0_at_c_f32(rows[2], 1), fhoriz_phase0_at_c_f32(rows[3], 1));
-    D[di + 2] = fvw_dot4_f32(vw, fhoriz_phase0_at_c_f32(rows[0], 2), fhoriz_phase0_at_c_f32(rows[1], 2),
-                             fhoriz_phase0_at_c_f32(rows[2], 2), fhoriz_phase0_at_c_f32(rows[3], 2));
-
-    D[di + 3] = fvw_dot4_f32(vw, fhoriz_phase1_at_c_f32(rows[0] + 9, 0), fhoriz_phase1_at_c_f32(rows[1] + 9, 0),
-                             fhoriz_phase1_at_c_f32(rows[2] + 9, 0), fhoriz_phase1_at_c_f32(rows[3] + 9, 0));
-    D[di + 4] = fvw_dot4_f32(vw, fhoriz_phase1_at_c_f32(rows[0] + 9, 1), fhoriz_phase1_at_c_f32(rows[1] + 9, 1),
-                             fhoriz_phase1_at_c_f32(rows[2] + 9, 1), fhoriz_phase1_at_c_f32(rows[3] + 9, 1));
-    D[di + 5] = fvw_dot4_f32(vw, fhoriz_phase1_at_c_f32(rows[0] + 9, 2), fhoriz_phase1_at_c_f32(rows[1] + 9, 2),
-                             fhoriz_phase1_at_c_f32(rows[2] + 9, 2), fhoriz_phase1_at_c_f32(rows[3] + 9, 2));
-
-    D[di + 6] = fvw_dot4_f32(vw, fhoriz_phase2_at_c_f32(rows[0] + 18, 0), fhoriz_phase2_at_c_f32(rows[1] + 18, 0),
-                             fhoriz_phase2_at_c_f32(rows[2] + 18, 0), fhoriz_phase2_at_c_f32(rows[3] + 18, 0));
-    D[di + 7] = fvw_dot4_f32(vw, fhoriz_phase2_at_c_f32(rows[0] + 18, 1), fhoriz_phase2_at_c_f32(rows[1] + 18, 1),
-                             fhoriz_phase2_at_c_f32(rows[2] + 18, 1), fhoriz_phase2_at_c_f32(rows[3] + 18, 1));
-    D[di + 8] = fvw_dot4_f32(vw, fhoriz_phase2_at_c_f32(rows[0] + 18, 2), fhoriz_phase2_at_c_f32(rows[1] + 18, 2),
-                             fhoriz_phase2_at_c_f32(rows[2] + 18, 2), fhoriz_phase2_at_c_f32(rows[3] + 18, 2));
-}
-
-static inline void accum_dst_period_r10_3_f32c4(float* D, int di,
-                                                  const float* rows[4], const int vw[4])
-{
-    for (int c = 0; c < 4; ++c)
-    {
-        D[di + c] = fvw_dot4_f32(vw, fhoriz_phase0_cn4_f32(rows[0], c), fhoriz_phase0_cn4_f32(rows[1], c),
-                                 fhoriz_phase0_cn4_f32(rows[2], c), fhoriz_phase0_cn4_f32(rows[3], c));
-        D[di + 4 + c] = fvw_dot4_f32(vw, fhoriz_phase1_cn4_f32(rows[0] + 12, c), fhoriz_phase1_cn4_f32(rows[1] + 12, c),
-                                     fhoriz_phase1_cn4_f32(rows[2] + 12, c), fhoriz_phase1_cn4_f32(rows[3] + 12, c));
-        D[di + 8 + c] = fvw_dot4_f32(vw, fhoriz_phase2_cn4_f32(rows[0] + 24, c), fhoriz_phase2_cn4_f32(rows[1] + 24, c),
-                                     fhoriz_phase2_cn4_f32(rows[2] + 24, c), fhoriz_phase2_cn4_f32(rows[3] + 24, c));
-    }
-}
-
-template<typename AccumPeriodFn>
-static void accum_dst_row_r10_3_f32(float* D, int dy, const Mat& src, int dst_width,
-                                    int periodElems, int outStride, AccumPeriodFn accumPeriod)
-{
-    const int sy0 = (dy * 10) / 3;
-    const float* rows[4] = {
-        src.ptr<float>(sy0), src.ptr<float>(std::min(sy0 + 1, src.rows - 1)),
-        src.ptr<float>(std::min(sy0 + 2, src.rows - 1)), src.ptr<float>(std::min(sy0 + 3, src.rows - 1))
-    };
-    int vw[4];
-    vert_weights_r10_3(dy, vw);
-
-    int k = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    const int kBlock = 4;
-    for (; k + kBlock <= dst_width / 3; k += kBlock)
-    {
-        for (int t = 0; t < kBlock; ++t)
-        {
-            const int off = periodElems * (k + t);
-            const float* r[4] = { rows[0] + off, rows[1] + off, rows[2] + off, rows[3] + off };
-            accumPeriod(D, outStride * (k + t), r, vw);
-        }
-    }
-#endif
-    for (; k < dst_width / 3; ++k)
-    {
-        const int off = periodElems * k;
-        const float* r[4] = { rows[0] + off, rows[1] + off, rows[2] + off, rows[3] + off };
-        accumPeriod(D, outStride * k, r, vw);
-    }
-}
-
-static void accum_dst_row_r10_3_f32c1(float* D, int dy, const Mat& src, int dst_width)
-{
-    accum_dst_row_r10_3_f32(D, dy, src, dst_width, 10, 3, accum_dst_period_r10_3_f32c1);
-
-    const int sy0 = (dy * 10) / 3;
-    int vw[4];
-    vert_weights_r10_3(dy, vw);
-    int k = dst_width / 3;
-    for (int dx = k * 3; dx < dst_width; ++dx)
-    {
-        const int si = (dx * 10) / 3;
-        float h[4];
-        for (int ri = 0; ri < 4; ++ri)
-        {
-            const float* p = src.ptr<float>(sy0 + ri) + si;
-            switch (dx % 3)
-            {
-            case 0: h[ri] = fhoriz_phase0_cn1_f32(p); break;
-            case 1: h[ri] = fhoriz_phase1_cn1_f32(p); break;
-            default: h[ri] = fhoriz_phase2_cn1_f32(p); break;
-            }
-        }
-        D[dx] = fvw_dot4_f32(vw, h[0], h[1], h[2], h[3]);
-    }
-}
-
-static void accum_dst_row_r10_3_f32c3(float* D, int dy, const Mat& src, int dst_width)
-{
-    accum_dst_row_r10_3_f32(D, dy, src, dst_width, 30, 9, accum_dst_period_r10_3_f32c3);
-
-    int k = dst_width / 3;
-    for (int dx = k * 3; dx < dst_width; ++dx)
-        eval_r10_3_f32_cn3_px(dx, dy, src, D + dx * 3);
-}
-
-static void accum_dst_row_r10_3_f32c4(float* D, int dy, const Mat& src, int dst_width)
-{
-    accum_dst_row_r10_3_f32(D, dy, src, dst_width, 40, 12, accum_dst_period_r10_3_f32c4);
-
-    int k = dst_width / 3;
-    for (int dx = k * 3; dx < dst_width; ++dx)
-        eval_r10_3_f32_cn4_px(dx, dy, src, D + dx * 4);
-}
-
-static inline void accum_dst_period_r5_3_f32c1_2row(float* D, int di,
-                                                    const float* rows[3], const int vw[2])
-{
-    D[di + 0] = fvw_dot2_r5_3_f32(vw, fhoriz_phase0_cn1_r5_3_f32(rows[0]), fhoriz_phase0_cn1_r5_3_f32(rows[1]));
-    D[di + 1] = fvw_dot2_r5_3_f32(vw, fhoriz_phase1_cn1_r5_3_f32(rows[0] + 1), fhoriz_phase1_cn1_r5_3_f32(rows[1] + 1));
-    D[di + 2] = fvw_dot2_r5_3_f32(vw, fhoriz_phase2_cn1_r5_3_f32(rows[0] + 3), fhoriz_phase2_cn1_r5_3_f32(rows[1] + 3));
-}
-
-static inline void accum_dst_period_r5_3_f32c1_3row(float* D, int di,
-                                                    const float* rows[3], const int vw[3])
-{
-    D[di + 0] = fvw_dot3_r5_3_f32(vw, fhoriz_phase0_cn1_r5_3_f32(rows[0]), fhoriz_phase0_cn1_r5_3_f32(rows[1]),
-                                  fhoriz_phase0_cn1_r5_3_f32(rows[2]));
-    D[di + 1] = fvw_dot3_r5_3_f32(vw, fhoriz_phase1_cn1_r5_3_f32(rows[0] + 1), fhoriz_phase1_cn1_r5_3_f32(rows[1] + 1),
-                                  fhoriz_phase1_cn1_r5_3_f32(rows[2] + 1));
-    D[di + 2] = fvw_dot3_r5_3_f32(vw, fhoriz_phase2_cn1_r5_3_f32(rows[0] + 3), fhoriz_phase2_cn1_r5_3_f32(rows[1] + 3),
-                                  fhoriz_phase2_cn1_r5_3_f32(rows[2] + 3));
-}
-
-static inline void accum_dst_period_r5_3_f32c3_2row(float* D, int di,
-                                                    const float* rows[3], const int vw[2])
-{
-    D[di + 0] = fvw_dot2_r5_3_f32(vw, fhoriz_phase0_at_c_r5_3_f32(rows[0], 0), fhoriz_phase0_at_c_r5_3_f32(rows[1], 0));
-    D[di + 1] = fvw_dot2_r5_3_f32(vw, fhoriz_phase0_at_c_r5_3_f32(rows[0], 1), fhoriz_phase0_at_c_r5_3_f32(rows[1], 1));
-    D[di + 2] = fvw_dot2_r5_3_f32(vw, fhoriz_phase0_at_c_r5_3_f32(rows[0], 2), fhoriz_phase0_at_c_r5_3_f32(rows[1], 2));
-    D[di + 3] = fvw_dot2_r5_3_f32(vw, fhoriz_phase1_at_c_r5_3_f32(rows[0] + 3, 0), fhoriz_phase1_at_c_r5_3_f32(rows[1] + 3, 0));
-    D[di + 4] = fvw_dot2_r5_3_f32(vw, fhoriz_phase1_at_c_r5_3_f32(rows[0] + 3, 1), fhoriz_phase1_at_c_r5_3_f32(rows[1] + 3, 1));
-    D[di + 5] = fvw_dot2_r5_3_f32(vw, fhoriz_phase1_at_c_r5_3_f32(rows[0] + 3, 2), fhoriz_phase1_at_c_r5_3_f32(rows[1] + 3, 2));
-    D[di + 6] = fvw_dot2_r5_3_f32(vw, fhoriz_phase2_at_c_r5_3_f32(rows[0] + 9, 0), fhoriz_phase2_at_c_r5_3_f32(rows[1] + 9, 0));
-    D[di + 7] = fvw_dot2_r5_3_f32(vw, fhoriz_phase2_at_c_r5_3_f32(rows[0] + 9, 1), fhoriz_phase2_at_c_r5_3_f32(rows[1] + 9, 1));
-    D[di + 8] = fvw_dot2_r5_3_f32(vw, fhoriz_phase2_at_c_r5_3_f32(rows[0] + 9, 2), fhoriz_phase2_at_c_r5_3_f32(rows[1] + 9, 2));
-}
-
-static inline void accum_dst_period_r5_3_f32c3_3row(float* D, int di,
-                                                    const float* rows[3], const int vw[3])
-{
-    D[di + 0] = fvw_dot3_r5_3_f32(vw, fhoriz_phase0_at_c_r5_3_f32(rows[0], 0), fhoriz_phase0_at_c_r5_3_f32(rows[1], 0),
-                                  fhoriz_phase0_at_c_r5_3_f32(rows[2], 0));
-    D[di + 1] = fvw_dot3_r5_3_f32(vw, fhoriz_phase0_at_c_r5_3_f32(rows[0], 1), fhoriz_phase0_at_c_r5_3_f32(rows[1], 1),
-                                  fhoriz_phase0_at_c_r5_3_f32(rows[2], 1));
-    D[di + 2] = fvw_dot3_r5_3_f32(vw, fhoriz_phase0_at_c_r5_3_f32(rows[0], 2), fhoriz_phase0_at_c_r5_3_f32(rows[1], 2),
-                                  fhoriz_phase0_at_c_r5_3_f32(rows[2], 2));
-    D[di + 3] = fvw_dot3_r5_3_f32(vw, fhoriz_phase1_at_c_r5_3_f32(rows[0] + 3, 0), fhoriz_phase1_at_c_r5_3_f32(rows[1] + 3, 0),
-                                  fhoriz_phase1_at_c_r5_3_f32(rows[2] + 3, 0));
-    D[di + 4] = fvw_dot3_r5_3_f32(vw, fhoriz_phase1_at_c_r5_3_f32(rows[0] + 3, 1), fhoriz_phase1_at_c_r5_3_f32(rows[1] + 3, 1),
-                                  fhoriz_phase1_at_c_r5_3_f32(rows[2] + 3, 1));
-    D[di + 5] = fvw_dot3_r5_3_f32(vw, fhoriz_phase1_at_c_r5_3_f32(rows[0] + 3, 2), fhoriz_phase1_at_c_r5_3_f32(rows[1] + 3, 2),
-                                  fhoriz_phase1_at_c_r5_3_f32(rows[2] + 3, 2));
-    D[di + 6] = fvw_dot3_r5_3_f32(vw, fhoriz_phase2_at_c_r5_3_f32(rows[0] + 9, 0), fhoriz_phase2_at_c_r5_3_f32(rows[1] + 9, 0),
-                                  fhoriz_phase2_at_c_r5_3_f32(rows[2] + 9, 0));
-    D[di + 7] = fvw_dot3_r5_3_f32(vw, fhoriz_phase2_at_c_r5_3_f32(rows[0] + 9, 1), fhoriz_phase2_at_c_r5_3_f32(rows[1] + 9, 1),
-                                  fhoriz_phase2_at_c_r5_3_f32(rows[2] + 9, 1));
-    D[di + 8] = fvw_dot3_r5_3_f32(vw, fhoriz_phase2_at_c_r5_3_f32(rows[0] + 9, 2), fhoriz_phase2_at_c_r5_3_f32(rows[1] + 9, 2),
-                                  fhoriz_phase2_at_c_r5_3_f32(rows[2] + 9, 2));
-}
-
-static inline void accum_dst_period_r5_3_f32c4_2row(float* D, int di,
-                                                    const float* rows[3], const int vw[2])
-{
-    for (int c = 0; c < 4; ++c)
-    {
-        D[di + c] = fvw_dot2_r5_3_f32(vw, fhoriz_phase0_cn4_r5_3_f32(rows[0], c), fhoriz_phase0_cn4_r5_3_f32(rows[1], c));
-        D[di + 4 + c] = fvw_dot2_r5_3_f32(vw, fhoriz_phase1_cn4_r5_3_f32(rows[0] + 4, c), fhoriz_phase1_cn4_r5_3_f32(rows[1] + 4, c));
-        D[di + 8 + c] = fvw_dot2_r5_3_f32(vw, fhoriz_phase2_cn4_r5_3_f32(rows[0] + 12, c), fhoriz_phase2_cn4_r5_3_f32(rows[1] + 12, c));
-    }
-}
-
-static inline void accum_dst_period_r5_3_f32c4_3row(float* D, int di,
-                                                    const float* rows[3], const int vw[3])
-{
-    for (int c = 0; c < 4; ++c)
-    {
-        D[di + c] = fvw_dot3_r5_3_f32(vw, fhoriz_phase0_cn4_r5_3_f32(rows[0], c), fhoriz_phase0_cn4_r5_3_f32(rows[1], c),
-                                      fhoriz_phase0_cn4_r5_3_f32(rows[2], c));
-        D[di + 4 + c] = fvw_dot3_r5_3_f32(vw, fhoriz_phase1_cn4_r5_3_f32(rows[0] + 4, c), fhoriz_phase1_cn4_r5_3_f32(rows[1] + 4, c),
-                                          fhoriz_phase1_cn4_r5_3_f32(rows[2] + 4, c));
-        D[di + 8 + c] = fvw_dot3_r5_3_f32(vw, fhoriz_phase2_cn4_r5_3_f32(rows[0] + 12, c), fhoriz_phase2_cn4_r5_3_f32(rows[1] + 12, c),
-                                          fhoriz_phase2_cn4_r5_3_f32(rows[2] + 12, c));
-    }
-}
-
-template<typename AccumPeriodFn2, typename AccumPeriodFn3>
-static void accum_dst_row_r5_3_f32_period(float* D, int dy, const Mat& src, int dst_width,
-                                          int periodElems, int outStride, int nrows, const int* vw,
-                                          AccumPeriodFn2 accum2, AccumPeriodFn3 accum3)
-{
-    const int sy0 = (dy * 5) / 3;
-    const float* rows[3] = {
-        src.ptr<float>(sy0), src.ptr<float>(std::min(sy0 + 1, src.rows - 1)), src.ptr<float>(std::min(sy0 + 2, src.rows - 1))
-    };
-
-    int k = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    const int kBlock = 4;
-    for (; k + kBlock <= dst_width / 3; k += kBlock)
-    {
-        for (int t = 0; t < kBlock; ++t)
-        {
-            const int off = periodElems * (k + t);
-            const float* r[3] = { rows[0] + off, rows[1] + off, rows[2] + off };
-            if (nrows == 2)
-                accum2(D, outStride * (k + t), r, vw);
-            else
-                accum3(D, outStride * (k + t), r, vw);
-        }
-    }
-#endif
-    for (; k < dst_width / 3; ++k)
-    {
-        const int off = periodElems * k;
-        const float* r[3] = { rows[0] + off, rows[1] + off, rows[2] + off };
-        if (nrows == 2)
-            accum2(D, outStride * k, r, vw);
-        else
-            accum3(D, outStride * k, r, vw);
-    }
-}
-
-static void accum_dst_row_r5_3_f32c1(float* D, int dy, const Mat& src, int dst_width)
-{
-    int vw[3], nrows;
-    vert_weights_r5_3(dy, vw, nrows);
-    accum_dst_row_r5_3_f32_period(D, dy, src, dst_width, 5, 3, nrows, vw,
-                                  accum_dst_period_r5_3_f32c1_2row, accum_dst_period_r5_3_f32c1_3row);
-
-    int k = dst_width / 3;
-    for (int dx = k * 3; dx < dst_width; ++dx)
-        D[dx] = eval_r5_3_f32_cn1(dx, dy, src);
-}
-
-static void accum_dst_row_r5_3_f32c3(float* D, int dy, const Mat& src, int dst_width)
-{
-    int vw[3], nrows;
-    vert_weights_r5_3(dy, vw, nrows);
-    accum_dst_row_r5_3_f32_period(D, dy, src, dst_width, 15, 9, nrows, vw,
-                                  accum_dst_period_r5_3_f32c3_2row, accum_dst_period_r5_3_f32c3_3row);
-
-    int k = dst_width / 3;
-    for (int dx = k * 3; dx < dst_width; ++dx)
-        eval_r5_3_f32_cn3_px(dx, dy, src, D + dx * 3);
-}
-
-static void accum_dst_row_r5_3_f32c4(float* D, int dy, const Mat& src, int dst_width)
-{
-    int vw[3], nrows;
-    vert_weights_r5_3(dy, vw, nrows);
-    accum_dst_row_r5_3_f32_period(D, dy, src, dst_width, 20, 12, nrows, vw,
-                                  accum_dst_period_r5_3_f32c4_2row, accum_dst_period_r5_3_f32c4_3row);
-
-    int k = dst_width / 3;
-    for (int dx = k * 3; dx < dst_width; ++dx)
-        eval_r5_3_f32_cn4_px(dx, dy, src, D + dx * 4);
-}
-
-class ResizeAreaRational10_3_F32_Invoker : public ParallelLoopBody
-{
-public:
-    ResizeAreaRational10_3_F32_Invoker(const Mat& _src, Mat& _dst, int _cn) : src(_src), dst(_dst), cn(_cn) {}
-
-    virtual void operator() (const Range& range) const CV_OVERRIDE
-    {
-        const int dst_width = dst.cols;
-        for (int dy = range.start; dy < range.end; ++dy)
-        {
-            float* D = dst.ptr<float>(dy);
-            if (cn == 1)
-                accum_dst_row_r10_3_f32c1(D, dy, src, dst_width);
-            else if (cn == 3)
-                accum_dst_row_r10_3_f32c3(D, dy, src, dst_width);
-            else
-                accum_dst_row_r10_3_f32c4(D, dy, src, dst_width);
-        }
-    }
-
-private:
-    const Mat& src;
-    Mat& dst;
-    int cn;
-};
-
-class ResizeAreaRational5_3_F32_Invoker : public ParallelLoopBody
-{
-public:
-    ResizeAreaRational5_3_F32_Invoker(const Mat& _src, Mat& _dst, int _cn) : src(_src), dst(_dst), cn(_cn) {}
-
-    virtual void operator() (const Range& range) const CV_OVERRIDE
-    {
-        const int dst_width = dst.cols;
-        for (int dy = range.start; dy < range.end; ++dy)
-        {
-            float* D = dst.ptr<float>(dy);
-            if (cn == 1)
-                accum_dst_row_r5_3_f32c1(D, dy, src, dst_width);
-            else if (cn == 3)
-                accum_dst_row_r5_3_f32c3(D, dy, src, dst_width);
-            else
-                accum_dst_row_r5_3_f32c4(D, dy, src, dst_width);
-        }
-    }
-
-private:
-    const Mat& src;
-    Mat& dst;
-    int cn;
-};
-
-
-static void resizeAreaRational10_3_f32_(const Mat& src, Mat& dst)
-{
-    const int cn = src.channels();
-    parallel_for_(Range(0, dst.rows),
-                  ResizeAreaRational10_3_F32_Invoker(src, dst, cn),
-                  dst.total() / ((double)(1 << 16)));
-}
-
-static void resizeAreaRational5_3_f32_(const Mat& src, Mat& dst)
-{
-    const int cn = src.channels();
-    parallel_for_(Range(0, dst.rows),
-                  ResizeAreaRational5_3_F32_Invoker(src, dst, cn),
-                  dst.total() / ((double)(1 << 16)));
-}
-
-}  // namespace area_rational_detail
-
-struct AreaHCol
-{
-    int di;
-    int si_left;
-    float a_left;
-    int sx1, sx2;
-    float a_mid;
-    int si_right;
-    float a_right;
-};
-
-static int buildAreaHColPlan( int ssize, int dst_width, int cn, double scale, AreaHCol* plan )
-{
-    for( int dx = 0; dx < dst_width; dx++ )
-    {
-        double fsx1 = dx * scale;
-        double fsx2 = fsx1 + scale;
-        double cellWidth = std::min(scale, ssize - fsx1);
-
-        int sx1 = cvCeil(fsx1), sx2 = cvFloor(fsx2);
-        sx2 = std::min(sx2, ssize - 1);
-        sx1 = std::min(sx1, sx2);
-
-        AreaHCol& p = plan[dx];
-        p.di = dx * cn;
-        p.si_left = -1;
-        p.a_left = 0.f;
-        p.sx1 = sx1;
-        p.sx2 = sx2;
-        p.a_mid = (sx2 > sx1) ? float(1.0 / cellWidth) : 0.f;
-        p.si_right = -1;
-        p.a_right = 0.f;
-
-        if( sx1 - fsx1 > 1e-3 )
-        {
-            p.si_left = (sx1 - 1) * cn;
-            p.a_left = (float)((sx1 - fsx1) / cellWidth);
-        }
-
-        if( fsx2 - sx2 > 1e-3 )
-        {
-            p.si_right = sx2 * cn;
-            p.a_right = (float)(std::min(std::min(fsx2 - sx2, 1.), cellWidth) / cellWidth);
-        }
-    }
-    return dst_width;
-}
-
-
-struct AreaHCol3
-{
-    const int*   base;
-    const float* w0;
-    const float* w1;
-    const float* w2;
-    int ncols;
-    int ssize;
-};
-
-static bool buildAreaHCol3Plan( const AreaHCol* plan, int ncols,
-                                int* base, float* w0, float* w1, float* w2 )
-{
-    if( ncols <= 0 )
-        return false;
-
-    int prev_base = -1;
-
-    for( int c = 0; c < ncols; c++ )
-    {
-        const AreaHCol& p = plan[c];
-
-        // Several interior taps need the scalar sum-then-scale order.
-        if( p.sx2 > p.sx1 + 1 )
-            return false;
-
-        int idx[3];
-        float wt[3];
-        int n = 0;
-
-        if( p.a_left > 0.f )  { idx[n] = p.si_left;  wt[n] = p.a_left;  n++; }
-        if( p.sx2 > p.sx1 )   { idx[n] = p.sx1;      wt[n] = p.a_mid;   n++; }
-        if( p.a_right > 0.f ) { idx[n] = p.si_right; wt[n] = p.a_right; n++; }
-
-        if( n == 0 )
-        {
-            base[c] = prev_base < 0 ? p.sx1 : prev_base;
-            w0[c] = w1[c] = w2[c] = 0.f;
-            continue;
-        }
-
-        for( int t = 1; t < n; t++ )
-            if( idx[t] != idx[t - 1] + 1 )
-                return false;
-
-        if( idx[0] < prev_base )
-            return false;
-
-        base[c] = idx[0];
-        prev_base = idx[0];
-        w0[c] = wt[0];
-        w1[c] = n > 1 ? wt[1] : 0.f;
-        w2[c] = n > 2 ? wt[2] : 0.f;
-    }
-
-    return true;
-}
-
-
-enum { AREA_HCOL_RUN_MAX = 16 };
-
-// Columns are also grouped so a whole group can be summed at once: each run is
-// permuted into its own 64-bit lane and one vpsadbw reduces all of them. That
-// needs the runs to fit a lane and the group to fit one 64-byte source window.
-enum { AREA_HCOL_GROUP = 8, AREA_HCOL_GROUP_RUN_MAX = 8, AREA_HCOL_GROUP_SPAN = 64 };
-
-static inline int areaHColGroupBase(int sx1_first)
-{
-    return sx1_first > 0 ? sx1_first - 1 : 0;
-}
-
-struct AreaHColRun
-{
-    const int*            sx1;
-    const unsigned short* mask;      // (1 << run length) - 1
-    const int*            si_left;
-    const int*            si_right;
-    const float*          a_left;
-    const float*          w_mid;
-    const float*          a_right;
-    const unsigned long long* gmask; // per group, run masks of its 8 columns
-    int ncols;
-    int ngroups;                     // leading groups the grouped kernel accepts
-    int ssize;
-};
-
-static bool buildAreaHColRunPlan( const AreaHCol* plan, int ncols,
-                                  int* sx1, unsigned short* mask,
-                                  int* si_left, int* si_right,
-                                  float* a_left, float* w_mid, float* a_right,
-                                  unsigned long long* gmask, int* ngroups )
-{
-    if( ncols <= 0 )
-        return false;
-
-    for( int c = 0; c < ncols; c++ )
-    {
-        const AreaHCol& p = plan[c];
-        const int len = p.sx2 - p.sx1;
-
-        if( len < 0 || len > AREA_HCOL_RUN_MAX )
-            return false;
-
-        sx1[c]  = p.sx1;
-        mask[c] = (unsigned short)((1u << len) - 1u);
-
-        si_left[c]  = p.a_left  > 0.f ? p.si_left  : 0;
-        si_right[c] = p.a_right > 0.f ? p.si_right : 0;
-        a_left[c]   = p.a_left;
-        a_right[c]  = p.a_right;
-        w_mid[c]    = len > 0 ? p.a_mid : 0.f;
-    }
-
-    int g = 0;
-    for( ; g < ncols / AREA_HCOL_GROUP; g++ )
-    {
-        const int c0 = g * AREA_HCOL_GROUP;
-        const int base = areaHColGroupBase(sx1[c0]);
-        unsigned long long m = 0;
-        int i = 0;
-
-        for( ; i < AREA_HCOL_GROUP; i++ )
-        {
-            const AreaHCol& p = plan[c0 + i];
-            const int len = p.sx2 - p.sx1;
-
-            if( len > AREA_HCOL_GROUP_RUN_MAX )
-                break;
-            if( p.sx1 < base || p.sx2 - base > AREA_HCOL_GROUP_SPAN )
-                break;
-            if( p.a_left > 0.f && p.si_left < base )
-                break;
-            if( p.a_right > 0.f && p.si_right - base >= AREA_HCOL_GROUP_SPAN )
-                break;
-
-            m |= ((1ull << len) - 1ull) << (i * 8);
-        }
-
-        if( i < AREA_HCOL_GROUP )
-            break;
-
-        gmask[g] = m;
-    }
-
-    *ngroups = g;
-    return true;
-}
-
-namespace resize_area_detail {
-
-template<typename WT>
-static void zero_row_buf(WT* buf, int width_cn)
-{
-    for( int dx = 0; dx < width_cn; dx++ )
-        buf[dx] = (WT)0;
-}
-
-template<>
-void zero_row_buf<float>(float* buf, int width_cn)
-{
-    int dx = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    const int step = VTraits<v_float32>::vlanes();
-    v_float32 vz = vx_setzero_f32();
-    for( ; dx + step <= width_cn; dx += step )
-        vx_store(buf + dx, vz);
-#endif
-    for( ; dx < width_cn; dx++ )
-        buf[dx] = 0.f;
-}
-
-template<typename T, typename WT>
-static inline void fill_row_buf_xtab(WT* buf, int width_cn, const T* S, int cn,
-                              const DecimateAlpha* xtab, int xtab_size)
-{
-    zero_row_buf(buf, width_cn);
-    int k;
-
-    if( cn == 1 )
-        for( k = 0; k < xtab_size; k++ )
-        {
-            int dxn = xtab[k].di;
-            WT alpha = xtab[k].alpha;
-            buf[dxn] += S[xtab[k].si]*alpha;
-        }
-    else if( cn == 2 )
-        for( k = 0; k < xtab_size; k++ )
-        {
-            int sxn = xtab[k].si;
-            int dxn = xtab[k].di;
-            WT alpha = xtab[k].alpha;
-            WT t0 = buf[dxn] + S[sxn]*alpha;
-            WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
-            buf[dxn] = t0; buf[dxn+1] = t1;
-        }
-    else if( cn == 3 )
-        for( k = 0; k < xtab_size; k++ )
-        {
-            int sxn = xtab[k].si;
-            int dxn = xtab[k].di;
-            WT alpha = xtab[k].alpha;
-            WT t0 = buf[dxn] + S[sxn]*alpha;
-            WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
-            WT t2 = buf[dxn+2] + S[sxn+2]*alpha;
-            buf[dxn] = t0; buf[dxn+1] = t1; buf[dxn+2] = t2;
-        }
-    else if( cn == 4 )
-    {
-        for( k = 0; k < xtab_size; k++ )
-        {
-            int sxn = xtab[k].si;
-            int dxn = xtab[k].di;
-            WT alpha = xtab[k].alpha;
-            WT t0 = buf[dxn] + S[sxn]*alpha;
-            WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
-            buf[dxn] = t0; buf[dxn+1] = t1;
-            t0 = buf[dxn+2] + S[sxn+2]*alpha;
-            t1 = buf[dxn+3] + S[sxn+3]*alpha;
-            buf[dxn+2] = t0; buf[dxn+3] = t1;
-        }
-    }
-    else
-        for( k = 0; k < xtab_size; k++ )
-        {
-            int sxn = xtab[k].si;
-            int dxn = xtab[k].di;
-            WT alpha = xtab[k].alpha;
-            for( int c = 0; c < cn; c++ )
-                buf[dxn + c] += S[sxn + c]*alpha;
-        }
-}
-
-#if CV_AVX_512VBMI
-static int fill_row_buf_hcol3_u8c1_avx512(float* buf, const uchar* S, const AreaHCol3& h3)
-{
-    const int step = 16;
-    int c = 0;
-
-    for( ; c + step <= h3.ncols; c += step )
-    {
-        const int b0 = h3.base[c];
-
-        if( b0 + 64 > h3.ssize )
-            break;
-        if( h3.base[c + step - 1] + 2 - b0 > 63 )
-            break;
-
-        __m512i bv  = _mm512_loadu_si512((const __m512i*)(h3.base + c));
-        __m128i rel = _mm512_cvtepi32_epi8(_mm512_sub_epi32(bv, _mm512_set1_epi32(b0)));
-
-        __m512i idx = _mm512_castsi128_si512(rel);
-        idx = _mm512_inserti32x4(idx, _mm_add_epi8(rel, _mm_set1_epi8(1)), 1);
-        idx = _mm512_inserti32x4(idx, _mm_add_epi8(rel, _mm_set1_epi8(2)), 2);
-
-        __m512i taps = _mm512_permutexvar_epi8(idx, _mm512_loadu_si512((const __m512i*)(S + b0)));
-
-        __m512 t0 = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm512_extracti32x4_epi32(taps, 0)));
-        __m512 t1 = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm512_extracti32x4_epi32(taps, 1)));
-        __m512 t2 = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm512_extracti32x4_epi32(taps, 2)));
-
-        __m512 r = _mm512_mul_ps(t0, _mm512_loadu_ps(h3.w0 + c));
-        r = _mm512_fmadd_ps(t1, _mm512_loadu_ps(h3.w1 + c), r);
-        r = _mm512_fmadd_ps(t2, _mm512_loadu_ps(h3.w2 + c), r);
-
-        _mm512_storeu_ps(buf + c, r);
-    }
-
-    return c;
-}
-#endif // CV_AVX_512VBMI
-
-#if CV_AVX_512VBMI
-// Eight columns at a time: one permute packs each column's run into its own
-// 64-bit lane of a single source window, so one vpsadbw yields all eight run
-// sums and the partials and the store become vector operations too. The
-// multiply/accumulate order is the scalar one, so results are bit identical.
-static int fill_row_buf_hcolrun8_u8c1_avx512(float* buf, const uchar* S,
-                                             const AreaHColRun& rp)
-{
-    const __m512i zero  = _mm512_setzero_si512();
-    const __m512i lane  = _mm512_set_epi64(0x0707070707070707LL, 0x0606060606060606LL,
-                                           0x0505050505050505LL, 0x0404040404040404LL,
-                                           0x0303030303030303LL, 0x0202020202020202LL,
-                                           0x0101010101010101LL, 0x0000000000000000LL);
-    const __m512i seq   = _mm512_set1_epi64(0x0706050403020100LL);
-    const int step = AREA_HCOL_GROUP;
-    int c = 0;
-
-    for( int g = 0; g < rp.ngroups; g++, c += step )
-    {
-        const int b0 = areaHColGroupBase(rp.sx1[c]);
-
-        if( b0 + 64 > rp.ssize )
-            break;
-
-        const __m512i win = _mm512_loadu_si512((const __m512i*)(S + b0));
-        const __m256i vb0 = _mm256_set1_epi32(b0);
-
-        // Lane i holds the run of column c+i: its start repeated eight times
-        // plus 0..7, with the mask cutting the lane down to the run length.
-        __m128i rel = _mm256_cvtepi32_epi8(_mm256_sub_epi32(
-                          _mm256_loadu_si256((const __m256i*)(rp.sx1 + c)), vb0));
-        __m512i idx = _mm512_add_epi8(
-                          _mm512_permutexvar_epi8(lane, _mm512_castsi128_si512(rel)), seq);
-        __m512i mid = _mm512_sad_epu8(
-                          _mm512_maskz_permutexvar_epi8(rp.gmask[g], idx, win), zero);
-
-        __m128i li = _mm256_cvtepi32_epi8(_mm256_sub_epi32(
-                         _mm256_loadu_si256((const __m256i*)(rp.si_left + c)), vb0));
-        __m128i ri = _mm256_cvtepi32_epi8(_mm256_sub_epi32(
-                         _mm256_loadu_si256((const __m256i*)(rp.si_right + c)), vb0));
-        __m128i lr = _mm512_castsi512_si128(_mm512_permutexvar_epi8(
-                         _mm512_castsi128_si512(_mm_unpacklo_epi64(li, ri)), win));
-
-        __m256 r = _mm256_mul_ps(_mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(lr)),
-                                 _mm256_loadu_ps(rp.a_left + c));
-        r = _mm256_fmadd_ps(_mm256_cvtepi32_ps(_mm512_cvtepi64_epi32(mid)),
-                            _mm256_loadu_ps(rp.w_mid + c), r);
-        r = _mm256_fmadd_ps(_mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(_mm_srli_si128(lr, 8))),
-                            _mm256_loadu_ps(rp.a_right + c), r);
-
-        _mm256_storeu_ps(buf + c, r);
-    }
-
-    return c;
-}
-#endif // CV_AVX_512VBMI
-
-#if CV_SIMD512
-// A run of whole pixels is summed by one masked load plus one vpsadbw instead of
-// one add per pixel. The sum is exact in integer form, so feeding it through the
-// same multiply/accumulate sequence as the scalar path reproduces it bit for bit.
-static void fill_row_buf_hcolrun_u8c1_avx512(float* buf, const uchar* S,
-                                             const AreaHColRun& rp, int c0)
-{
-    const __m128i zero = _mm_setzero_si128();
-
-    for( int c = c0; c < rp.ncols; c++ )
-    {
-        __m128i v = _mm_maskz_loadu_epi8((__mmask16)rp.mask[c], S + rp.sx1[c]);
-        __m128i s = _mm_sad_epu8(v, zero);
-        int mid = _mm_cvtsi128_si32(s) + _mm_extract_epi32(s, 2);
-
-        float b = (float)S[rp.si_left[c]] * rp.a_left[c];
-        b = std::fma((float)mid, rp.w_mid[c], b);
-        b = std::fma((float)S[rp.si_right[c]], rp.a_right[c], b);
-        buf[c] = b;
-    }
-}
-#endif // CV_SIMD512
-
-static void fill_row_buf_hcol_u8c1(float* buf, int width_cn, const uchar* S,
-                                   const AreaHCol* plan, int ncols,
-                                   const AreaHCol3* h3,
-                                   const AreaHColRun* hrun)
-{
-    CV_UNUSED(width_cn);
-
-    int c0 = 0, c1 = ncols;
-#if CV_AVX_512VBMI
-    if( h3 )
-        c0 = fill_row_buf_hcol3_u8c1_avx512(buf, S, *h3);
-#else
-    CV_UNUSED(h3);
-#endif
-#if CV_SIMD512
-    if( hrun )
-    {
-        int cr = 0;
-#if CV_AVX_512VBMI
-        cr = fill_row_buf_hcolrun8_u8c1_avx512(buf, S, *hrun);
-#endif
-        fill_row_buf_hcolrun_u8c1_avx512(buf, S, *hrun, cr);
-        return;
-    }
-#else
-    CV_UNUSED(hrun);
-#endif
-
-    for( int c = c0; c < c1; c++ )
-    {
-        const AreaHCol& p = plan[c];
-        float b = 0.f;
-
-        if( p.a_left > 0.f )
-            b = (float)S[p.si_left] * p.a_left;
-
-        if( p.sx2 > p.sx1 )
-        {
-            if( p.sx2 == p.sx1 + 1 )
-                b += (float)S[p.sx1] * p.a_mid;
-            else
-            {
-                float mid = 0.f;
-                for( int sx = p.sx1; sx < p.sx2; sx++ )
-                    mid += (float)S[sx];
-                b += mid * p.a_mid;
-            }
-        }
-
-        if( p.a_right > 0.f )
-            b += (float)S[p.si_right] * p.a_right;
-
-        buf[p.di] = b;
-    }
-}
-
-// Scratch for the multi-channel 8U path below. The planes hold one source row,
-// the channel buffer one destination row per channel.
-struct AreaHPlanar
-{
-    uchar* planes;
-    float* chbuf;
-    int cn;
-    int src_width;
-    int dst_width;
-};
-
-static void area_split_row_u8(const uchar* S, int width, int cn, uchar* planes)
-{
-    uchar* p0 = planes;
-    uchar* p1 = p0 + width;
-    uchar* p2 = p1 + width;
-    uchar* p3 = p2 + width;
-    int x = 0;
-
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    const int step = VTraits<v_uint8>::vlanes();
-    if( cn == 3 )
-        for( ; x <= width - step; x += step )
-        {
-            v_uint8 a, b, c;
-            v_load_deinterleave(S + x*3, a, b, c);
-            v_store(p0 + x, a);
-            v_store(p1 + x, b);
-            v_store(p2 + x, c);
-        }
-    else
-        for( ; x <= width - step; x += step )
-        {
-            v_uint8 a, b, c, d;
-            v_load_deinterleave(S + x*4, a, b, c, d);
-            v_store(p0 + x, a);
-            v_store(p1 + x, b);
-            v_store(p2 + x, c);
-            v_store(p3 + x, d);
-        }
-#endif
-
-    for( ; x < width; x++ )
-    {
-        const uchar* s = S + x*cn;
-        p0[x] = s[0];
-        p1[x] = s[1];
-        p2[x] = s[2];
-        if( cn == 4 )
-            p3[x] = s[3];
-    }
-}
-
-static void area_interleave_row_f32(const float* chbuf, int width, int cn, float* buf)
-{
-    const float* p0 = chbuf;
-    const float* p1 = p0 + width;
-    const float* p2 = p1 + width;
-    const float* p3 = p2 + width;
-    int x = 0;
-
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    const int step = VTraits<v_float32>::vlanes();
-    if( cn == 3 )
-        for( ; x <= width - step; x += step )
-            v_store_interleave(buf + x*3, vx_load(p0 + x), vx_load(p1 + x),
-                               vx_load(p2 + x));
-    else
-        for( ; x <= width - step; x += step )
-            v_store_interleave(buf + x*4, vx_load(p0 + x), vx_load(p1 + x),
-                               vx_load(p2 + x), vx_load(p3 + x));
-#endif
-
-    for( ; x < width; x++ )
-    {
-        float* d = buf + x*cn;
-        d[0] = p0[x];
-        d[1] = p1[x];
-        d[2] = p2[x];
-        if( cn == 4 )
-            d[3] = p3[x];
-    }
-}
-
-
-static void fill_row_buf_hcol_u8cn(float* buf, const uchar* S,
-                                   const AreaHCol* plan, int ncols,
-                                   const AreaHCol3* h3, const AreaHColRun* hrun,
-                                   const AreaHPlanar& pl)
-{
-    area_split_row_u8(S, pl.src_width, pl.cn, pl.planes);
-
-    for( int ch = 0; ch < pl.cn; ch++ )
-        fill_row_buf_hcol_u8c1(pl.chbuf + ch*pl.dst_width, pl.dst_width,
-                               pl.planes + ch*pl.src_width, plan, ncols, h3, hrun);
-
-    area_interleave_row_f32(pl.chbuf, pl.dst_width, pl.cn, buf);
-}
-
-template<typename T, typename WT>
-struct fill_row_buf
-{
-    static void call(WT* buf, int width_cn, const T* S, int cn,
-                     const DecimateAlpha* xtab, int xtab_size,
-                     const AreaHCol* hcol, int hcol_cols, const AreaHCol3* h3,
-                     const AreaHColRun* hrun, const AreaHPlanar* pl)
-    {
-        CV_UNUSED(hcol);
-        CV_UNUSED(hcol_cols);
-        CV_UNUSED(h3);
-        CV_UNUSED(hrun);
-        CV_UNUSED(pl);
-        fill_row_buf_xtab(buf, width_cn, S, cn, xtab, xtab_size);
-    }
-};
-
-template<>
-struct fill_row_buf<uchar, float>
-{
-    static void call(float* buf, int width_cn, const uchar* S, int cn,
-                     const DecimateAlpha* xtab, int xtab_size,
-                     const AreaHCol* hcol, int hcol_cols, const AreaHCol3* h3,
-                     const AreaHColRun* hrun, const AreaHPlanar* pl)
-    {
-        if( hcol && cn == 1 )
-            fill_row_buf_hcol_u8c1(buf, width_cn, S, hcol, hcol_cols, h3, hrun);
-        else if( hcol && pl )
-            fill_row_buf_hcol_u8cn(buf, S, hcol, hcol_cols, h3, hrun, *pl);
-        else
-            fill_row_buf_xtab(buf, width_cn, S, cn, xtab, xtab_size);
-    }
-};
-
-}  // namespace resize_area_detail
-
 template<typename T, typename WT> class ResizeArea_Invoker :
     public ParallelLoopBody
 {
@@ -6202,10 +3704,7 @@ public:
     ResizeArea_Invoker( const Mat& _src, Mat& _dst,
                         const DecimateAlpha* _xtab, int _xtab_size,
                         const DecimateAlpha* _ytab, int _ytab_size,
-                        const int* _tabofs,
-                        const AreaHCol* _hcol, int _hcol_cols,
-                        const AreaHCol3* _hcol3,
-                        const AreaHColRun* _hcolrun )
+                        const int* _tabofs )
     {
         src = &_src;
         dst = &_dst;
@@ -6214,10 +3713,6 @@ public:
         ytab = _ytab;
         ytab_size = _ytab_size;
         tabofs = _tabofs;
-        hcol = _hcol;
-        hcol_cols = _hcol_cols;
-        hcol3 = _hcol3;
-        hcolrun = _hcolrun;
     }
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
@@ -6231,18 +3726,6 @@ public:
         WT *buf = _buffer.data(), *sum = buf + dsize.width;
         int j_start = tabofs[range.start], j_end = tabofs[range.end], j, k, dx, prev_dy = ytab[j_start].di;
 
-        // The multi-channel plan works on one plane at a time, so it needs a
-        // source row split by channel and a destination row per channel.
-        const bool planar = hcol != 0 && cn != 1;
-        AutoBuffer<uchar> _planes(planar ? src->cols*cn : 0);
-        AutoBuffer<float> _chbuf(planar ? dst->cols*cn : 0);
-        resize_area_detail::AreaHPlanar pl;
-        pl.planes = _planes.data();
-        pl.chbuf = _chbuf.data();
-        pl.cn = cn;
-        pl.src_width = src->cols;
-        pl.dst_width = dst->cols;
-
         for( dx = 0; dx < dsize.width; dx++ )
             sum[dx] = (WT)0;
 
@@ -6254,69 +3737,62 @@ public:
 
             {
                 const T* S = src->template ptr<T>(sy);
-                if( hcol )
+                for( dx = 0; dx < dsize.width; dx++ )
+                    buf[dx] = (WT)0;
+
+                if( cn == 1 )
+                    for( k = 0; k < xtab_size; k++ )
+                    {
+                        int dxn = xtab[k].di;
+                        WT alpha = xtab[k].alpha;
+                        buf[dxn] += S[xtab[k].si]*alpha;
+                    }
+                else if( cn == 2 )
+                    for( k = 0; k < xtab_size; k++ )
+                    {
+                        int sxn = xtab[k].si;
+                        int dxn = xtab[k].di;
+                        WT alpha = xtab[k].alpha;
+                        WT t0 = buf[dxn] + S[sxn]*alpha;
+                        WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
+                        buf[dxn] = t0; buf[dxn+1] = t1;
+                    }
+                else if( cn == 3 )
+                    for( k = 0; k < xtab_size; k++ )
+                    {
+                        int sxn = xtab[k].si;
+                        int dxn = xtab[k].di;
+                        WT alpha = xtab[k].alpha;
+                        WT t0 = buf[dxn] + S[sxn]*alpha;
+                        WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
+                        WT t2 = buf[dxn+2] + S[sxn+2]*alpha;
+                        buf[dxn] = t0; buf[dxn+1] = t1; buf[dxn+2] = t2;
+                    }
+                else if( cn == 4 )
                 {
-                    resize_area_detail::fill_row_buf<T, WT>::call(
-                        buf, dsize.width, S, cn, xtab, xtab_size, hcol, hcol_cols, hcol3,
-                        hcolrun, planar ? &pl : 0);
+                    for( k = 0; k < xtab_size; k++ )
+                    {
+                        int sxn = xtab[k].si;
+                        int dxn = xtab[k].di;
+                        WT alpha = xtab[k].alpha;
+                        WT t0 = buf[dxn] + S[sxn]*alpha;
+                        WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
+                        buf[dxn] = t0; buf[dxn+1] = t1;
+                        t0 = buf[dxn+2] + S[sxn+2]*alpha;
+                        t1 = buf[dxn+3] + S[sxn+3]*alpha;
+                        buf[dxn+2] = t0; buf[dxn+3] = t1;
+                    }
                 }
                 else
                 {
-                    for( dx = 0; dx < dsize.width; dx++ )
-                        buf[dx] = (WT)0;
-
-                    if( cn == 1 )
-                        for( k = 0; k < xtab_size; k++ )
-                        {
-                            int dxn = xtab[k].di;
-                            WT alpha = xtab[k].alpha;
-                            buf[dxn] += S[xtab[k].si]*alpha;
-                        }
-                    else if( cn == 2 )
-                        for( k = 0; k < xtab_size; k++ )
-                        {
-                            int sxn = xtab[k].si;
-                            int dxn = xtab[k].di;
-                            WT alpha = xtab[k].alpha;
-                            WT t0 = buf[dxn] + S[sxn]*alpha;
-                            WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
-                            buf[dxn] = t0; buf[dxn+1] = t1;
-                        }
-                    else if( cn == 3 )
-                        for( k = 0; k < xtab_size; k++ )
-                        {
-                            int sxn = xtab[k].si;
-                            int dxn = xtab[k].di;
-                            WT alpha = xtab[k].alpha;
-                            WT t0 = buf[dxn] + S[sxn]*alpha;
-                            WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
-                            WT t2 = buf[dxn+2] + S[sxn+2]*alpha;
-                            buf[dxn] = t0; buf[dxn+1] = t1; buf[dxn+2] = t2;
-                        }
-                    else if( cn == 4 )
+                    for( k = 0; k < xtab_size; k++ )
                     {
-                        for( k = 0; k < xtab_size; k++ )
-                        {
-                            int sxn = xtab[k].si;
-                            int dxn = xtab[k].di;
-                            WT alpha = xtab[k].alpha;
-                            WT t0 = buf[dxn] + S[sxn]*alpha;
-                            WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
-                            buf[dxn] = t0; buf[dxn+1] = t1;
-                            t0 = buf[dxn+2] + S[sxn+2]*alpha;
-                            t1 = buf[dxn+3] + S[sxn+3]*alpha;
-                            buf[dxn+2] = t0; buf[dxn+3] = t1;
-                        }
+                        int sxn = xtab[k].si;
+                        int dxn = xtab[k].di;
+                        WT alpha = xtab[k].alpha;
+                        for( int c = 0; c < cn; c++ )
+                            buf[dxn + c] += S[sxn + c]*alpha;
                     }
-                    else
-                        for( k = 0; k < xtab_size; k++ )
-                        {
-                            int sxn = xtab[k].si;
-                            int dxn = xtab[k].di;
-                            WT alpha = xtab[k].alpha;
-                            for( int c = 0; c < cn; c++ )
-                                buf[dxn + c] += S[sxn + c]*alpha;
-                        }
                 }
             }
 
@@ -6342,10 +3818,6 @@ private:
     const DecimateAlpha* ytab;
     int xtab_size0, ytab_size;
     const int* tabofs;
-    const AreaHCol* hcol;
-    int hcol_cols;
-    const AreaHCol3* hcol3;
-    const AreaHColRun* hcolrun;
 };
 
 
@@ -6353,15 +3825,236 @@ template <typename T, typename WT>
 static void resizeArea_( const Mat& src, Mat& dst,
                          const DecimateAlpha* xtab, int xtab_size,
                          const DecimateAlpha* ytab, int ytab_size,
-                         const int* tabofs,
-                         const AreaHCol* hcol, int hcol_cols,
-                         const AreaHCol3* hcol3,
-                         const AreaHColRun* hcolrun )
+                         const int* tabofs )
 {
     parallel_for_(Range(0, dst.rows),
-                 ResizeArea_Invoker<T, WT>(src, dst, xtab, xtab_size, ytab, ytab_size, tabofs, hcol, hcol_cols, hcol3, hcolrun),
+                 ResizeArea_Invoker<T, WT>(src, dst, xtab, xtab_size, ytab, ytab_size, tabofs),
                  dst.total()/((double)(1 << 16)));
 }
+
+// Horizontal INTER_AREA taps per destination element (channel included), stored tap-major
+// so a vector of neighbouring elements loads tap t contiguously. Elements with fewer than
+// ntaps taps are padded with a valid index and zero weight; the padding is masked out.
+struct AreaXPlan
+{
+    int ntaps;
+    int width;
+    const int* idx;
+    const float* w;
+    const int* cnt;
+};
+
+static void buildAreaXPlan( const DecimateAlpha* xtab, int xtab_size, int width, int cn,
+                            AutoBuffer<int>& _idx, AutoBuffer<float>& _w, AutoBuffer<int>& _cnt,
+                            AreaXPlan& plan )
+{
+    _cnt.allocate(width);
+    int* cnt = _cnt.data();
+    std::fill(cnt, cnt + width, 0);
+    for( int k = 0; k < xtab_size; k++ )
+        cnt[xtab[k].di]++;
+    int ntaps = 0;
+    for( int e = 0; e < width; e += cn )
+        ntaps = std::max(ntaps, cnt[e]);
+
+    _idx.allocate((size_t)ntaps * width);
+    _w.allocate((size_t)ntaps * width);
+    int* idx = _idx.data();
+    float* w = _w.data();
+    std::fill(w, w + (size_t)ntaps * width, 0.f);
+
+    for( int k = 0, t = 0; k < xtab_size; k++ )
+    {
+        const int e = xtab[k].di;
+        t = (k > 0 && xtab[k - 1].di == e) ? t + 1 : 0;
+        for( int c = 0; c < cn; c++ )
+        {
+            idx[(size_t)t * width + e + c] = xtab[k].si + c;
+            w[(size_t)t * width + e + c] = xtab[k].alpha;
+            if( t == 0 )
+                for( int p = cnt[e]; p < ntaps; p++ )
+                    idx[(size_t)p * width + e + c] = xtab[k].si + c;
+        }
+    }
+    for( int e = 0; e < width; e += cn )
+        for( int c = 1; c < cn; c++ )
+            cnt[e + c] = cnt[e];
+
+    plan.ntaps = ntaps;
+    plan.width = width;
+    plan.idx = idx;
+    plan.w = w;
+    plan.cnt = cnt;
+}
+
+// S must be readable one float past the row end when cn == 3.
+static void area_hpass_32f(float* D, const float* S, const AreaXPlan& p, int cn)
+{
+    const int width = p.width;
+    int e = 0;
+#if CV_SIMD128
+    // 3 or 4 channels of a pixel share their taps: one 4-float load per tap, no gather.
+    // A 3-channel store spills one float into the next pixel, which overwrites it, so the
+    // last pixel is left to the scalar loop.
+    if( cn == 3 || cn == 4 )
+    {
+        const int end = cn == 4 ? width : width - 3;
+        for( ; e < end; e += cn )
+        {
+            v_float32x4 acc = v_setzero_f32();
+            for( int t = 0; t < p.cnt[e]; t++ )
+            {
+                const size_t o = (size_t)t * width + e;
+                acc = v_muladd(v_load(S + p.idx[o]), v_setall_f32(p.w[o]), acc);
+            }
+            v_store(D + e, acc);
+        }
+    }
+    else
+#endif
+    {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int L = VTraits<v_float32>::vlanes();
+        for( ; e <= width - L; e += L )
+        {
+            const v_int32 cnt = vx_load(p.cnt + e);
+            v_float32 acc = vx_setzero_f32();
+            for( int t = 0; t < p.ntaps; t++ )
+            {
+                const size_t o = (size_t)t * width + e;
+                const v_float32 s = vx_lut(S, p.idx + o);
+                const v_float32 m = v_reinterpret_as_f32(v_lt(vx_setall_s32(t), cnt));
+                acc = v_select(m, v_muladd(s, vx_load(p.w + o), acc), acc);
+            }
+            v_store(D + e, acc);
+        }
+#endif
+    }
+    for( ; e < width; e++ )
+    {
+        float acc = 0.f;
+        for( int t = 0; t < p.cnt[e]; t++ )
+            acc += S[p.idx[(size_t)t * width + e]] * p.w[(size_t)t * width + e];
+        D[e] = acc;
+    }
+}
+
+// vrow = beta*S (first row of a destination row) or vrow += beta*S.
+static inline void area_vacc_row(const float* S, int n, float beta, float* vrow, bool first)
+{
+    if( first )
+        inter_area::mul(S, n, beta, vrow);
+    else
+        inter_area::muladd(S, n, beta, vrow);
+}
+
+static inline void area_vacc_row(const uchar* S, int n, float beta, float* vrow, bool first)
+{
+    int x = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int L = VTraits<v_float32>::vlanes();
+    const v_float32 vb = vx_setall_f32(beta);
+    for( ; x <= n - L; x += L )
+    {
+        const v_float32 s = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(S + x)));
+        v_store(vrow + x, first ? v_mul(s, vb) : v_muladd(s, vb, vx_load(vrow + x)));
+    }
+#endif
+    for( ; x < n; x++ )
+        vrow[x] = first ? S[x]*beta : vrow[x] + S[x]*beta;
+}
+
+static inline void area_vacc_row(const ushort* S, int n, float beta, float* vrow, bool first)
+{
+    int x = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int L = VTraits<v_float32>::vlanes();
+    const v_float32 vb = vx_setall_f32(beta);
+    for( ; x <= n - L; x += L )
+    {
+        const v_float32 s = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand(S + x)));
+        v_store(vrow + x, first ? v_mul(s, vb) : v_muladd(s, vb, vx_load(vrow + x)));
+    }
+#endif
+    for( ; x < n; x++ )
+        vrow[x] = first ? S[x]*beta : vrow[x] + S[x]*beta;
+}
+
+static inline void area_vacc_row(const short* S, int n, float beta, float* vrow, bool first)
+{
+    int x = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int L = VTraits<v_float32>::vlanes();
+    const v_float32 vb = vx_setall_f32(beta);
+    for( ; x <= n - L; x += L )
+    {
+        const v_float32 s = v_cvt_f32(vx_load_expand(S + x));
+        v_store(vrow + x, first ? v_mul(s, vb) : v_muladd(s, vb, vx_load(vrow + x)));
+    }
+#endif
+    for( ; x < n; x++ )
+        vrow[x] = first ? S[x]*beta : vrow[x] + S[x]*beta;
+}
+
+// The weighted source rows of each destination row are summed first, so the horizontal
+// pass runs once per destination row instead of once per (row, weight) pair. The order of
+// the float additions differs from ResizeArea_Invoker.
+template<typename T>
+class ResizeAreaVFirst_Invoker : public ParallelLoopBody
+{
+public:
+    ResizeAreaVFirst_Invoker( const Mat& _src, Mat& _dst, const AreaXPlan& _xplan,
+                              const DecimateAlpha* _ytab, const int* _tabofs ) :
+        src(_src), dst(_dst), xplan(_xplan), ytab(_ytab), tabofs(_tabofs)
+    {
+    }
+
+    virtual void operator() (const Range& range) const CV_OVERRIDE
+    {
+        const int cn = src.channels(), swidth = src.cols * cn, dwidth = dst.cols * cn;
+        const bool is_float = std::is_same<T, float>::value;
+        AutoBuffer<float> _vrow(swidth + 1 + (is_float ? 0 : dwidth));
+        float* vrow = _vrow.data();
+        float* drow = vrow + swidth + 1;
+        vrow[swidth] = 0.f;
+
+        for( int dy = range.start; dy < range.end; dy++ )
+        {
+            for( int j = tabofs[dy]; j < tabofs[dy + 1]; j++ )
+                area_vacc_row(src.ptr<T>(ytab[j].si), swidth, ytab[j].alpha, vrow, j == tabofs[dy]);
+            if( is_float )
+                area_hpass_32f(dst.ptr<float>(dy), vrow, xplan, cn);
+            else
+            {
+                area_hpass_32f(drow, vrow, xplan, cn);
+                inter_area::saturate_store(drow, dwidth, dst.ptr<T>(dy));
+            }
+        }
+    }
+
+private:
+    const Mat& src;
+    Mat& dst;
+    const AreaXPlan& xplan;
+    const DecimateAlpha* ytab;
+    const int* tabofs;
+};
+
+template <typename T>
+static void resizeAreaVFirst_( const Mat& src, Mat& dst,
+                               const DecimateAlpha* xtab, int xtab_size,
+                               const DecimateAlpha* ytab, int /*ytab_size*/,
+                               const int* tabofs )
+{
+    AutoBuffer<int> _xidx, _xcnt;
+    AutoBuffer<float> _xw;
+    AreaXPlan xplan;
+    buildAreaXPlan(xtab, xtab_size, dst.cols*dst.channels(), dst.channels(), _xidx, _xw, _xcnt, xplan);
+    parallel_for_(Range(0, dst.rows),
+                  ResizeAreaVFirst_Invoker<T>(src, dst, xplan, ytab, tabofs),
+                  dst.total()/((double)(1 << 16)));
+}
+
 
 
 typedef void (*ResizeFunc)( const Mat& src, Mat& dst,
@@ -6376,10 +4069,7 @@ typedef void (*ResizeAreaFastFunc)( const Mat& src, Mat& dst,
 typedef void (*ResizeAreaFunc)( const Mat& src, Mat& dst,
                                 const DecimateAlpha* xtab, int xtab_size,
                                 const DecimateAlpha* ytab, int ytab_size,
-                                const int* tabofs,
-                                const AreaHCol* hcol, int hcol_cols,
-                                const AreaHCol3* hcol3,
-                                const AreaHColRun* hcolrun );
+                                const int* yofs);
 
 
 static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, DecimateAlpha* tab )
@@ -6766,8 +4456,8 @@ void resize_cpu(int src_type,
 
     static ResizeAreaFunc area_tab[] =
     {
-        resizeArea_<uchar, float>, 0, resizeArea_<ushort, float>,
-        resizeArea_<short, float>, 0, resizeArea_<float, float>,
+        resizeAreaVFirst_<uchar>, 0, resizeAreaVFirst_<ushort>,
+        resizeAreaVFirst_<short>, 0, resizeAreaVFirst_<float>,
         resizeArea_<double, double>, 0
     };
 
@@ -6825,34 +4515,6 @@ void resize_cpu(int src_type,
             DecimateAlpha* xtab = _xytab.data(), *ytab = xtab + src_width*2;
             int xtab_size = 0, ytab_size = 0;
 
-            if( depth == CV_8U && (cn == 1 || cn == 3 || cn == 4) &&
-                area_rational_detail::is_rational_10_3(src_width, dsize.width, src_height, dsize.height, scale_x, scale_y) )
-            {
-                area_rational_detail::resizeAreaRational10_3_u8_(src, dst);
-                return;
-            }
-
-            if( depth == CV_8U && (cn == 1 || cn == 3 || cn == 4) &&
-                area_rational_detail::is_rational_5_3(src_width, dsize.width, src_height, dsize.height, scale_x, scale_y) )
-            {
-                area_rational_detail::resizeAreaRational5_3_u8_(src, dst);
-                return;
-            }
-
-            if( depth == CV_32F && (cn == 1 || cn == 3 || cn == 4) &&
-                area_rational_detail::is_rational_10_3(src_width, dsize.width, src_height, dsize.height, scale_x, scale_y) )
-            {
-                area_rational_detail::resizeAreaRational10_3_f32_(src, dst);
-                return;
-            }
-
-            if( depth == CV_32F && (cn == 1 || cn == 3 || cn == 4) &&
-                area_rational_detail::is_rational_5_3(src_width, dsize.width, src_height, dsize.height, scale_x, scale_y) )
-            {
-                area_rational_detail::resizeAreaRational5_3_f32_(src, dst);
-                return;
-            }
-
             ytab_size = computeResizeAreaTab(src_height, dsize.height, 1, scale_y, ytab);
 
             AutoBuffer<int> _tabofs(dsize.height + 1);
@@ -6867,72 +4529,8 @@ void resize_cpu(int src_type,
             }
             tabofs[dy] = ytab_size;
 
-            // Plane-by-plane hcol: cn==1 wins on all CPUs; cn>1 only when AVX-512 VBMI
-            // fast paths exist (otherwise split/interleave overhead hurts ARM).
-#if CV_AVX_512VBMI
-            const bool use_u8_hcol = (depth == CV_8U && (cn == 1 || cn == 3 || cn == 4));
-#else
-            const bool use_u8_hcol = (depth == CV_8U && cn == 1);
-#endif
-            if( use_u8_hcol )
-            {
-                AutoBuffer<AreaHCol> _hcol(dsize.width);
-                const int hcol_cols = buildAreaHColPlan(src_width, dsize.width, 1, scale_x, _hcol.data());
-
-                AutoBuffer<int> _base(dsize.width);
-                AutoBuffer<float> _w(dsize.width*3);
-                AreaHCol3 hcol3;
-                hcol3.base = _base.data();
-                hcol3.w0 = _w.data();
-                hcol3.w1 = _w.data() + dsize.width;
-                hcol3.w2 = _w.data() + dsize.width*2;
-                hcol3.ncols = hcol_cols;
-                hcol3.ssize = src_width;
-                const bool has3 = buildAreaHCol3Plan(_hcol.data(), hcol_cols, _base.data(),
-                                                     _w.data(), _w.data() + dsize.width,
-                                                     _w.data() + dsize.width*2);
-
-                AutoBuffer<int> _ridx;
-                AutoBuffer<unsigned short> _rmask;
-                AutoBuffer<float> _rw;
-                AutoBuffer<unsigned long long> _rgmask;
-                AreaHColRun hcolrun;
-                bool hasrun = false;
-
-                if( !has3 )
-                {
-                    _ridx.allocate(dsize.width*3);
-                    _rmask.allocate(dsize.width);
-                    _rw.allocate(dsize.width*3);
-                    _rgmask.allocate(dsize.width / AREA_HCOL_GROUP + 1);
-                    hcolrun.ngroups = 0;
-                    hasrun = buildAreaHColRunPlan(_hcol.data(), hcol_cols,
-                                                  _ridx.data(), _rmask.data(),
-                                                  _ridx.data() + dsize.width,
-                                                  _ridx.data() + dsize.width*2,
-                                                  _rw.data(), _rw.data() + dsize.width,
-                                                  _rw.data() + dsize.width*2,
-                                                  _rgmask.data(), &hcolrun.ngroups);
-                    hcolrun.gmask = _rgmask.data();
-                    hcolrun.ssize = src_width;
-                    hcolrun.sx1 = _ridx.data();
-                    hcolrun.mask = _rmask.data();
-                    hcolrun.si_left = _ridx.data() + dsize.width;
-                    hcolrun.si_right = _ridx.data() + dsize.width*2;
-                    hcolrun.a_left = _rw.data();
-                    hcolrun.w_mid = _rw.data() + dsize.width;
-                    hcolrun.a_right = _rw.data() + dsize.width*2;
-                    hcolrun.ncols = hcol_cols;
-                }
-
-                func( src, dst, xtab, 0, ytab, ytab_size, tabofs, _hcol.data(), hcol_cols,
-                      has3 ? &hcol3 : 0, hasrun ? &hcolrun : 0 );
-                return;
-            }
-
             xtab_size = computeResizeAreaTab(src_width, dsize.width, cn, scale_x, xtab);
-
-            func( src, dst, xtab, xtab_size, ytab, ytab_size, tabofs, 0, 0, 0, 0 );
+            func( src, dst, xtab, xtab_size, ytab, ytab_size, tabofs );
             return;
         }
     }

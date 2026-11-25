@@ -1723,6 +1723,28 @@ static Mat resizeAreaRef_8u(const Mat& src, Size dsize, double scale_x, double s
     return dst;
 }
 
+// The 32F path sums rows before columns; the 64F path keeps the original order, so both
+// must agree up to float rounding.
+TEST(Resize, area_fractional_32f)
+{
+    RNG& rng = theRNG();
+    for (int cn : { 1, 2, 3, 4 })
+    for (int iter = 0; iter < 40; iter++)
+    {
+        Mat big(rng.uniform(20, 200), rng.uniform(20, 300), CV_32FC(cn));
+        rng.fill(big, RNG::UNIFORM, -100.f, 100.f);
+        const Mat src = big(Rect(1, 1, big.cols - 2, big.rows - 1));
+        const double f = rng.uniform(0.05, 0.95);
+        Mat src64, dst, ref;
+        src.convertTo(src64, CV_64F);
+        cv::resize(src, dst, Size(), f, f, INTER_AREA);
+        cv::resize(src64, ref, Size(), f, f, INTER_AREA);
+        ref.convertTo(ref, CV_32F);
+        EXPECT_LE(cvtest::norm(dst, ref, NORM_INF), 1e-4)
+            << "cn=" << cn << " src=" << src.size() << " f=" << f;
+    }
+}
+
 TEST(Resize, area_fractional_clipped_edge_8u)
 {
     Mat ramp(31, 33, CV_8UC1);
@@ -1811,7 +1833,7 @@ static Mat resizeNearestRef(const Mat& src, Size dsize, double fx, double fy)
     return ref;
 }
 
-static Mat makeNearestRationalSrc(int sh, int sw, int type)
+static Mat makeNearestSrc(int sh, int sw, int type)
 {
     Mat src(sh, sw, type);
     for (int y = 0; y < sh; y++)
@@ -1820,36 +1842,38 @@ static Mat makeNearestRationalSrc(int sh, int sw, int type)
     return src;
 }
 
-TEST(Resize, nearest_rational_up)
+TEST(Resize, nearest_up_any_ratio)
 {
-    const int ratios[][2] = { {13, 10}, {12, 5}, {17, 5} };
-    const int types[] = { CV_8UC2, CV_8UC4 };
-    for (const auto& r : ratios)
+    RNG& rng = theRNG();
+    const int types[] = { CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4, CV_16UC2, CV_32FC1 };
     for (int type : types)
-    for (int tall = 0; tall <= 1; tall++)
-    for (int explicit_scale = 0; explicit_scale <= 1; explicit_scale++)
+    for (int iter = 0; iter < 60; iter++)
     {
-        const int num = r[0], den = r[1];
-        const int sw = tall ? den : den * 1000, sh = tall ? 50000 : den * 3;
-        Mat src = makeNearestRationalSrc(sh, sw, type);
-
-        const Size dsize(sw * num / den, sh * num / den);
-        const double f = (double)num / den;
-        Mat dst;
-        if (explicit_scale)
+        const int sw = rng.uniform(1, 300), sh = rng.uniform(1, 40);
+        Mat big = makeNearestSrc(sh + 2, sw + 3, type);
+        const Mat src = (iter & 1) ? big(Rect(1, 1, sw, sh)) : big(Rect(0, 0, sw, sh)).clone();
+        const double f = rng.uniform(1.0, 5.0);
+        Mat dst, ref;
+        if (iter & 2)
+        {
             cv::resize(src, dst, Size(), f, f, INTER_NEAREST);
+            ref = resizeNearestRef(src, dst.size(), f, f);
+        }
         else
+        {
+            const Size dsize(cvRound(sw * f), cvRound(sh * f));
             cv::resize(src, dst, dsize, 0, 0, INTER_NEAREST);
-        ASSERT_EQ(dsize, dst.size());
-
-        Mat ref = resizeNearestRef(src, dsize, (double)dsize.width / sw, (double)dsize.height / sh);
-        EXPECT_EQ(0, cvtest::norm(dst, ref, NORM_INF)) << "ratio " << num << "/" << den << " type " << type
-            << " size " << src.size() << " explicit " << explicit_scale;
+            ref = resizeNearestRef(src, dsize, (double)dsize.width / sw, (double)dsize.height / sh);
+        }
+        const Mat dst_bytes(dst.rows, (int)(dst.cols * dst.elemSize()), CV_8U, dst.data, dst.step);
+        const Mat ref_bytes(ref.rows, (int)(ref.cols * ref.elemSize()), CV_8U, ref.data, ref.step);
+        EXPECT_EQ(0, cvtest::norm(dst_bytes, ref_bytes, NORM_INF)) << "type " << type
+            << " size " << src.size() << " -> " << dst.size() << " f " << f << " iter " << iter;
     }
 }
 
 // Explicit factors that only round to a rational size must keep the generic mapping.
-TEST(Resize, nearest_rational_up_inexact_scale)
+TEST(Resize, nearest_up_inexact_scale)
 {
     const struct { int sw, sh; double fx, fy; } cases[] = {
         { 10, 10, 1.34, 1.3 }, { 10, 10, 1.3, 1.34 }, { 10, 10, 1.31, 1.31 },
@@ -1859,12 +1883,60 @@ TEST(Resize, nearest_rational_up_inexact_scale)
     for (const auto& c : cases)
     for (int type : types)
     {
-        Mat src = makeNearestRationalSrc(c.sh, c.sw, type);
+        Mat src = makeNearestSrc(c.sh, c.sw, type);
         Mat dst;
         cv::resize(src, dst, Size(), c.fx, c.fy, INTER_NEAREST);
         Mat ref = resizeNearestRef(src, dst.size(), c.fx, c.fy);
         EXPECT_EQ(0, cvtest::norm(dst, ref, NORM_INF)) << "fx " << c.fx << " fy " << c.fy
             << " type " << type << " size " << src.size();
+    }
+}
+
+// Integer INTER_AREA downscale: each output is the rounded mean of its scale x scale block
+// (2x2 rounds as (sum + 2) >> 2); cells clipped by the source edge average only the pixels
+// they cover.
+static Mat resizeAreaIntRef_8u(const Mat& src, int scale)
+{
+    const int cn = src.channels();
+    const double f = 1. / scale;
+    Mat dst(saturate_cast<int>(src.rows * f), saturate_cast<int>(src.cols * f), src.type());
+    for (int dy = 0; dy < dst.rows; dy++)
+        for (int dx = 0; dx < dst.cols; dx++)
+            for (int c = 0; c < cn; c++)
+            {
+                int sum = 0, count = 0;
+                for (int sy = dy * scale; sy < std::min((dy + 1) * scale, src.rows); sy++)
+                    for (int sx = dx * scale; sx < std::min((dx + 1) * scale, src.cols); sx++, count++)
+                        sum += src.ptr(sy)[sx * cn + c];
+                uchar& d = dst.ptr(dy)[dx * cn + c];
+                if (count != scale * scale)
+                    d = saturate_cast<uchar>((float)sum / count);
+                else if (scale == 2)
+                    d = (uchar)((sum + 2) >> 2);
+                else
+                    d = saturate_cast<uchar>(sum * (1.f / (scale * scale)));
+            }
+    return dst;
+}
+
+TEST(Resize, area_integer_scale_8u)
+{
+    RNG& rng = theRNG();
+    const int scales[] = { 2, 3, 4, 5, 6, 7, 10, 13, 16, 33 };
+    for (int cn : { 1, 3, 4 })
+    for (int scale : scales)
+    for (int iter = 0; iter < 6; iter++)
+    {
+        const int sw = scale * rng.uniform(1, 90) + (iter & 1 ? rng.uniform(0, scale) : 0);
+        const int sh = scale * rng.uniform(1, 6) + (iter & 2 ? rng.uniform(0, scale) : 0);
+        Mat big(sh + 1, sw + 2, CV_8UC(cn));
+        rng.fill(big, RNG::UNIFORM, 0, 256);
+        const Mat src = big(Rect(1, 1, sw, sh));
+        Mat ref = resizeAreaIntRef_8u(src, scale), dst;
+        cv::resize(src, dst, Size(), 1. / scale, 1. / scale, INTER_AREA);
+        ASSERT_EQ(ref.size(), dst.size());
+        EXPECT_EQ(0, cvtest::norm(dst, ref, NORM_INF)) << "cn " << cn << " scale " << scale
+            << " size " << src.size() << " -> " << ref.size();
     }
 }
 
@@ -1896,7 +1968,7 @@ private:
 
 TEST(Resize, nearest_gather_stays_in_bounds)
 {
-    const int types[] = { CV_8UC1, CV_8UC2, CV_32FC3 };
+    const int types[] = { CV_8UC1, CV_8UC2, CV_8UC4, CV_32FC3 };
     const int interps[] = { INTER_NEAREST, INTER_NEAREST_EXACT };
     const int widths[] = { 64, 100, 130, 257 };
     const double scales[] = { 9.0, 2.0, 1.5, 1.3, 0.75, 0.5, 0.2 };
