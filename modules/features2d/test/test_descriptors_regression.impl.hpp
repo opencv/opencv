@@ -135,7 +135,7 @@ protected:
         float failed_percents = (100 * (float)failed_count / validDescriptors.rows);
         std::stringstream ss;
         ss << "Exact count (dist == 0): " << exact_count << " (" << (int)exact_percents << "%)" << std::endl
-                << "Failed count (dist > " << maxDist << "): " << failed_count << " (" << (int)failed_percents << "%)" << std::endl
+                << "Failed count (dist > " << maxDist << " or NaN): " << failed_count << " (" << (int)failed_percents << "%)" << std::endl
                 << "Max distance between valid and computed descriptors (" << validDescriptors.size() << "): " << curMaxDist;
         EXPECT_LE(failed_percents, 20.0f);
         std::cout << ss.str() << std::endl;
