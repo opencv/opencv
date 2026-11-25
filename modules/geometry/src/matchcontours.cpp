@@ -41,13 +41,18 @@
 #include "precomp.hpp"
 
 
-double cv::matchShapes(InputArray contour1, InputArray contour2, int method, double)
+double cv::matchShapes(InputArray contour1, InputArray contour2, int method, double parameter)
+{
+    return matchShapes(contour1, contour2, method, parameter, 1.e-5);
+}
+
+double cv::matchShapes(InputArray contour1, InputArray contour2, int method, double, double eps)
 {
     CV_INSTRUMENT_REGION();
+    CV_Check(eps, std::isfinite(eps) && eps >= 0, "Hu moment threshold must be finite and non-negative");
 
     double ma[7], mb[7];
     int i, sma, smb;
-    double eps = 1.e-5;
     double mmm;
     double result = 0;
     bool anyA = false, anyB = false;

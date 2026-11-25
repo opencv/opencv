@@ -493,15 +493,29 @@ CV_EXPORTS_W void HuMoments( const Moments& m, OutputArray hu );
 
 /** @brief Compares two shapes.
  *
- * The function compares two shapes. All three implemented methods use the Hu invariants (see #HuMoments)
+ * All three methods compare corresponding Hu moments (see #HuMoments). A pair contributes
+ * to the distance only if both absolute values exceed the threshold (1e-5 by default).
+ * Differences in skipped pairs can therefore give distinct shapes a distance of zero.
+ * If exactly one shape has seven zero Hu moments, the distance is DBL_MAX for any threshold.
  *
  * @param contour1 First contour or grayscale image.
  * @param contour2 Second contour or grayscale image.
  * @param method Comparison method, see #ShapeMatchModes
- * @param parameter Method-specific parameter (not supported now).
+ * @param parameter Reserved for method-specific use. Currently ignored.
  */
 CV_EXPORTS_W double matchShapes( InputArray contour1, InputArray contour2,
                                  int method, double parameter );
+
+/** @overload
+ * @param contour1 First contour or grayscale image.
+ * @param contour2 Second contour or grayscale image.
+ * @param method Comparison method, see #ShapeMatchModes
+ * @param parameter Reserved for method-specific use. Currently ignored.
+ * @param eps Finite, non-negative threshold on the absolute Hu moments. Use zero to
+ * include every pair for which both moments are nonzero.
+ */
+CV_EXPORTS_W double matchShapes( InputArray contour1, InputArray contour2,
+                                 int method, double parameter, double eps );
 
 /** @example samples/cpp/geometry.cpp
  * An example program illustrates the use of cv::convexHull, cv::fitEllipse, cv::minEnclosingTriangle, cv::minEnclosingCircle and cv::minAreaRect.
