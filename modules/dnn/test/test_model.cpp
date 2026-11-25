@@ -400,6 +400,11 @@ TEST_P(Test_Model, ClassifyBatch)
         EXPECT_EQ(classIds[i], refClassIds[i]) << "image " << i;
         EXPECT_NEAR(confs[i], refConfs[i], scoreDiff) << "image " << i;
     }
+
+    // The single-image overload reads one sample, so a vector must not reach it as a batch.
+    int oneId = -1;
+    float oneConf = -1.f;
+    EXPECT_THROW(model.classify(frames, oneId, oneConf), cv::Exception);
 }
 
 TEST_P(Test_Model, ClassifyBatchHigherRank)
@@ -1202,6 +1207,11 @@ TEST_P(Test_Model, OutputFormatRejectsWrongDeclaration)
     // A class-index row is 6 wide and yolov8n is 84 wide.
     EXPECT_THROW(detect(_tf("yolov8n.onnx", false),
                         DetectionOutputParams(DNN_BOX_AUTO, DNN_CLS_INDEX)), cv::Exception);
+
+    // Only a separate score output can carry an activation, and yolov8n fuses its scores in.
+    EXPECT_THROW(detect(_tf("yolov8n.onnx", false),
+                        DetectionOutputParams(DNN_BOX_AUTO, DNN_CLS_AUTO, DNN_COORD_AUTO,
+                                              DNN_ACT_SIGMOID)), cv::Exception);
 
     // yolo_nas_s already emits probabilities, so asking for a sigmoid must change the scores.
     const std::string nas = _tf("onnx/models/yolo_nas_s.onnx", false);

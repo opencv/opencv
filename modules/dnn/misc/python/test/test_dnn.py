@@ -589,6 +589,9 @@ class dnn_test(NewOpenCVTests):
 
         keypoints, boxes, confidences, frameIds = model.estimatePoses(frames, 0.3, 0.45)
         self.assertEqual(list(frameIds), sorted(frameIds))
+        # dog416 holds no person, so only the second frame yields a pose; without pinning that,
+        # the per-frame comparison below is satisfied by 0 == 0 on both.
+        self.assertEqual(sorted(set(int(f) for f in frameIds)), [1])
 
         for b, frame in enumerate(frames):
             refKeypoints, refBoxes, refConfs = model.estimatePoses(frame, 0.3, 0.45)

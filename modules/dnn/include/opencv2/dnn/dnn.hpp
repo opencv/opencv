@@ -1579,14 +1579,14 @@ CV__DNN_INLINE_NS_BEGIN
     {
         DNN_ACT_AUTO = 0,    //!< Default. Infer from the values.
         DNN_ACT_NONE = 1,    //!< Scores are already in [0, 1].
-        DNN_ACT_SIGMOID = 2, //!< Scores are logits. Applies to split outputs only.
+        DNN_ACT_SIGMOID = 2, //!< Scores are logits. Rejected unless they are a separate output.
     };
 
     /** @brief How a detection network writes one row of its output.
      *
-     * Each field is an independent property of the export, and each defaults to inferring itself
-     * from the values. Declare only the ones you know. The output is 3D, [B, C, N] or [B, N, C],
-     * and the anchor axis must be the longer one.
+     * Each field is an independent property of the export and defaults to inferring itself: the
+     * box form from the row shape, the rest from the values. Declare only the ones you know. The
+     * output is 3D, [B, C, N] or [B, N, C], and the anchor axis must be the longer one.
      *
      * A split head gives boxes and class scores as two outputs. The 4-wide one is the boxes; if
      * both are 4 wide, as in a four-class detector, the first is the boxes and
@@ -1665,6 +1665,8 @@ CV__DNN_INLINE_NS_BEGIN
 
          /** @brief Set flag crop for frame.
           *  @param[in] crop Flag which indicates whether image will be cropped after resize or not.
+          *  @note Writes the padding mode: true selects DNN_PMODE_CROP_CENTER, false
+          *  DNN_PMODE_NULL, so it discards a mode set by setPaddingMode().
          */
          CV_WRAP Model& setInputCrop(bool crop);
 
@@ -1682,8 +1684,9 @@ CV__DNN_INLINE_NS_BEGIN
 
          /** @brief Declare how the network writes a detection row, instead of inferring it.
           *  @param[in] params Output encoding, @see DetectionOutputParams. Fields left at their
-          *  AUTO default are still inferred from the values.
+          *  AUTO default are still inferred.
           *  @note Applies to detect(), estimatePoses() and segmentInstances().
+          *  @note DNN_ACT_SIGMOID is rejected unless the scores arrive in their own output.
          */
          CV_WRAP Model& setOutputParams(const DetectionOutputParams& params);
 
@@ -1699,6 +1702,8 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param[in] swapRB Flag which indicates that swap first and last channels.
          *  @param[in] crop Flag which indicates whether image will be cropped after resize or not.
          *  blob(n, c, y, x) = scale * resize( frame(y, x, c) ) - mean(c) )
+         *  @note The crop argument writes the padding mode, so this discards a mode set by
+         *  setPaddingMode().
          */
          CV_WRAP void setInputParams(double scale = 1.0, const Size& size = Size(),
                                      const Scalar& mean = Scalar(), bool swapRB = false, bool crop = false);
@@ -1714,6 +1719,8 @@ CV__DNN_INLINE_NS_BEGIN
           *  each is resized to the network input size.
           *  @param[out] outs Allocated output blobs. The images are run as one batch, so each
           *  blob carries them in its first dimension.
+          *  @note In Python this takes a sequence of images. A single array is read as a
+          *  sequence of its rows, so pass [img] rather than img for one image.
           */
          CV_WRAP_AS(predictBatch) void predict(InputArrayOfArrays frames,
                                                CV_OUT std::vector<Mat>& outs) const;

@@ -114,8 +114,10 @@ static std::vector<Point2f> samplePointsIn(const Size& inputSize)
 
 TEST(blobPointsToImagePoints, DNN_PMODE_NULL)
 {
-    Size inputSize(50 + (rand() % 100) / 4 * 4, 50 + (rand() % 100) / 4 * 4);
-    Size imgSize(200 + (rand() % 100) / 4 * 4, 200 + (rand() % 100) / 4 * 4);
+    const int inW = 50 + (rand() % 100) / 4 * 4, inH = 50 + (rand() % 100) / 4 * 4;
+    const int imgW = 200 + (rand() % 100) / 4 * 4, imgH = 200 + (rand() % 100) / 4 * 4;
+    Size inputSize(inW, inH), imgSize(imgW, imgH);
+    SCOPED_TRACE(cv::format("blob %dx%d, image %dx%d", inW, inH, imgW, imgH));
     std::vector<Point2f> pBlob = samplePointsIn(inputSize);
     Image2BlobParams paramNet;
     paramNet.size = inputSize;
@@ -133,8 +135,10 @@ TEST(blobPointsToImagePoints, DNN_PMODE_NULL)
 
 TEST(blobPointsToImagePoints, DNN_PMODE_CROP_CENTER)
 {
-    Size inputSize(50 + (rand() % 100) / 4 * 4, 50 + (rand() % 100) / 4 * 4);
-    Size imgSize(200 + (rand() % 100) / 4 * 4, 200 + (rand() % 100) / 4 * 4);
+    const int inW = 50 + (rand() % 100) / 4 * 4, inH = 50 + (rand() % 100) / 4 * 4;
+    const int imgW = 200 + (rand() % 100) / 4 * 4, imgH = 200 + (rand() % 100) / 4 * 4;
+    Size inputSize(inW, inH), imgSize(imgW, imgH);
+    SCOPED_TRACE(cv::format("blob %dx%d, image %dx%d", inW, inH, imgW, imgH));
     std::vector<Point2f> pBlob = samplePointsIn(inputSize);
     Image2BlobParams paramNet;
     paramNet.size = inputSize;
@@ -156,8 +160,10 @@ TEST(blobPointsToImagePoints, DNN_PMODE_CROP_CENTER)
 
 TEST(blobPointsToImagePoints, DNN_PMODE_LETTERBOX)
 {
-    Size inputSize(50 + (rand() % 100) / 4 * 4, 50 + (rand() % 100) / 4 * 4);
-    Size imgSize(200 + (rand() % 100) / 4 * 4, 200 + (rand() % 100) / 4 * 4);
+    const int inW = 50 + (rand() % 100) / 4 * 4, inH = 50 + (rand() % 100) / 4 * 4;
+    const int imgW = 200 + (rand() % 100) / 4 * 4, imgH = 200 + (rand() % 100) / 4 * 4;
+    Size inputSize(inW, inH), imgSize(imgW, imgH);
+    SCOPED_TRACE(cv::format("blob %dx%d, image %dx%d", inW, inH, imgW, imgH));
     std::vector<Point2f> pBlob = samplePointsIn(inputSize);
     Image2BlobParams paramNet;
     paramNet.size = inputSize;

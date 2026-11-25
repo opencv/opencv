@@ -676,7 +676,7 @@ void Image2BlobParams::blobPointsToImagePoints(const std::vector<Point2f> &pBlob
     }
     else
     {
-        pImg.assign(pBlob.begin(), pBlob.end());
+        pImg = pBlob;   // may alias pBlob, so no assign() from its own iterators
     }
 }
 
