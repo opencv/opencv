@@ -46,7 +46,9 @@ public:
 
         outputs.assign(1, MatShape{B, S_q, H * D_v});
         // Scratch for K^T re-transposed to (B, H, S_kv, D); only the MLAS path uses it.
-        internals.assign(1, MatShape{B * H * S_kv * D});
+        internals.clear();
+        if (mlasAvailable())
+            internals.push_back(MatShape{B * H * S_kv * D});
         return false;
     }
 
@@ -96,7 +98,7 @@ public:
         const float effective_scale = (scale > 0.f) ? (1.f / scale) : 1.f;
         const size_t per_thread =
             mlasFlashAttentionBufferBytesPerThread(q_block, kv_block, D_v);
-        if (mlasAvailable() && per_thread > 0) {
+        if (mlasAvailable() && per_thread > 0 && !internals.empty()) {
             // MlasFlashAttention needs K as (B,H,S_kv,D), so re-transpose K^T (B,H,D,S_kv).
             Mat &K = internals[0];
             const float* kT_data = KT.ptr<const float>();

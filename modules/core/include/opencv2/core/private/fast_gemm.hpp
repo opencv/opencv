@@ -90,6 +90,10 @@ CV_EXPORTS void fastGemmThin(int M, int N, int K, float alpha,
                              const float* A, int lda0, int lda1,
                              const float* packed_B, float beta,
                              float* C, int ldc, bool multi_thread);
+// Used by fastGemmBatch only, so not exported; defined in fast_gemm_thin.dispatch.cpp.
+void fastGemmThinTB(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
+                    int M, int N, int K, float alpha, const float *A, int lda,
+                    const float *B, int ldb, float beta, float *C, int ldc, bool multi_thread);
 
 CV_EXPORTS void fastGemmPagedQK(const char *Q, const std::vector<const char *> &K, char *A,
                                 size_t B, size_t T_q, size_t Nq, size_t N_k, size_t T_s, size_t D, size_t T_k,
