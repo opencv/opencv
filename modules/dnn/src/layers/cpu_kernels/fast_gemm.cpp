@@ -524,13 +524,14 @@ static void fast_gemm_thin(float alpha, float beta, int M, int N, int K,
         opt_NEON::fastGemmThinKernel(M, N, K, alpha, A, lda0, lda1, B, ldb, false, beta, C, ldc, multi_thread);
         return;
     }
-#endif
+#else
     if (fastGemmThinEligible(M, N, K)) {
         AutoBuffer<float> packed(fastGemmThinPackBSize(N, K));
         fastGemmThinPackB(N, K, B, (size_t)ldb, 1, packed.data());
         fastGemmThin(M, N, K, alpha, A, lda0, lda1, packed.data(), beta, C, ldc, multi_thread);
         return;
     }
+#endif
 
     auto fn = [&](const Range &r) {
         for (int i = r.start; i < r.end; i++) {
