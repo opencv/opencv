@@ -2,18 +2,18 @@
 set(ANDROID_GRADLE_PLUGIN_VERSION "9.5.0" CACHE STRING "Android Gradle Plugin version")
 message(STATUS "Android Gradle Plugin version: ${ANDROID_GRADLE_PLUGIN_VERSION}")
 
+set(GRADLE_VERSION "9.9.2" CACHE STRING "Gradle version")
+message(STATUS "Gradle version: ${GRADLE_VERSION}")
+
 set(KOTLIN_PLUGIN_VERSION "1.8.20" CACHE STRING "Kotlin Plugin version")
 message(STATUS "Kotlin Plugin version: ${KOTLIN_PLUGIN_VERSION}")
-if(BUILD_KOTLIN_EXTENSIONS)
+if(BUILD_KOTLIN_EXTENSIONS AND GRADLE_VERSION VERSION_LESS 9)
   set(KOTLIN_PLUGIN_DECLARATION "apply plugin: 'kotlin-android'" CACHE STRING "Kotlin Plugin version")
   set(KOTLIN_STD_LIB "implementation 'org.jetbrains.kotlin:kotlin-stdlib:${KOTLIN_PLUGIN_VERSION}'" CACHE STRING "Kotlin Standard Library dependency")
 else()
   set(KOTLIN_PLUGIN_DECLARATION "" CACHE STRING "Kotlin Plugin version")
   set(KOTLIN_STD_LIB "" CACHE STRING "Kotlin Standard Library dependency")
 endif()
-
-set(GRADLE_VERSION "9.9.2" CACHE STRING "Gradle version")
-message(STATUS "Gradle version: ${GRADLE_VERSION}")
 
 set(ANDROID_COMPILE_SDK_VERSION "36" CACHE STRING "Android compileSdkVersion")
 if(ANDROID_NATIVE_API_LEVEL GREATER 21)
