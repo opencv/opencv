@@ -132,16 +132,12 @@ TEST(blobFromImage, allocated)
     ASSERT_EQ(blobData, blob.data);
 }
 
-// depth, channels, swapRB, blob depth. Non-contiguous 5x67 image to exercise SIMD tails.
+// depth, channels, swapRB, blob depth.
 typedef testing::TestWithParam<tuple<int, int, bool, int> > blobFromImage_NCHW_SIMD;
 
-TEST_P(blobFromImage_NCHW_SIMD, TailsAndStrides)
+// Non-contiguous image (ROI with odd width) to exercise SIMD tails and row strides.
+static void testBlobFromImageNCHW(int depth, int nch, bool swapRB, int ddepth, int rows, int cols)
 {
-    const int depth = get<0>(GetParam());
-    const int nch = get<1>(GetParam());
-    const bool swapRB = get<2>(GetParam());
-    const int ddepth = get<3>(GetParam());
-    const int rows = 5, cols = 67;
     const Scalar mean = ddepth == CV_32F ? Scalar(1.25, 2.5, 3.75, 5.0) : Scalar();
     const Scalar scale = ddepth == CV_32F ? Scalar(0.5, 0.25, 0.125, 0.0625) : Scalar::all(1.0);
 
@@ -180,6 +176,19 @@ TEST_P(blobFromImage_NCHW_SIMD, TailsAndStrides)
             }
         }
     }
+}
+
+TEST_P(blobFromImage_NCHW_SIMD, TailsAndStrides)
+{
+    testBlobFromImageNCHW(get<0>(GetParam()), get<1>(GetParam()), get<2>(GetParam()),
+                          get<3>(GetParam()), 5, 67);
+}
+
+// Large enough to be split into several parallel stripes.
+TEST_P(blobFromImage_NCHW_SIMD, ParallelStripes)
+{
+    testBlobFromImageNCHW(get<0>(GetParam()), get<1>(GetParam()), get<2>(GetParam()),
+                          get<3>(GetParam()), 257, 389);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, blobFromImage_NCHW_SIMD,
@@ -234,6 +243,46 @@ TEST_P(blobFromImage_NCHW_Default, ExactCopy)
 
 INSTANTIATE_TEST_CASE_P(/**/, blobFromImage_NCHW_Default,
     testing::Combine(testing::Values(CV_8U, CV_32F), testing::Values(1, 3, 4)));
+
+// A batch is one parallel range over all rows of all images, so stripes can cross image
+// boundaries. Each image of the batch must match the single-image result exactly.
+typedef testing::TestWithParam<tuple<int, int, bool, int> > blobFromImages_CrossBoundary;
+
+TEST_P(blobFromImages_CrossBoundary, MatchesSingleImage)
+{
+    const int depth = get<0>(GetParam());
+    const int nch = get<1>(GetParam());
+    const bool swapRB = get<2>(GetParam());
+    const int ddepth = get<3>(GetParam());
+    const Scalar mean = ddepth == CV_32F ? Scalar(1.25, 2.5, 3.75, 5.0) : Scalar();
+    const Scalar scale = ddepth == CV_32F ? Scalar(0.5, 0.25, 0.125, 0.0625) : Scalar::all(1.0);
+    // Equal sizes are required within a batch. 3 x 257 x 389 gives several stripes, and
+    // 257 rows per image is not a multiple of the stripe height, so stripes cross boundaries.
+    std::vector<Mat> images;
+    for (int k = 0; k < 3; ++k)
+    {
+        Mat img(257, 389, CV_MAKETYPE(depth, nch));
+        randu(img, depth == CV_8U ? Scalar::all(0) : Scalar::all(-10),
+                   depth == CV_8U ? Scalar::all(255) : Scalar::all(10));
+        images.push_back(img);
+    }
+
+    Image2BlobParams param(scale, Size(), mean, swapRB, ddepth, DNN_LAYOUT_NCHW);
+    Mat batch = blobFromImagesWithParams(images, param);
+    ASSERT_EQ((int)images.size(), batch.size[0]);
+
+    const size_t imageBytes = (size_t)nch * batch.size[2] * batch.size[3] * batch.elemSize1();
+    for (size_t k = 0; k < images.size(); ++k)
+    {
+        Mat single = blobFromImageWithParams(images[k], param);
+        ASSERT_EQ(0, memcmp(single.data, batch.data + k * imageBytes, imageBytes))
+            << "image " << k << " (" << images[k].rows << " rows)";
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, blobFromImages_CrossBoundary,
+    testing::Combine(testing::Values(CV_8U, CV_32F), testing::Values(1, 3, 4),
+                     testing::Values(false, true), testing::Values(CV_32F, CV_8U)));
 
 TEST(imagesFromBlob, Regression)
 {
