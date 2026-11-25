@@ -4127,7 +4127,7 @@ TEST_P(Test_ONNX_layers, getUnconnectedOutLayers)
     if (engine_forced == cv::dnn::ENGINE_ORT)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
 
-    Net net = readNetFromONNX(_tf("models/yolov8x.onnx", false));
+    Net net = readNetFromONNX(_tf("models/yolov8n.onnx", false));
     ASSERT_FALSE(net.empty());
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);

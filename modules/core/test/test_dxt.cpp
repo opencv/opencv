@@ -1510,7 +1510,8 @@ TEST(Core_DFT, parallel_large)
 {
     RNG& rng = cvtest::TS::ptr()->get_rng();
     int nthreads0 = getNumThreads();
-    static const int sizes[][2] = { {1024, 1024}, {700, 1500}, {1, 1 << 20}, {1 << 18, 1}, {513, 2000} };
+    // the 2D sizes keep >= 2 stripes in every pass of dftParallelStripes (rows, column batches, DCT lines)
+    static const int sizes[][2] = { {512, 512}, {350, 750}, {1, 1 << 20}, {1 << 18, 1}, {513, 1000} };
     for (size_t si = 0; si < sizeof(sizes)/sizeof(sizes[0]); si++)
     {
         int rows = sizes[si][0], cols = sizes[si][1];
