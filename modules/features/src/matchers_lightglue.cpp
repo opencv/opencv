@@ -351,6 +351,10 @@ void ALIKEDLightGlueMatcherImpl::lightglueMatch(const Mat& queryDesc, const Mat&
     // mscores0: [M] float32 - confidence per pair
     Mat matchesMat = outs[0];
     Mat scoresMat = outs[1];
+    CV_CheckTypeEQ(matchesMat.type(), CV_64SC1, "LightGlue matches0 output must be an Mx2 int64 tensor");
+    CV_CheckEQ(matchesMat.cols, 2, "LightGlue matches0 output must be an Mx2 int64 tensor");
+    CV_CheckTypeEQ(scoresMat.type(), CV_32FC1, "LightGlue mscores0 output must be a float tensor");
+    CV_CheckEQ(scoresMat.total(), (size_t)matchesMat.rows, "LightGlue mscores0 must have one score per match");
 
     matches.clear();
     int nMatches = matchesMat.rows;
@@ -358,14 +362,14 @@ void ALIKEDLightGlueMatcherImpl::lightglueMatch(const Mat& queryDesc, const Mat&
 
     for (int i = 0; i < nMatches; i++)
     {
-        int qIdx = (int)matchesMat.at<int64_t>(i, 0);
-        int tIdx = (int)matchesMat.at<int64_t>(i, 1);
+        int64_t qIdx = matchesMat.at<int64_t>(i, 0);
+        int64_t tIdx = matchesMat.at<int64_t>(i, 1);
         if (qIdx >= 0 && tIdx >= 0 && qIdx < N && tIdx < M)
         {
             float score = scoresMat.at<float>(i);
             if (score >= scoreThreshold)
             {
-                matches.push_back(DMatch(qIdx, tIdx, 1.0f - score));
+                matches.push_back(DMatch((int)qIdx, (int)tIdx, 1.0f - score));
             }
         }
     }
@@ -421,6 +425,8 @@ void DISKLightGlueMatcherImpl::lightglueMatch(const Mat& queryDesc, const Mat& t
 
     CV_Assert(matches0.total() == (size_t)N);
     CV_Assert(mscores0.total() == (size_t)N);
+    CV_CheckTypeEQ(matches0.type(), CV_64SC1, "LightGlue matches0 output must be an int64 tensor");
+    CV_CheckTypeEQ(mscores0.type(), CV_32FC1, "LightGlue mscores0 output must be a float tensor");
 
     matches.clear();
     matches.reserve(N);
