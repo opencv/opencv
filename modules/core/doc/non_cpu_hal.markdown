@@ -156,6 +156,12 @@ A built-in backend registers itself in `registry.cpp`; tests register theirs wit
   use pinned host memory mapped into the GPU, which the CPU uses in place. It implements `flip`
   and `transpose`, in place too. Its kernels and runtime calls (`src/accel/gpu/`) are written
   once for the CUDA and HIP runtimes.
+* HIP (`src/accel/backend_hip.cpp`), built in when OpenCV is configured with `WITH_HIP=ON`, which
+  needs CMake 3.21 or newer. `opencv_core` then links `libamdhip64`, so ROCm must be installed
+  wherever that build runs. It has the operations of the CUDA backend, from the same sources. By
+  default the kernels are built for the generic target of each GPU family (`gfx11-generic` and
+  the like); `CMAKE_HIP_ARCHITECTURES=native` builds them only for the GPUs of the build machine.
+  On a GPU the build has no code for, operations run on the CPU.
 
 Adding an operation
 -------------------
@@ -206,5 +212,6 @@ Tests
 addresses the CPU cannot use, memory the CPU addresses, and a second device of the first kind for
 transfers between devices. Its streams run work on a thread of their own, after an optional
 delay, so a missing wait shows up as wrong data, and work on freed memory or on another device's
-memory is counted. The `Core_Accel_CUDA` tests run when a CUDA device is present, and
-`perf_accel.cpp` measures flip and transpose there.
+memory is counted. The `Core_Accel_GPU` tests run once for each GPU backend of the build (CUDA,
+HIP), on its first device when one is present, and `perf_accel.cpp` measures flip and transpose
+on the first CUDA or HIP device.

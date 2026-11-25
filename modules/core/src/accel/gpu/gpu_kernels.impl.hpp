@@ -5,7 +5,7 @@
 // Third party copyrights are property of their respective owners.
 
 // Non-CPU HAL: kernels of the GPU backends (core operations), compiled once per runtime, for
-// CUDA by src/cuda/accel_kernels.cu. Elements are moved as opaque
+// CUDA by src/cuda/accel_kernels.cu and for HIP by src/hip/accel_kernels.hip. Elements are moved as opaque
 // groups of bytes, so one kernel serves every type of the same element size.
 
 #include "gpu_kernels.hpp"

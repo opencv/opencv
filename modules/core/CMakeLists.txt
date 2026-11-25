@@ -192,6 +192,17 @@ ocv_target_link_libraries(${the_module} PRIVATE
     "${OPENCV_HAL_LINKER_LIBS}"
 )
 
+if(HAVE_HIP)
+  # the HIP backend of the non-CPU HAL: the kernels are HIP, backend_hip.cpp is plain C++
+  target_sources(${the_module} PRIVATE "${CMAKE_CURRENT_LIST_DIR}/src/hip/accel_kernels.hip")
+  # the precompiled header would force-include precomp.hpp, and with it CUDA's runtime headers
+  set_source_files_properties("${CMAKE_CURRENT_LIST_DIR}/src/accel/backend_hip.cpp"
+    PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+  ocv_target_link_libraries(${the_module} PRIVATE hip::host)
+  # with the HIP language enabled, CMake treats ROCm's lib directory as implicit and leaves it out of RUNPATH
+  set_property(TARGET ${the_module} APPEND PROPERTY BUILD_RPATH "${hip_LIB_INSTALL_DIR}")
+endif()
+
 if(OPENCV_DISABLE_THREAD_SUPPORT)
   ocv_target_compile_definitions(${the_module} PUBLIC "OPENCV_DISABLE_THREAD_SUPPORT=1")
 endif()

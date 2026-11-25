@@ -144,7 +144,7 @@ public:
 };
 
 /** @brief Adds a backend: its devices appear in Device::enumerate().
-The built-in CUDA backend registers itself. Backends stay registered for the life of the process. */
+The built-in CUDA and HIP backends register themselves. Backends stay registered for the life of the process. */
 CV_EXPORTS void registerBackend(const Ptr<Backend>& backend);
 
 }} // namespace cv::accel

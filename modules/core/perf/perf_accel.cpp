@@ -14,12 +14,14 @@ using namespace perf;
 
 typedef perf::TestBaseWithParam<tuple<Size, MatType> > Accel_Size_MatType;
 
-// the first device of the built-in CUDA backend; the tests are skipped without one
+// the first device of the built-in CUDA backend, else of the HIP one; the tests are skipped without one
 static accel::Device gpu()
 {
     accel::Device d = accel::Device::find("cuda");
     if (d.empty())
-        throw SkipTestException("no CUDA device for the non-CPU HAL");
+        d = accel::Device::find("hip");
+    if (d.empty())
+        throw SkipTestException("no CUDA or HIP device");
     return d;
 }
 
