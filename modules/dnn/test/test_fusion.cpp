@@ -824,6 +824,18 @@ TEST(Fusion, ReshapeShapeOperandFoldsToConstant)
                "", 1e-4, 5e-4);
 }
 
+TEST(Fusion, ReshapeShapeOperandKeptUnderAllowZero)
+{
+    const std::string name = "reshape_allowzero_shape";
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + name + ".onnx"), ENGINE_OPENCV);
+    ASSERT_TRUE(net.getMainGraph());
+
+    net.setInput(blobFromNPY(findDataFile("dnn/onnx/data/input_" + name + ".npy")));
+    Mat out = net.forward();
+
+    normAssert(blobFromNPY(findDataFile("dnn/onnx/data/output_" + name + ".npy")), out);
+}
+
 TEST(Fusion, AdjacentSlicesCollapseToOneSplit)
 {
     const std::string name = "slice_to_split";
@@ -838,6 +850,19 @@ TEST(Fusion, AdjacentSlicesCollapseToOneSplit)
     normAssert(blobFromNPY(findDataFile("dnn/onnx/data/output_" + name + ".npy")), out);
 }
 
+TEST(Fusion, SliceEndPastAxisIsClampedInSplit)
+{
+    const std::string name = "slice_to_split_clamp";
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + name + ".onnx"), ENGINE_OPENCV);
+    ASSERT_TRUE(net.getMainGraph());
+
+    net.setInput(blobFromNPY(findDataFile("dnn/onnx/data/input_" + name + ".npy")));
+    Mat out = net.forward();
+
+    EXPECT_EQ(fusedCount(net, "Split2"), 1);
+    normAssert(blobFromNPY(findDataFile("dnn/onnx/data/output_" + name + ".npy")), out);
+}
+
 TEST(Fusion, InputScalarFoldsIntoConsumer)
 {
     const std::string name = "input_scalar_fold";
@@ -848,6 +873,19 @@ TEST(Fusion, InputScalarFoldsIntoConsumer)
     Mat out = net.forward();
 
     EXPECT_EQ(fusedCount(net, "NaryEltwise"), 0) << "a scalar Mul or Div was left in place";
+    normAssert(blobFromNPY(findDataFile("dnn/onnx/data/output_" + name + ".npy")), out);
+}
+
+TEST(Fusion, InputScalarOfHigherRankIsNotFolded)
+{
+    const std::string name = "input_scalar_rank";
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + name + ".onnx"), ENGINE_OPENCV);
+    ASSERT_TRUE(net.getMainGraph());
+
+    net.setInput(blobFromNPY(findDataFile("dnn/onnx/data/input_" + name + ".npy")));
+    Mat out = net.forward();
+
+    EXPECT_EQ(MatShape({1, 2, 3, 5}), out.shape());
     normAssert(blobFromNPY(findDataFile("dnn/onnx/data/output_" + name + ".npy")), out);
 }
 

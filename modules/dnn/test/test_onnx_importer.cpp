@@ -4003,6 +4003,7 @@ TEST_P(Test_ONNX_layers, MatMulNBits_ZeroPoints) {
     testONNXModels("matmulnbits_gemv_zp", npy, 1e-4, 1e-3);
     // n_blk=5: the last zero-point byte holds one nibble, not two
     testONNXModels("matmulnbits_gemv_zp_oddblk", npy, 1e-4, 1e-3);
+    testONNXModels("matmulnbits_zp_empty_tail", npy, 1e-4, 1e-3);
 }
 
 TEST_P(Test_ONNX_layers, GatherBlockQuantized) {
@@ -4016,6 +4017,13 @@ TEST_P(Test_ONNX_layers, GatherBlockQuantized) {
     testONNXModels("gather_block_quantized_negidx", npy, 1e-4, 1e-3);
     // past either end: unlike ONNX Gather, the slice comes back zero rather than failing
     testONNXModels("gather_block_quantized_oob", npy, 1e-4, 1e-3);
+}
+
+TEST(Test_ONNX_importer, GatherBlockQuantized_uint4_refused)
+{
+    Net net;
+    EXPECT_NO_THROW(net = readNetFromONNX(_tf("models/gather_block_quantized_uint4.onnx")));
+    EXPECT_TRUE(net.empty());
 }
 
 static void testGQAWindowBias(const std::string& name, bool required)

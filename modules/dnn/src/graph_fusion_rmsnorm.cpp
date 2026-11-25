@@ -32,7 +32,8 @@ struct ModelFusionRMSNorm
     {
         if (!netimpl->isConstArg(a)) return false;
         const Mat& t = netimpl->argTensor(a);
-        if (t.total() != 1 || t.type() != CV_32F) return false;
+        // A one-element tensor of higher rank would raise X's rank, which the fused layer keeps.
+        if (t.total() != 1 || t.dims > 1 || t.type() != CV_32F) return false;
         v = t.ptr<float>()[0];
         return true;
     }

@@ -299,8 +299,8 @@ struct FuseBNPass
 };
 
 // Rewrites two Slices that partition one tensor along an axis into a single Split.
-//   X -> Slice[0:P] and X -> Slice[P:end]   =>   X -> Split[{P, dim-P}]
-// The axis length must be declared, so a symbolic one is left alone rather than guessed at.
+//   X -> Slice[0:P] and X -> Slice[P:end]   =>   X -> Split[{P, -1}]
+// Split2 resolves the -1 and clamps P at runtime, so the axis length need not be known.
 
 struct ModelFusionSliceToSplit
 {

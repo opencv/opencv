@@ -13,6 +13,7 @@
 //   - Reshape whose shape operand is Concat(Unsqueeze(Gather(Shape(s), i)), consts...):
 //     replace it with a constant, writing 0 where the gathered dimension provably equals
 //     the Reshape input's own at that position, which Reshape reads as "keep this axis".
+//     Skipped under allowzero, where a 0 is a zero-size axis.
 // These run iteratively, so a Reshape+Transpose+Reshape that ends up with an
 // identity transpose collapses to a single Reshape, and adjacent transposes
 // in attention layouts merge.
@@ -246,7 +247,7 @@ struct ModelFusionReshapeTranspose
             }
 
             Reshape2Layer* rs = dynamic_cast<Reshape2Layer*>(layer.get());
-            if (rs && layer->outputs.size() == 1 &&
+            if (rs && !rs->allowZero && layer->outputs.size() == 1 &&
                 foldShapeOperand(prog, producer, dropped, externalArgs, layer))
                 modified = true;
             // The fold runs first: the check below reads the spec it may have resolved.

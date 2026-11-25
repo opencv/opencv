@@ -31,7 +31,8 @@ struct ModelFusionInputScalar
     {
         if (!netimpl->isConstArg(a)) return false;
         Mat t = netimpl->argTensor(a);
-        if (t.total() != 1) return false;
+        // A one-element tensor of higher rank broadcasts the input up to that rank.
+        if (t.total() != 1 || t.dims > 1) return false;
         if (t.type() == CV_32F) { out = t.ptr<float>()[0]; return true; }
         if (t.type() == CV_64F) { out = (float)t.ptr<double>()[0]; return true; }
         if (t.type() == CV_16F) {

@@ -735,6 +735,8 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         MatShape newShapeDesc;
+        //! ONNX allowzero: a 0 in the shape is a zero-size axis, not a copy of the input's.
+        bool allowZero;
 
         static Ptr<Reshape2Layer> create(const LayerParams& params);
     };

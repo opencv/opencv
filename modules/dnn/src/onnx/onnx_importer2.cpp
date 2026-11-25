@@ -1837,18 +1837,21 @@ void ONNXImporter2::parseMatMul(LayerParams& layerParams, const opencv_onnx::Nod
 
 void ONNXImporter2::parseMatMulNBits(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto) {
     int n_inputs = node_proto.input_size();
-    CV_Check(n_inputs, n_inputs == 3 || n_inputs == 4,
-             "DNN/MatMulNBits: expected (A, B, scales[, zero_points])");
+    CV_Check(n_inputs, 3 <= n_inputs && n_inputs <= 6,
+             "DNN/MatMulNBits: expected (A, B, scales[, zero_points, g_idx, bias])");
     CV_CheckTrue(net.isConstArg(node_inputs[1]) && net.isConstArg(node_inputs[2]),
                  "DNN/MatMulNBits: packed weights and scales must be constants");
-    // g_idx (input 5) would reorder K, which the blocked kernels cannot express.
-    CV_CheckFalse(n_inputs > 4, "DNN/MatMulNBits: g_idx is not supported");
+    // g_idx would reorder K, which the blocked kernels cannot express.
+    CV_CheckFalse(n_inputs > 4 && !node_inputs[4].empty(),
+                  "DNN/MatMulNBits: g_idx is not supported");
+    CV_CheckFalse(n_inputs > 5 && !node_inputs[5].empty(),
+                  "DNN/MatMulNBits: bias is not supported");
 
     layerParams.blobs.push_back(net.argTensor(node_inputs[1]));
     Mat scales;
     net.argTensor(node_inputs[2]).convertTo(scales, CV_32F);
     layerParams.blobs.push_back(scales);
-    if (n_inputs == 4 && !node_inputs[3].empty()) {
+    if (n_inputs >= 4 && !node_inputs[3].empty()) {
         CV_CheckTrue(net.isConstArg(node_inputs[3]),
                      "DNN/MatMulNBits: zero_points must be a constant");
         layerParams.blobs.push_back(net.argTensor(node_inputs[3]));
@@ -1864,6 +1867,10 @@ void ONNXImporter2::parseGatherBlockQuantized(LayerParams& layerParams,
              "GatherBlockQuantized: expected (data, indices, scales[, zero_points])");
     CV_CheckTrue(net.isConstArg(node_inputs[0]) && net.isConstArg(node_inputs[2]),
                  "GatherBlockQuantized: the quantized table and its scales must be constants");
+    // int4/uint4 tables load one value per byte; the layer reads packed uint8 only.
+    CV_CheckEQ(findGraphTensorOnnxType(node_proto.input(0)),
+               (int)opencv_onnx::TensorProto_DataType_UINT8,
+               "GatherBlockQuantized: only uint8 data is supported");
     addLayer(layerParams, node_proto, n_inputs);
 }
 

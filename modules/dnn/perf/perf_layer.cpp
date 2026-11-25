@@ -1538,4 +1538,53 @@ PERF_TEST_P_(Layer_DynamicInt8, MatMulInteger)
 
 INSTANTIATE_TEST_CASE_P(/**/, Layer_DynamicInt8, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 
+typedef TestBaseWithParam<tuple<Vec2i, int, std::string> > Layer_MatMulNBits;
+PERF_TEST_P_(Layer_MatMulNBits, matmulnbits)
+{
+    const int N = get<0>(GetParam())[0], K = get<0>(GetParam())[1];
+    const int M = get<1>(GetParam());
+    const std::string format = get<2>(GetParam());
+    const int bits = format == "8bit" ? 8 : 4, block_size = 32;
+    const int n_blk = (K + block_size - 1) / block_size, epb = 8 / bits;
+
+    Mat A(std::vector<int>{M, K}, CV_32F);
+    Mat B(std::vector<int>{N, n_blk * block_size * bits / 8}, CV_8U);
+    Mat scales(std::vector<int>{N, n_blk}, CV_32F);
+    randu(A, -1.f, 1.f);
+    randu(B, 0, 256);
+    randu(scales, 0.001f, 0.01f);
+
+    LayerParams lp;
+    lp.set("K", K);
+    lp.set("N", N);
+    lp.set("bits", bits);
+    lp.set("block_size", block_size);
+    lp.blobs.push_back(B);
+    lp.blobs.push_back(scales);
+    if (format == "4bit_zp") {
+        Mat zp(std::vector<int>{N, (n_blk + epb - 1) / epb}, CV_8U);
+        randu(zp, 0, 256);
+        lp.blobs.push_back(zp);
+    }
+
+    Net net;
+    net.addLayerToPrev("matmulnbits", "MatMulNBits", lp);
+    net.setInput(A);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(DNN_TARGET_CPU);
+    net.forward();
+
+    TEST_CYCLE()
+    {
+        net.forward();
+    }
+    SANITY_CHECK_NOTHING();
+}
+
+// Qwen2.5-0.5B projections: q/o, gate/up, down.
+INSTANTIATE_TEST_CASE_P(/**/, Layer_MatMulNBits, Combine(
+    Values(Vec2i(896, 896), Vec2i(4864, 896), Vec2i(896, 4864)),
+    Values(1, 16, 128),
+    Values("4bit", "4bit_zp", "8bit")));
+
 } // namespace
