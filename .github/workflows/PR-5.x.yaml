@@ -53,7 +53,7 @@ jobs:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-iOS.yaml@main
 
   Android:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-Android.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-Android.yamlas/android_ndk_30
 
   docs:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-docs.yaml@main
