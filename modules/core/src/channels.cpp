@@ -96,75 +96,6 @@ static MixChannelsFunc getMixchFunc(int depth)
     return mixchTab[depth];
 }
 
-template<typename T>
-static void copyPermutedPixels(const T* src, T* dst, int pixels, const int* order, int channels)
-{
-    for (int pixel = 0; pixel < pixels; ++pixel, src += channels, dst += channels)
-        for (int channel = 0; channel < channels; ++channel)
-            dst[channel] = src[order[channel]];
-}
-
-#if CV_SIMD || CV_SIMD_SCALABLE
-template<typename T, typename VecT, int channels, bool swapRB = false>
-static void permuteChannels(NAryMatIterator& it, const int* order)
-{
-    const int lanes = VTraits<VecT>::vlanes();
-    const int pixels = static_cast<int>(it.size);
-    VecT a, b, c, d;
-    const VecT* vectors[] = {&a, &b, &c, &d};
-    const VecT& first = swapRB ? c : *vectors[order[0]];
-    const VecT& second = swapRB ? b : *vectors[order[1]];
-    const VecT& third = swapRB ? a : *vectors[channels == 2 ? 0 : order[2]];
-    const VecT& fourth = swapRB ? d : *vectors[channels == 4 ? order[3] : 0];
-
-    for (size_t plane = 0; plane < it.nplanes; ++plane, ++it)
-    {
-        const T* src = reinterpret_cast<const T*>(it.ptrs[0]);
-        T* dst = reinterpret_cast<T*>(it.ptrs[1]);
-        int pixel = 0;
-        for (; pixel <= pixels - lanes; pixel += lanes, src += lanes * channels, dst += lanes * channels)
-        {
-            if constexpr (channels == 2)
-            {
-                v_load_deinterleave(src, a, b);
-                v_store_interleave(dst, b, a);
-            }
-            else if constexpr (channels == 3)
-            {
-                v_load_deinterleave(src, a, b, c);
-                v_store_interleave(dst, first, second, third);
-            }
-            else
-            {
-                v_load_deinterleave(src, a, b, c, d);
-                v_store_interleave(dst, first, second, third, fourth);
-            }
-        }
-        copyPermutedPixels(src, dst, pixels - pixel, order, channels);
-    }
-    vx_cleanup();
-}
-
-template<typename T, typename VecT>
-static void permuteChannels(NAryMatIterator& it, const int* order, int channels)
-{
-    const bool swapRB = order[0] == 2 && order[1] == 1;
-    if (channels == 2)
-        permuteChannels<T, VecT, 2>(it, order);
-    else if (channels == 3)
-    {
-        if (swapRB)
-            permuteChannels<T, VecT, 3, true>(it, order);
-        else
-            permuteChannels<T, VecT, 3>(it, order);
-    }
-    else if (swapRB && order[3] == 3)
-        permuteChannels<T, VecT, 4, true>(it, order);
-    else
-        permuteChannels<T, VecT, 4>(it, order);
-}
-#endif
-
 static bool tryPermuteChannels(const Mat& src, const Mat& dst, const int* fromTo, size_t npairs,
                                NAryMatIterator& it)
 {
@@ -176,11 +107,7 @@ static bool tryPermuteChannels(const Mat& src, const Mat& dst, const int* fromTo
     const size_t pixels = it.size * it.nplanes;
     const bool bytes = channels >= 5 && channels <= 16 && elemSize == 1 && it.size >= 16 && pixels >= 1024;
     const bool wide32 = channels >= 32 && elemSize == 4 && pixels >= 65536;
-#if CV_SIMD || CV_SIMD_SCALABLE
     const bool small = channels >= 2 && channels <= 4 && elemSize <= 4;
-#else
-    const bool small = false;
-#endif
     if (!(small || bytes || wide32))
         return false;
 
@@ -222,27 +149,9 @@ static bool tryPermuteChannels(const Mat& src, const Mat& dst, const int* fromTo
     }
     if (wide32)
     {
-        for (size_t plane = 0; plane < it.nplanes; ++plane, ++it)
-            copyPermutedPixels(reinterpret_cast<const unsigned*>(it.ptrs[0]), reinterpret_cast<unsigned*>(it.ptrs[1]),
-                               static_cast<int>(it.size), order, channels);
-        return true;
+        CV_CPU_DISPATCH(permuteWideChannels, (it, order, channels), CV_CPU_DISPATCH_MODES_ALL);
     }
-
-#if CV_SIMD || CV_SIMD_SCALABLE
-    switch (elemSize)
-    {
-    case 1:
-        permuteChannels<uchar, v_uint8>(it, order, channels);
-        return true;
-    case 2:
-        permuteChannels<ushort, v_uint16>(it, order, channels);
-        return true;
-    case 4:
-        permuteChannels<unsigned, v_uint32>(it, order, channels);
-        return true;
-    }
-#endif
-    return false;
+    CV_CPU_DISPATCH(permuteSmallChannels, (it, order, channels, elemSize), CV_CPU_DISPATCH_MODES_ALL);
 }
 
 } // cv::
