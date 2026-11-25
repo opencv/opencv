@@ -24,6 +24,9 @@ static inline IppDataType ippiGetDataType(int depth)
 
 #if IPP_VERSION_X100 >= 700
 
+// HACK: Should be removed when IPP management moves to HAL (not in core/base.hpp).
+namespace cv { namespace ipp { unsigned long long getIppTopFeatures(); } }
+
 
 static IppStatus ipp_minMaxIndex_wrap(const void* pSrc, int srcStep, IppiSize size, IppDataType dataType,
     float* pMinVal, float* pMaxVal, IppiPoint* pMinIndex, IppiPoint* pMaxIndex, const Ipp8u*, int)
