@@ -140,24 +140,63 @@ namespace cv { namespace accel { namespace CV_GPU_NS {
 
 namespace {
 
-//! a centred kernel of odd length the GPU takes, of @p type
-bool validTaps(const Mat& k, int type)
+//! a kernel GaussianBlur passes: CV_64F, centred, of an odd length the GPU takes
+bool validKernel(const Mat& k)
 {
     const int n = (int)k.total();
-    return k.type() == type && k.isContinuous() && n % 2 == 1 && n <= kernels::GAUSSIAN_MAX_TAPS;
+    return k.type() == CV_64F && k.isContinuous() && n % 2 == 1 && n <= kernels::GAUSSIAN_MAX_TAPS;
 }
 
-// two passes through a buffer, so the output may alias the input in any way; BORDER_WRAP is
-// left to the CPU, whose floating-point filters reject it
-bool GpuImgprocOps::gaussianBlur(const UMat& src, UMat& dst, const Mat& kx, const Mat& ky, int borderType,
+/* The CPU's fixed-point taps (getGaussianKernelFixedPoint_ED() in smooth.dispatch.cpp): rounded with
+   the error carried from tap to tap, the centre taking the rest. Scaling by 2^bits is exact, so the
+   double arithmetic gives the CPU's softdouble results. */
+template<typename T>
+void fixedPointTaps(const double* k, int n, int bits, T* taps)
+{
+    const int64 one = (int64)1 << bits;
+    double err = 0;
+    int64 sum = 0;
+    for (int i = 0; i < n / 2; i++)
+    {
+        const double v = k[i] * (double)one + err;
+        const int64 r = cvRound(v);
+        err = v - (double)r;
+        taps[i] = taps[n - 1 - i] = (T)r;
+        sum += r;
+    }
+    taps[n / 2] = (T)(one - 2 * sum);
+}
+
+//! the taps the CPU uses for @p depth: CV_16U with 8 fraction bits for CV_8U, CV_32U with 16 for CV_16U, else CV_32F
+Mat cpuTaps(const Mat& k, int depth)
+{
+    const int n = (int)k.total();
+    Mat taps;
+    if (depth == CV_8U)
+        fixedPointTaps(k.ptr<double>(), n, 8, (ushort*)(taps = Mat(1, n, CV_16U)).ptr());
+    else if (depth == CV_16U)
+        fixedPointTaps(k.ptr<double>(), n, 16, (unsigned*)(taps = Mat(1, n, CV_32U)).ptr());
+    else
+        k.reshape(1, 1).convertTo(taps, CV_32F);
+    return taps;
+}
+
+// two passes through a buffer, so the output may alias the input in any way; BORDER_WRAP is left to
+// the CPU, whose floating-point filters reject it, and so is a region without BORDER_ISOLATED, which
+// reads its parent beyond its edges
+bool GpuImgprocOps::gaussianBlur(const UMat& src, UMat& dst, const Mat& kx64, const Mat& ky64, int borderType,
                                  Stream& stream)
 {
+    if (src.isSubmatrix() && !(borderType & BORDER_ISOLATED))
+        return false;
+    borderType &= ~BORDER_ISOLATED;
     const int depth = src.depth();
     const int tapType = depth == CV_8U ? CV_16U : depth == CV_16U ? CV_32U : CV_32F;
     if (!usableImage(src) || !usableImage(dst) || borderType == BORDER_WRAP || borderType > BORDER_REFLECT_101 ||
         (depth != CV_8U && depth != CV_16U && depth != CV_16S && depth != CV_32F) ||
-        !validTaps(kx, tapType) || !validTaps(ky, tapType))
+        !validKernel(kx64) || !validKernel(ky64))
         return false;
+    const Mat kx = cpuTaps(kx64, depth), ky = cpuTaps(ky64, depth);
     GpuStream& s = gpuStreamOf(stream);
     UMat buf;
     buf.createOn(getDevice(src), src.size(), CV_MAKETYPE(tapType, src.channels()));

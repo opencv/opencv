@@ -56,7 +56,6 @@
 #include "filter.hpp"
 
 #include "opencv2/core/softfloat.hpp"
-#include "opencv2/core/private/accel_backend.hpp"
 
 namespace cv {
 #include "fixedpoint.inl.hpp"
@@ -524,50 +523,6 @@ static bool validateGaussianBlurKernel(std::vector<T>& kernel)
     return isValid;
 }
 
-//! GaussianBlur's fixed-point kernels as Mats of their raw integers, of type @p ktype
-template<typename FT>
-static void createFixedPointKernels(Mat& kx, Mat& ky, int type, Size ksize, double sigma1, double sigma2, int ktype)
-{
-    std::vector<FT> fkx, fky;
-    createGaussianKernels(fkx, fky, type, ksize, sigma1, sigma2);
-    Mat(1, (int)fkx.size(), ktype, fkx.data()).copyTo(kx);
-    Mat(1, (int)fky.size(), ktype, fky.data()).copyTo(ky);
-}
-
-// on the device that holds the input, with the CPU's kernels: fixed point for 8U and 16U
-static bool accel_GaussianBlur(InputArray _src, OutputArray _dst, Size ksize, double sigma1, double sigma2,
-                               int borderType)
-{
-    if (!_src.isUMat() || !_dst.isUMat() || _src.dims() > 2)
-        return false;
-    const UMat src = _src.getUMat();
-    const accel::Device device = accel::getDevice(src);
-    if (device.empty() || !accel::outputUsable(_dst, device, src.size(), src.type()))
-        return false;
-    UMat& dst = _dst.getUMatRef();
-    dst.createOn(device, src.size(), src.type());
-    accel::ImgprocOps* ops = device.ops<accel::ImgprocOps>("imgproc");
-    // a region without BORDER_ISOLATED reads its parent beyond its edges, which the CPU path does
-    if (!ops || (src.isSubmatrix() && !(borderType & BORDER_ISOLATED)))
-        return false;
-    borderType &= ~BORDER_ISOLATED;
-    if (borderType != BORDER_CONSTANT)
-    {
-        if (src.rows == 1)
-            ksize.height = 1;
-        if (src.cols == 1)
-            ksize.width = 1;
-    }
-    Mat kx, ky;
-    if (src.depth() == CV_8U)
-        createFixedPointKernels<ufixedpoint16>(kx, ky, src.type(), ksize, sigma1, sigma2, CV_16U);
-    else if (src.depth() == CV_16U)
-        createFixedPointKernels<ufixedpoint32>(kx, ky, src.type(), ksize, sigma1, sigma2, CV_32U);
-    else
-        createGaussianKernels(kx, ky, src.type(), ksize, sigma1, sigma2);
-    return ops->gaussianBlur(src, dst, kx, ky, borderType, device.threadStream());
-}
-
 void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
                   double sigma1, double sigma2,
                   int borderType, AlgorithmHint hint)
@@ -579,15 +534,12 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
     CV_Assert(!_src.empty());
 
-    if (accel_GaussianBlur(_src, _dst, ksize, sigma1, sigma2, borderType))
-        return;
-
     int type = _src.type();
     Size size = _src.size();
     _dst.create( size, type );
 
     if( (borderType & ~BORDER_ISOLATED) != BORDER_CONSTANT &&
-        ((borderType & BORDER_ISOLATED) != 0 || !_src.getMat().isSubmatrix()) )
+        ((borderType & BORDER_ISOLATED) != 0 || !(_src.isUMat() ? _src.isSubmatrix() : _src.getMat().isSubmatrix())) )
     {
         if( size.height == 1 )
             ksize.height = 1;
@@ -613,6 +565,10 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
     Mat kx, ky;
     createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);
+
+    CV_ACCEL_RUN(_src.isUMat(),
+                 accel::run(&accel::ImgprocOps::gaussianBlur, "imgproc", _src, _dst, size, type,
+                            getGaussianKernel(ksize.width, sigma1, CV_64F), getGaussianKernel(ksize.height, sigma2, CV_64F), borderType))
 
     CV_OCL_RUN(useOpenCL && sdepth == CV_8U &&
             ((ksize.width == 3 && ksize.height == 3) ||

@@ -204,6 +204,16 @@ if (accel_flip(_src, _dst, flip_mode))
     return;
 ```
 
+   For a 2-D image, `cv::accel::run()` does all of this, so the hook is one statement that runs only
+   for a UMat input. The operation then takes the function's own arguments, as a CPU HAL function
+   does:
+
+```cpp
+CV_ACCEL_RUN(_src.isUMat() && borderType != BORDER_TRANSPARENT,
+             accel::run(&accel::ImgprocOps::warpAffine, "imgproc", _src, _dst, dsize.empty() ? _src.size() : dsize,
+                        _src.type(), _M0, flags, borderType, borderValue))
+```
+
 3. Implement it in the backends that can. For the GPU backends and an imgproc operation: declare the
    kernel and the operation in `non_cpu_hal/gpu/imgproc/include/gpu_hal_imgproc.hpp`, and write
    both in the family's `src/<family>.impl.hpp` (a new family file is added at the end of

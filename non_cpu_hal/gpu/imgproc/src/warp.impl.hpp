@@ -130,29 +130,53 @@ namespace cv { namespace accel { namespace CV_GPU_NS {
 
 namespace {
 
-// the types the CPU warps in floating point (warp_kernels.simd.hpp), which the GPU follows
-bool GpuImgprocOps::warpAffine(const UMat& src, UMat& dst, const Matx23d& M, int interpolation, int borderType,
+// cv::InterpolationFlags and cv::WarpPolynomial values that core does not see
+enum { INTER_AREA = 3, INTER_MAX = 7, WARP_INVERSE_MAP = 16 };
+
+// the types the CPU warps in floating point (warp_kernels.simd.hpp), which the GPU follows, with M
+// inverted as cv::warpAffine inverts it; an output that is the input gets a copy of it first
+bool GpuImgprocOps::warpAffine(const UMat& src, UMat& dst, InputArray M0, int flags, int borderType,
                                const Scalar& borderValue, Stream& stream)
 {
+    const Mat m0 = M0.getMat();
+    int interpolation = flags & INTER_MAX;
+    if (interpolation == INTER_AREA)
+        interpolation = kernels::INTER_LINEAR;
     const int depth = src.depth(), cn = src.channels();
-    if (!usableImage(src) || !usableImage(dst) || src.u == dst.u || cn == 2 ||
+    if (m0.size() != Size(3, 2) || (m0.type() != CV_32F && m0.type() != CV_64F) ||   // the CPU reports it
+        !usableImage(src) || !usableImage(dst) || cn == 2 ||
         (depth != CV_8U && depth != CV_16U && depth != CV_32F) ||
         (interpolation != kernels::INTER_NEAREST && interpolation != kernels::INTER_LINEAR) || borderType > BORDER_REFLECT_101)
         return false;
+    double M[6];
+    Mat matM(2, 3, CV_64F, M);
+    m0.convertTo(matM, CV_64F);
+    if (!(flags & WARP_INVERSE_MAP))
+    {
+        double D = M[0]*M[4] - M[1]*M[3];
+        D = D != 0 ? 1./D : 0;
+        double A11 = M[4]*D, A22 = M[0]*D;
+        M[0] = A11; M[1] *= -D;
+        M[3] *= -D; M[4] = A22;
+        double b1 = -M[0]*M[2] - M[1]*M[5];
+        double b2 = -M[3]*M[2] - M[4]*M[5];
+        M[2] = b1; M[5] = b2;
+    }
     float m[6], bval[4];
     for (int i = 0; i < 6; i++)
-        m[i] = (float)M.val[i];
+        m[i] = (float)M[i];
     for (int c = 0; c < 4; c++)
         bval[c] = depth == CV_8U ? saturate_cast<uchar>(borderValue[c])
                 : depth == CV_16U ? saturate_cast<ushort>(borderValue[c]) : (float)borderValue[c];
+    const UMat in = src.u == dst.u ? src.clone() : src;
     GpuStream& s = gpuStreamOf(stream);
     DeviceGuard g(s.device_);
-    const unsigned char* sp = (const unsigned char*)src.handle(ACCESS_READ) + src.offset;
+    const unsigned char* sp = (const unsigned char*)in.handle(ACCESS_READ) + in.offset;
     unsigned char* dp = (unsigned char*)dst.handle(ACCESS_WRITE) + dst.offset;
-    if (!launched(kernels::warpAffine(sp, src.step[0], src.rows, src.cols, dp, dst.step[0], dst.rows, dst.cols,
+    if (!launched(kernels::warpAffine(sp, in.step[0], in.rows, in.cols, dp, dst.step[0], dst.rows, dst.cols,
                                       depth, cn, m, interpolation, borderType, bval, s.s_), "warpAffine"))
         return false;
-    stream.retain({ src, dst });
+    stream.retain({ in, dst });
     return true;
 }
 

@@ -12,6 +12,7 @@
 #endif
 
 #include "opencv2/core/accel.hpp"
+#include <utility>
 
 /*
 Interface of the accelerator backends built into OpenCV (CUDA, ...). It is not installed: backends
@@ -112,15 +113,13 @@ public:
 class CV_EXPORTS ImgprocOps : public Ops
 {
 public:
-    /** @brief cv::GaussianBlur of a 2-D UMat with the separable kernels GaussianBlur computes,
-    centred. For CV_8U and CV_16U input they are fixed-point, CV_16U with 8 and CV_32U with 16
-    fraction bits, and the result equals the CPU's bit-exact one; otherwise they are CV_32F.
-    @p borderType has no BORDER_ISOLATED: the input is never read beyond its edges. */
+    /** @brief cv::GaussianBlur, with the kernels it computes as CV_64F (getGaussianKernel()), its
+    kernel size resolved. A backend rounds them as the CPU does, to fixed point for CV_8U and CV_16U,
+    where the CPU's result is bit-exact. @p borderType may carry BORDER_ISOLATED. */
     virtual bool gaussianBlur(const UMat& src, UMat& dst, const Mat& kernelX, const Mat& kernelY,
                               int borderType, Stream& stream);
-    /** @brief cv::warpAffine: dst(x, y) = src(M * (x, y, 1)), @p M maps the output to the input.
-    @p interpolation is one of InterpolationFlags, INTER_AREA already turned into INTER_LINEAR. */
-    virtual bool warpAffine(const UMat& src, UMat& dst, const Matx23d& M, int interpolation,
+    /** @brief cv::warpAffine with its own @p M and @p flags (interpolation, WARP_INVERSE_MAP). */
+    virtual bool warpAffine(const UMat& src, UMat& dst, InputArray M, int flags,
                             int borderType, const Scalar& borderValue, Stream& stream);
 };
 
@@ -174,6 +173,39 @@ public:
 The built-in CUDA and HIP backends register themselves. Backends stay registered for the life of the process. */
 CV_EXPORTS void registerBackend(const Ptr<Backend>& backend);
 
+namespace detail {
+template<typename F> struct OpsOf;
+template<typename O, typename... A> struct OpsOf<bool (O::*)(A...)> { typedef O type; };
+}
+
+/** @brief What a hook (CV_ACCEL_RUN) does: when @p src is a 2-D UMat on a device, creates the output
+@p dst there as @p size x @p type and calls @p op of the device's @p module operations with the input,
+the output, @p args and the stream of this thread. False, for the CPU to run the function, when the
+device has no such operation or it declines; the output then stays on the device. */
+template<typename F, typename... Args>
+bool run(F op, const char* module, InputArray src, OutputArray dst, Size size, int type, Args&&... args)
+{
+    typedef typename detail::OpsOf<F>::type ModuleOps;
+    if (!src.isUMat() || !dst.isUMat() || src.empty() || src.dims() > 2)
+        return false;
+    const UMat usrc = src.getUMat();
+    const Device device = getDevice(usrc);
+    if (device.empty() || !outputUsable(dst, device, size, type))
+        return false;
+    UMat& udst = dst.getUMatRef();
+    udst.createOn(device, size, type);
+    ModuleOps* ops = device.ops<ModuleOps>(module);
+    return ops && (ops->*op)(usrc, udst, std::forward<Args>(args)..., device.threadStream());
+}
+
 }} // namespace cv::accel
+
+/** @brief The hook of a cv:: function, as CV_OCL_RUN: returns from the function when @p condition
+holds and @p func, usually cv::accel::run(), ran it on a device. */
+#define CV_ACCEL_RUN(condition, func) \
+    { \
+        if ((condition) && (func)) \
+            return; \
+    }
 
 #endif // OPENCV_CORE_PRIVATE_ACCEL_BACKEND_HPP

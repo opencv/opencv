@@ -46,7 +46,7 @@ class GpuImgprocOps CV_FINAL : public ImgprocOps
 public:
     bool gaussianBlur(const UMat& src, UMat& dst, const Mat& kx, const Mat& ky, int borderType,
                       Stream& stream) CV_OVERRIDE;    // smooth.impl.hpp
-    bool warpAffine(const UMat& src, UMat& dst, const Matx23d& M, int interpolation, int borderType,
+    bool warpAffine(const UMat& src, UMat& dst, InputArray M, int flags, int borderType,
                     const Scalar& borderValue, Stream& stream) CV_OVERRIDE;    // warp.impl.hpp
 };
 

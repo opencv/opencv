@@ -57,7 +57,6 @@
 #include <opencv2/core/utils/configuration.private.hpp>
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencv2/core/softfloat.hpp"
-#include "opencv2/core/private/accel_backend.hpp"
 #include "imgwarp.hpp"
 
 #include "warp_common.hpp"
@@ -2602,45 +2601,6 @@ void warpAffineBlockline(int *adelta, int *bdelta, short* xy, short* alpha, int 
 } // hal::
 } // cv::
 
-namespace cv {
-
-// on the device that holds the input; BORDER_TRANSPARENT keeps what the output holds, so the CPU runs it
-static bool accel_warpAffine(InputArray _src, OutputArray _dst, InputArray _M0, Size dsize, int flags,
-                             int borderType, const Scalar& borderValue)
-{
-    if (!_src.isUMat() || !_dst.isUMat() || _src.empty() || borderType == BORDER_TRANSPARENT)
-        return false;
-    UMat src = _src.getUMat();
-    const accel::Device device = accel::getDevice(src);
-    if (dsize.empty())
-        dsize = src.size();
-    const Mat M0 = _M0.getMat();
-    if (device.empty() || M0.size() != Size(3, 2) || (M0.type() != CV_32F && M0.type() != CV_64F) ||
-        !accel::outputUsable(_dst, device, dsize, src.type()))
-        return false;   // the CPU path reports a wrong matrix
-
-    Matx23d M;
-    M0.convertTo(M, CV_64F);
-    if (!(flags & WARP_INVERSE_MAP))
-    {
-        const Matx23d forward = M;
-        invertAffineTransform(forward, M);
-    }
-    int interpolation = flags & INTER_MAX;
-    if (interpolation == INTER_AREA)
-        interpolation = INTER_LINEAR;
-
-    UMat& dst = _dst.getUMatRef();
-    dst.createOn(device, dsize, src.type());
-    accel::ImgprocOps* ops = device.ops<accel::ImgprocOps>("imgproc");
-    if (!ops)
-        return false;   // CPU fallback; the output is already on the device
-    if (src.u == dst.u)
-        src = src.clone();  // in place: the input is copied on the device first
-    return ops->warpAffine(src, dst, M, interpolation, borderType, borderValue, device.threadStream());
-}
-
-} // namespace cv
 
 void cv::warpAffine( InputArray _src, OutputArray _dst,
                      InputArray _M0, Size dsize,
@@ -2662,8 +2622,9 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     if (borderType < 0 || borderType > BORDER_TRANSPARENT)
       CV_Error(Error::StsBadArg, "Unknown/unsupported border type");
 
-    if (accel_warpAffine(_src, _dst, _M0, dsize, flags, borderType, borderValue))
-        return;
+    CV_ACCEL_RUN(_src.isUMat() && borderType != BORDER_TRANSPARENT,
+                 accel::run(&accel::ImgprocOps::warpAffine, "imgproc", _src, _dst, dsize.empty() ? _src.size() : dsize,
+                            _src.type(), _M0, flags, borderType, borderValue))
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() &&
                _src.cols() <= SHRT_MAX && _src.rows() <= SHRT_MAX,
