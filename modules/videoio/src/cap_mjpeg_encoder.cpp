@@ -1137,7 +1137,7 @@ inline void convertToYUV(int colorspace, int channels, int input_channels, short
         for( i = 0; i < y_limit; i++, pix_data += step, Y_data += Y_step )
         {
             for( j = 0; j < x_limit; j++ )
-                Y_data[j] = (short)(pix_data[j]*4 - 128*4);
+                Y_data[j] = (short)(pix_data[j] - 128);
         }
     }
 }

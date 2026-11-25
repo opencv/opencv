@@ -1341,4 +1341,43 @@ TEST(Videoio_MJPEG, put_bits_no_heap_overflow)
     remove(filename.c_str());
 }
 
+typedef testing::TestWithParam<int> Videoio_MJPEG_Gray;
+
+// Grayscale frames should be read back with the values that were written.
+TEST_P(Videoio_MJPEG_Gray, roundtrip)
+{
+    if (!videoio_registry::hasBackend(CAP_OPENCV_MJPEG))
+        throw SkipTestException("CAP_OPENCV_MJPEG is not available");
+
+    // 8 pixel wide stripes with large and small steps between neighbour 8x8 blocks
+    Mat frame(24, 32, CV_8UC1, Scalar::all(0));
+    frame.colRange(8, 16).setTo(Scalar::all(255));
+    frame.colRange(16, 24).setTo(Scalar::all(100));
+    frame.colRange(24, 32).setTo(Scalar::all(155));
+    frame(Rect(0, 0, 4, 4)).setTo(Scalar::all(255));
+
+    const std::string filename = cv::tempfile(".avi");
+    {
+        VideoWriter writer(filename, CAP_OPENCV_MJPEG, VideoWriter::fourcc('M', 'J', 'P', 'G'), 25.0, frame.size(), false);
+        ASSERT_TRUE(writer.isOpened());
+        ASSERT_TRUE(writer.set(VIDEOWRITER_PROP_QUALITY, GetParam()));
+        ASSERT_NO_THROW(writer.write(frame));
+    }
+
+    Mat decoded;
+    {
+        VideoCapture cap(filename, CAP_OPENCV_MJPEG);
+        ASSERT_TRUE(cap.isOpened());
+        ASSERT_TRUE(cap.read(decoded));
+    }
+    remove(filename.c_str());
+
+    ASSERT_EQ(frame.size(), decoded.size());
+    if (decoded.channels() == 3)
+        cvtColor(decoded, decoded, COLOR_BGR2GRAY);
+    EXPECT_LE(cvtest::norm(frame, decoded, NORM_INF), 16.0);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Videoio_MJPEG_Gray, testing::Values(75, 90, 100));
+
 } // namespace
