@@ -2251,6 +2251,54 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, CompareScalarNewIntDepths, Combine(
                                 Values(CV_32U, CV_64U, CV_64S),
                                 Values(2.5, -1.0, 1e12, 3.0)));
 
+// UMat add()/subtract() into an integer type must match Mat bit-exactly on .5 ties: a float or fractional
+// operand is added first and the sum rounded, the float input is not rounded to an integer before the add
+PARAM_TEST_CASE(AddSubtractToIntDepth, MatDepth, bool)
+{
+};
+
+OCL_TEST_P(AddSubtractToIntDepth, MatchesCPU)
+{
+    const int ddepth = GET_PARAM(0);
+    const bool subtract = GET_PARAM(1);
+
+    float fvals[] = { 193.5f, 194.5f, 0.5f, 1.5f, 2.5f, 3.5f, 100.25f, 10.75f };
+    uchar ivals[] = { 1, 2, 3, 4, 10, 100, 193, 200 };
+    Mat fsrc(1, 8, CV_32F, fvals), isrc(1, 8, CV_8U, ivals), ones(1, 8, CV_8U, Scalar(1));
+
+    struct { const char* name; Mat a; Mat b; Scalar s; bool scalar; } cases[] = {
+        { "float array, integral scalar",     fsrc, Mat(), Scalar(1),   true  },
+        { "float array, integer array",       fsrc, ones,  Scalar(),    false },
+        { "integer array, fractional scalar", isrc, Mat(), Scalar(1.5), true  },
+    };
+
+    for (const auto& c : cases)
+    {
+        SCOPED_TRACE(c.name);
+
+        UMat ua = c.a.getUMat(ACCESS_READ), ub = c.b.getUMat(ACCESS_READ);
+        Mat dst;
+        UMat udst;
+        if (subtract)
+        {
+            OCL_OFF(c.scalar ? cv::subtract(c.a, c.s, dst, noArray(), ddepth) : cv::subtract(c.a, c.b, dst, noArray(), ddepth));
+            OCL_ON(c.scalar ? cv::subtract(ua, c.s, udst, noArray(), ddepth) : cv::subtract(ua, ub, udst, noArray(), ddepth));
+        }
+        else
+        {
+            OCL_OFF(c.scalar ? cv::add(c.a, c.s, dst, noArray(), ddepth) : cv::add(c.a, c.b, dst, noArray(), ddepth));
+            OCL_ON(c.scalar ? cv::add(ua, c.s, udst, noArray(), ddepth) : cv::add(ua, ub, udst, noArray(), ddepth));
+        }
+
+        ASSERT_EQ(ddepth, udst.depth());
+        EXPECT_EQ(0, cvtest::norm(dst, udst.getMat(ACCESS_READ), NORM_INF));
+    }
+}
+
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, AddSubtractToIntDepth, Combine(
+                                Values(CV_8U, CV_16U),
+                                Bool()));
+
 } } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL
