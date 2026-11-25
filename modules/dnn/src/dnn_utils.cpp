@@ -18,24 +18,17 @@ CV__DNN_INLINE_NS_BEGIN
 
 static void blobFromImage32FDispatch(const float* src, size_t srcstep, float* const dst[4],
                                      int rows, int cols, int nch,
-                                     const float mean[4], const float scale[4], bool normalize)
+                                     const float mean[4], const float scale[4])
 {
-    CV_CPU_DISPATCH(blobFromImage32F_, (src, srcstep, dst, rows, cols, nch, mean, scale, normalize),
+    CV_CPU_DISPATCH(blobFromImage32F_, (src, srcstep, dst, rows, cols, nch, mean, scale),
                     CV_CPU_DISPATCH_MODES_ALL);
 }
 
 static void blobFromImage8U32FDispatch(const uchar* src, size_t srcstep, float* const dst[4],
                                        int rows, int cols, int nch,
-                                       const float mean[4], const float scale[4], bool normalize)
+                                       const float mean[4], const float scale[4])
 {
-    CV_CPU_DISPATCH(blobFromImage8U32F_, (src, srcstep, dst, rows, cols, nch, mean, scale, normalize),
-                    CV_CPU_DISPATCH_MODES_ALL);
-}
-
-static void blobFromImage8U8UDispatch(const uchar* src, size_t srcstep, uchar* const dst[4],
-                                      int rows, int cols, int nch)
-{
-    CV_CPU_DISPATCH(blobFromImage8U8U_, (src, srcstep, dst, rows, cols, nch),
+    CV_CPU_DISPATCH(blobFromImage8U32F_, (src, srcstep, dst, rows, cols, nch, mean, scale),
                     CV_CPU_DISPATCH_MODES_ALL);
 }
 
@@ -198,27 +191,28 @@ void blobFromImagesNCHWImpl(const std::vector<Mat>& images, Mat& blob_, const Im
                 std::swap(mean[0], mean[2]);
                 std::swap(scale[0], scale[2]);
             }
-            const bool normalize = param.mean != Scalar() ||
-                                   param.scalefactor != Scalar::all(1.0);
 
             Tout* dst[4] = { p_blob_r, p_blob_g, p_blob_b, p_blob_a };
             if (std::is_same<Tinp, float>::value)
             {
                 blobFromImage32FDispatch(reinterpret_cast<const float*>(images[k].ptr<Tinp>()),
                         images[k].step1(), reinterpret_cast<float* const*>(dst),
-                        h, w, nch, mean, scale, normalize);
+                        h, w, nch, mean, scale);
             }
             else if (std::is_same<Tout, float>::value)
             {
                 blobFromImage8U32FDispatch(reinterpret_cast<const uchar*>(images[k].ptr<Tinp>()),
                         images[k].step, reinterpret_cast<float* const*>(dst),
-                        h, w, nch, mean, scale, normalize);
+                        h, w, nch, mean, scale);
             }
             else
             {
-                blobFromImage8U8UDispatch(reinterpret_cast<const uchar*>(images[k].ptr<Tinp>()),
-                        images[k].step, reinterpret_cast<uchar* const*>(dst),
-                        h, w, nch);
+                // uint8 -> uint8 is a plain channel split into the blob planes
+                // (mean/scale are rejected for CV_8U blobs by the caller).
+                Mat planes[4];
+                for (int c = 0; c < nch; ++c)
+                    planes[c] = Mat(h, w, CV_8U, dst[c]);
+                split(images[k], planes);
             }
             continue;
         }

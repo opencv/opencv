@@ -205,6 +205,36 @@ INSTANTIATE_TEST_CASE_P(/**/, blobFromImage_NCHW_SIMD,
     )
 );
 
+// Default mean/scale must reproduce the input values exactly (no normalization shortcut needed).
+typedef testing::TestWithParam<tuple<int, int> > blobFromImage_NCHW_Default;
+
+TEST_P(blobFromImage_NCHW_Default, ExactCopy)
+{
+    const int depth = get<0>(GetParam());
+    const int nch = get<1>(GetParam());
+    const int rows = 5, cols = 67;
+
+    Mat image(rows, cols, CV_MAKETYPE(depth, nch));
+    randu(image, depth == CV_8U ? Scalar::all(0) : Scalar::all(-10),
+                 depth == CV_8U ? Scalar::all(255) : Scalar::all(10));
+
+    Mat blob = blobFromImage(image);
+
+    ASSERT_EQ(CV_32F, blob.depth());
+    std::vector<Mat> planes;
+    split(image, planes);
+    for (int c = 0; c < nch; ++c)
+    {
+        Mat plane(rows, cols, CV_32F, blob.ptr<float>(0, c));
+        Mat expected;
+        planes[c].convertTo(expected, CV_32F);
+        EXPECT_EQ(0, cvtest::norm(plane, expected, NORM_INF)) << "c=" << c;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, blobFromImage_NCHW_Default,
+    testing::Combine(testing::Values(CV_8U, CV_32F), testing::Values(1, 3, 4)));
+
 TEST(imagesFromBlob, Regression)
 {
     int nbOfImages = 8;
