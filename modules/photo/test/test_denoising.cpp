@@ -196,12 +196,16 @@ TEST(Photo_DenoisingGrayscaleMulti16bitL1, regression)
 
 static void checkDenoiseSubmatrixROI(int type, int norm_type, float h_val, bool use_umat)
 {
-    const Size roi_size(32, 32);
-    const int pad = 16;
+    const Size roi_size(29, 35);
+    const int pad_left = 11;
+    const int pad_top = 14;
+    const int pad_right = 19;
+    const int pad_bottom = 17;
     const int template_window_size = 5;
     const int search_window_size = 11;
-    const Rect roi_rect(pad, pad, roi_size.width, roi_size.height);
-    const Size parent_size(roi_size.width + 2 * pad, roi_size.height + 2 * pad);
+    const Rect roi_rect(pad_left, pad_top, roi_size.width, roi_size.height);
+    const Size parent_size(roi_size.width + pad_left + pad_right,
+                           roi_size.height + pad_top + pad_bottom);
 
     const bool is_16u = (CV_MAT_DEPTH(type) == CV_16U);
     const double min_val = is_16u ? 10000.0 : 40.0;
@@ -259,17 +263,23 @@ TEST(Photo_DenoisingGrayscale, submatrix_roi)
     checkDenoiseSubmatrixROI(CV_8UC1, NORM_L2, 50.0f, true);
     checkDenoiseSubmatrixROI(CV_8UC2, NORM_L2, 50.0f, true);
     checkDenoiseSubmatrixROI(CV_8UC3, NORM_L2, 50.0f, true);
+    checkDenoiseSubmatrixROI(CV_8UC4, NORM_L2, 50.0f, true);
+    checkDenoiseSubmatrixROI(CV_16UC1, NORM_L1, 4000.0f, true);
 }
 
 TEST(Photo_DenoisingGrayscaleMulti, submatrix_roi)
 {
-    const Size roi_size(32, 32);
-    const int pad = 16;
+    const Size roi_size(29, 35);
+    const int pad_left = 11;
+    const int pad_top = 14;
+    const int pad_right = 19;
+    const int pad_bottom = 17;
     const int temporal_window_size = 3;
     const int template_window_size = 5;
     const int search_window_size = 11;
-    const Rect roi_rect(pad, pad, roi_size.width, roi_size.height);
-    const Size parent_size(roi_size.width + 2 * pad, roi_size.height + 2 * pad);
+    const Rect roi_rect(pad_left, pad_top, roi_size.width, roi_size.height);
+    const Size parent_size(roi_size.width + pad_left + pad_right,
+                           roi_size.height + pad_top + pad_bottom);
 
     struct MultiCase
     {
@@ -279,6 +289,7 @@ TEST(Photo_DenoisingGrayscaleMulti, submatrix_roi)
     };
     const MultiCase cases[] = {
         { CV_8UC1, NORM_L2, 50.0f },
+        { CV_8UC3, NORM_L2, 50.0f },
         { CV_16UC1, NORM_L1, 4000.0f }
     };
 
@@ -291,13 +302,14 @@ TEST(Photo_DenoisingGrayscaleMulti, submatrix_roi)
         const double max_val = is_16u ? 50000.0 : 200.0;
         const double high_border_val = is_16u ? 65000.0 : 255.0;
 
-        std::vector<Mat> isolated_frames(temporal_window_size);
-        std::vector<Mat> parent_low_frames(temporal_window_size);
-        std::vector<Mat> parent_high_frames(temporal_window_size);
-        std::vector<Mat> low_rois(temporal_window_size);
-        std::vector<Mat> high_rois(temporal_window_size);
+        const size_t num_frames = static_cast<size_t>(temporal_window_size);
+        std::vector<Mat> isolated_frames(num_frames);
+        std::vector<Mat> parent_low_frames(num_frames);
+        std::vector<Mat> parent_high_frames(num_frames);
+        std::vector<Mat> low_rois(num_frames);
+        std::vector<Mat> high_rois(num_frames);
 
-        for (int i = 0; i < temporal_window_size; ++i)
+        for (size_t i = 0; i < num_frames; ++i)
         {
             isolated_frames[i].create(roi_size, type);
             rng.fill(isolated_frames[i], RNG::UNIFORM, Scalar::all(min_val), Scalar::all(max_val));
