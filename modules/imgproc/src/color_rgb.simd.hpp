@@ -622,6 +622,21 @@ struct RGB5x52Gray
 };
 
 
+// The vector kernels cover a remainder by rewinding the final block so it ends at n, which
+// re-reads source pixels already visited. If dst overlaps src (identical or partially
+// overlapping storage) an earlier store may have overwritten data that re-read needs. Rewind
+// only when the two byte ranges are disjoint; otherwise finish the remainder with the scalar
+// loop, which reads each pixel before it can be overwritten.
+// This must be evaluated on the original pointers: once the loop advances src by
+// vsize*scn and dst by vsize, comparing them (src == dst) no longer detects overlap.
+template<typename _Tp>
+static inline bool rgb2grayBuffersDisjoint(const _Tp* src, _Tp* dst, int n, int scn)
+{
+    const uintptr_t s0 = (uintptr_t)src, d0 = (uintptr_t)dst;
+    return (s0 + (uintptr_t)n * (uintptr_t)scn * sizeof(_Tp) <= d0) ||
+           (d0 + (uintptr_t)n * sizeof(_Tp) <= s0);
+}
+
 template<typename _Tp> struct RGB2Gray
 {
     typedef _Tp channel_type;
@@ -668,13 +683,14 @@ struct RGB2Gray<float>
         float cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+        const bool disjoint = rgb2grayBuffersDisjoint(src, dst, n, scn);
         const int vsize = VTraits<v_float32>::vlanes();
         v_float32 rv = vx_setall_f32(cr), gv = vx_setall_f32(cg), bv = vx_setall_f32(cb);
         for(; i < n;
             i += vsize, src += vsize*scn, dst += vsize)
         {
             if ( i > n - vsize ) {
-                if (i == 0 || src == dst) {
+                if (i == 0 || !disjoint) {
                     break;
                 }
                 int backup = i - (n - vsize);
@@ -734,16 +750,9 @@ struct RGB2Gray<uchar>
         short cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
         int i = 0;
 
-        // The vector kernels cover a remainder by rewinding the final block so it ends at
-        // n, which re-reads source pixels already visited. If the destination overlaps the
-        // source (identical or partially overlapping storage) an earlier store may have
-        // overwritten bytes that re-read needs. Rewind only when the two byte ranges are
-        // disjoint; otherwise finish the remainder with the scalar loop, which reads each
-        // pixel before it can be overwritten.
-        [[maybe_unused]] const bool disjoint = [&]() {
-            const uintptr_t s0 = (uintptr_t)src, d0 = (uintptr_t)dst;
-            return (s0 + (uintptr_t)n * (uintptr_t)scn <= d0) || (d0 + (uintptr_t)n <= s0);
-        }();
+        // See rgb2grayBuffersDisjoint: rewinding the final block is only safe when the
+        // source and destination byte ranges do not overlap.
+        [[maybe_unused]] const bool disjoint = rgb2grayBuffersDisjoint(src, dst, n, scn);
 
 #if CV_AVX512_SKX
         // Bit-exact x86 fast paths. BGRA: no channel deinterleave at all - the 4-byte
@@ -922,6 +931,7 @@ struct RGB2Gray<ushort>
         int i = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+        const bool disjoint = rgb2grayBuffersDisjoint(src, dst, n, scn);
         const int vsize = VTraits<v_uint16>::vlanes();
 
 #if CV_NEON
@@ -933,7 +943,7 @@ struct RGB2Gray<ushort>
                  i += vsize, src += scn*vsize, dst += vsize)
             {
                 if ( i > n - vsize ) {
-                    if (i == 0 || src == dst) {
+                    if (i == 0 || !disjoint) {
                         break;
                     }
                     int backup = i - (n - vsize);
@@ -978,7 +988,7 @@ struct RGB2Gray<ushort>
              i += vsize, src += scn*vsize, dst += vsize)
         {
             if ( i > n - vsize ) {
-                if (i == 0 || src == dst) {
+                if (i == 0 || !disjoint) {
                     break;
                 }
                 int backup = i - (n - vsize);
