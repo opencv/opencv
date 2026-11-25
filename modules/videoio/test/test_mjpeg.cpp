@@ -206,6 +206,58 @@ TEST(Videoio_MJPEG, accuracy_gray_roundtrip)
     }
 }
 
+// Every 8x8 block is flat, and neighbouring block levels jump between near-black
+// and near-white. Each block then has a large DC delta from its predecessor and no AC
+// energy, so a wrong DC predictor (or one not reset per stripe) shows up directly.
+static void fillMjpegDcJumps(Mat& frame)
+{
+    CV_Assert(frame.type() == CV_8UC1);
+    static const uchar levels[] = { 16, 240, 48, 208, 128, 0, 255, 96 };
+    const int nlevels = (int)(sizeof(levels) / sizeof(levels[0]));
+    unsigned state = 12345u;
+    for (int by = 0; by < frame.rows; by += 8)
+    {
+        for (int bx = 0; bx < frame.cols; bx += 8)
+        {
+            state = state * 1664525u + 1013904223u;
+            const uchar v = levels[(state >> 16) % nlevels];
+            frame(Rect(bx, by, std::min(8, frame.cols - bx), std::min(8, frame.rows - by))).setTo(v);
+        }
+    }
+    // Force the extreme swing on the first row of blocks regardless of the LCG output.
+    for (int bx = 0; bx < frame.cols; bx += 8)
+        frame(Rect(bx, 0, std::min(8, frame.cols - bx), std::min(8, frame.rows))).setTo(
+            ((bx / 8) & 1) ? 255 : 0);
+}
+
+TEST(Videoio_MJPEG, accuracy_gray_dc_jumps)
+{
+    requireOpenCvMjpeg();
+
+    // 320x240 is 8-aligned, so every block is flat with no padded tails.
+    Mat src(Size(320, 240), CV_8UC1);
+    fillMjpegDcJumps(src);
+    for (int nstripes : {1, 4})
+    {
+        const Mat decoded = encodeDecodeMjpeg(src, src.size(), false, 95, nstripes);
+        ASSERT_FALSE(decoded.empty()) << "stripes=" << nstripes;
+        ASSERT_EQ(src.size(), decoded.size());
+
+        Mat decodedGray;
+        if (decoded.channels() == 3)
+            cvtColor(decoded, decodedGray, COLOR_BGR2GRAY);
+        else
+            decodedGray = decoded;
+
+        // Flat blocks quantize almost exactly; a drifting DC predictor would
+        // offset whole blocks and blow past both limits.
+        const double psnr = cvtest::PSNR(decodedGray, src);
+        const double maxErr = cv::norm(decodedGray, src, NORM_INF);
+        EXPECT_GT(psnr, 40.0) << "stripes=" << nstripes << " PSNR=" << psnr;
+        EXPECT_LE(maxErr, 8.0) << "stripes=" << nstripes;
+    }
+}
+
 TEST(Videoio_MJPEG, accuracy_real_image)
 {
     requireOpenCvMjpeg();
