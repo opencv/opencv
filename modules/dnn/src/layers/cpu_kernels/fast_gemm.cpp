@@ -19,13 +19,6 @@
 #undef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 #include "fast_gemm_kernels.default.hpp"
 
-// fast_gemm_thin is a regular dispatched file: its baseline copy is compiled from the same source.
-#undef CV_CPU_DISPATCH_MODES_ALL
-#define CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN namespace cpu_baseline {
-#define CV_CPU_OPTIMIZATION_NAMESPACE_END }
-#include "fast_gemm_thin.simd.hpp"
-#include "layers/cpu_kernels/fast_gemm_thin.simd_declarations.hpp"
-
 namespace cv { namespace dnn {
 
 int fastGemmMC(const FastGemmOpt &opt) {
@@ -686,14 +679,6 @@ void fastGemm(bool trans_a, bool trans_b,
     fastGemm(trans_a, trans_b, ma, na, mb, nb,
              alpha, a, lda0, lda1, b, ldb0, ldb1,
              beta, c, ldc, opt);
-}
-
-static void fastGemmThinTB(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
-                           int M, int N, int K, float alpha, const float *A, int lda,
-                           const float *B, int ldb, float beta, float *C, int ldc, bool multi_thread) {
-    CV_CPU_DISPATCH(fastGemmThinTBKernel, (batch, A_offsets, B_offsets, C_offsets, M, N, K, alpha, A, lda,
-                                           B, ldb, beta, C, ldc, multi_thread),
-                    CV_CPU_DISPATCH_MODES_ALL);
 }
 
 void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,

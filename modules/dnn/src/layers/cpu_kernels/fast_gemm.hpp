@@ -256,6 +256,9 @@ void fastGemmThin(int M, int N, int K, float alpha,
                   const float* A, int lda0, int lda1,
                   const float* packed_B, float beta,
                   float* C, int ldc, bool multi_thread);
+void fastGemmThinTB(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
+                    int M, int N, int K, float alpha, const float *A, int lda,
+                    const float *B, int ldb, float beta, float *C, int ldc, bool multi_thread);
 
 void pagedAttnQKGemm(
     const Mat& Q, const std::vector<Mat> &K, Mat& A,
