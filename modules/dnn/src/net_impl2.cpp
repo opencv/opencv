@@ -2421,7 +2421,8 @@ bool Net::Impl::tryInferShapes(const std::vector<MatShape>& suggestedInpShapes,
                                              adata.name.c_str(), typeToString(suggestedType).c_str(),
                                              typeToString(adata.type).c_str()));
             }
-            type = suggestedType;
+            bool floatArg = adata.type == CV_32F || adata.type == CV_16F || adata.type == CV_16BF;
+            type = floatArg ? (enableFP16 ? adata.type : CV_32F) : suggestedType;
         }
 
         if (nsuggestedShapes) {
