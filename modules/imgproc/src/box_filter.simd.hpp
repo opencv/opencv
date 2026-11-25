@@ -1072,6 +1072,75 @@ struct ColumnSum :
 #define VEC_ALIGN CV_MALLOC_ALIGN
 
 template<typename ST, typename T>
+inline int BlockSumBorder(const T* ref, const T* S, T* R, ST* SUM, T* D, ST** buf_ptr,
+    const int *btab, int width, int i, int cn, int dx1, int dx2, int kheight, int kwidth,
+    bool leftBorder, int borderLen, int borderType, double scale)
+{
+    int j=0, k;
+    const T* Si = S+i;
+    if( leftBorder )
+    {
+        for( k=0; k < dx1*cn; k++, j++ )
+        {
+            if( borderType != BORDER_CONSTANT )
+                R[j] = ref[btab[k]];
+            else
+                R[j] = 0;
+        }
+        if( width >= dx1+dx2 )
+        {
+            for( k=0; k < (kwidth-1)*cn; k++, j++ )
+            {
+                R[j] = Si[k];
+            }
+        }
+        else
+        {
+            int diff = dx1+dx2-width;
+            for( k=0; k < (kwidth-1-diff)*cn; k++, j++ )
+            {
+                R[j] = Si[k];
+            }
+            int rem = min(diff, dx2);
+            for( k=0; k < rem*cn; k++, j++ )
+            {
+                if( borderType != BORDER_CONSTANT )
+                    R[j] = ref[btab[dx1*cn+k]];
+                else
+                    R[j] = 0;
+            }
+        }
+    }
+    else
+    {
+        for( k=0; k < borderLen+(kwidth-1-dx2)*cn; k++, j++ )
+        {
+            R[j] = Si[k];
+        }
+        for( k=0; k < dx2*cn; k++, j++ )
+        {
+            if( borderType != BORDER_CONSTANT )
+                R[j] = ref[btab[dx1*cn+k]];
+            else
+                R[j] = 0;
+        }
+    }
+
+    for( j=0; j < borderLen; j++, i++ )
+    {
+        ST Sp = 0;
+        for(k=0; k < kwidth; k++)
+            Sp += (ST)R[j+k*cn];
+        buf_ptr[kheight-1][i] = Sp;
+        ST s0 = SUM[i] + Sp;
+        D[i] = saturate_cast<T>(s0*scale);
+        SUM[i] = s0 - buf_ptr[0][i];
+    }
+
+    return i;
+}
+
+template<typename ST, typename T>
 inline void BlockSumBorderInplace(const T* ref, const T* S, T* R,
     const int *btab, int width, int cn, int dx1, int dx2, int borderType)
 {
@@ -1202,9 +1271,9 @@ inline int BlockSumCore(const T* S, ST* SUM, T* D, ST** buf_ptr, double scale,
     return i;
 }
 
-uchar* alignCore(uchar* ptr) // align core region to VEC_ALIGN
+uchar* alignCore(uchar* ptr, int borderBytes) // align core region to VEC_ALIGN
 {
-    return alignPtr((uchar*)ptr, VEC_ALIGN);
+    return alignPtr(ptr + borderBytes, VEC_ALIGN) - borderBytes;
 }
 
 template<typename ST, typename T>
@@ -1307,10 +1376,12 @@ void blockSum(const Mat& _src, Mat& _dst, Size ksize, Point anchor, const Size &
     T* R;
     ST** buf_ptr = &bufPtr[0];
     const int *btab = borderTab;
-    T* C = (T*)alignCore(constBorder);
-    ST* SUM = (ST*)alignCore(&buf[bufStep*kheight]);
+    // out of place, the left border columns are computed separately and the core starts after them
+    const int coreOfs = inplace ? 0 : borderLeft;
+    T* C = (T*)alignCore(constBorder, coreOfs*sizeof(T));
+    ST* SUM = (ST*)alignCore(&buf[bufStep*kheight], coreOfs*sizeof(ST));
     for( int k=0;k<kheight;k++ )
-        buf_ptr[k] = (ST*)alignCore(&buf[bufStep*k]);
+        buf_ptr[k] = (ST*)alignCore(&buf[bufStep*k], coreOfs*sizeof(ST));
 
     for( int rc=0, bbi=0; rc < height1; rc++ )
     {
@@ -1325,17 +1396,35 @@ void blockSum(const Mat& _src, Mat& _dst, Size ksize, Point anchor, const Size &
         S = ref;
         R = (T*)alignPtr(border, VEC_ALIGN);
         if ( rc < (kheight-1) )
-            D = (T*)alignCore(inplaceDst);
+            D = (T*)alignCore(inplaceDst, coreOfs*sizeof(T));
         else
             D = (T*)dst;
         for( int k=0; k < kheight; k++ )
-            buf_ptr[k] = (ST*)alignCore(&buf[((bbi+k)%kheight)*bufStep]);
+            buf_ptr[k] = (ST*)alignCore(&buf[((bbi+k)%kheight)*bufStep], coreOfs*sizeof(ST));
 
         int widthcn = width*cn;
         i=0;
-        BlockSumBorderInplace<ST,T>(ref, S, R, btab, width + kwidth - 1 - dx1 - dx2, cn, dx1, dx2, borderType);
-        BlockSumCore<ST,T>(R, SUM, D, buf_ptr, scale, widthcn, i, cn, kheight, kwidth);
-
+        if( inplace )
+        {
+            BlockSumBorderInplace<ST,T>(ref, S, R, btab, width + kwidth - 1 - dx1 - dx2, cn, dx1, dx2, borderType);
+            BlockSumCore<ST,T>(R, SUM, D, buf_ptr, scale, widthcn, i, cn, kheight, kwidth);
+        }
+        else
+        {
+            if( dx1>0 )
+            {
+                i = BlockSumBorder<ST,T>(ref, S, R, SUM, D, buf_ptr, btab, width, i, cn,
+                        dx1, dx2, kheight, kwidth, true, borderLeft, borderType, scale);
+                S-=(dx1*cn);
+            }
+            i = BlockSumCore<ST,T>(S, SUM, D, buf_ptr, scale, widthcn-(dx2*cn), i, cn, kheight, kwidth);
+            if( i<widthcn && dx2>0 )
+            {
+                int border_len_right = widthcn-i;
+                i = BlockSumBorder<ST,T>(ref, S, R, SUM, D, buf_ptr, btab, width, i, cn,
+                        dx1, dx2, kheight, kwidth, false, border_len_right, borderType, scale);
+            }
+        }
 
         bbi++; bbi %= kheight;
         if( rc >= (kheight-1) )
@@ -1476,12 +1565,6 @@ Ptr<BaseRowColumnFilter> getRowColumnSumFilter(int srcType, int dstType, int ksi
 #endif
                 if( sdepth == CV_32S )
                     return makePtr<Sum3x3sameType<SKIP_SCALING,  int, v_int32> >(ksize, scale);
-                if( sdepth == CV_32F )
-                    return makePtr<Sum3x3sameType<SKIP_SCALING, float, v_float32> >(ksize, scale);
-#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-                if( sdepth == CV_64F )
-                    return makePtr<Sum3x3sameType<SKIP_SCALING, double,v_float64> >(ksize, scale);
-#endif
             }
             else
             {
@@ -1495,12 +1578,6 @@ Ptr<BaseRowColumnFilter> getRowColumnSumFilter(int srcType, int dstType, int ksi
 #endif
                 if( sdepth == CV_32S )
                     return makePtr<Sum3x3sameType<APPLY_SCALING, int, v_int32> >(ksize, scale);
-                if( sdepth == CV_32F )
-                    return makePtr<Sum3x3sameType<APPLY_SCALING, float, v_float32> >(ksize, scale);
-#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-                if( sdepth == CV_64F )
-                    return makePtr<Sum3x3sameType<APPLY_SCALING, double, v_float64> >(ksize, scale);
-#endif
             }
         }
         else if (ksize == 5)
@@ -1517,12 +1594,6 @@ Ptr<BaseRowColumnFilter> getRowColumnSumFilter(int srcType, int dstType, int ksi
 #endif
                 if( sdepth == CV_32S )
                     return makePtr<Sum5x5sameType<SKIP_SCALING, int, v_int32> >(ksize, scale); //intermediate stored can be stored in int64_t, but matching reference code to avoid output mismatch.
-                if( sdepth == CV_32F )
-                    return makePtr<Sum5x5sameType<SKIP_SCALING, float, v_float32> >(ksize, scale);
-#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-                if( sdepth == CV_64F )
-                    return makePtr<Sum5x5sameType<SKIP_SCALING, double, v_float64> >(ksize, scale);
-#endif
             }
             else
             {
@@ -1536,12 +1607,6 @@ Ptr<BaseRowColumnFilter> getRowColumnSumFilter(int srcType, int dstType, int ksi
 #endif
                 if( sdepth == CV_32S )
                     return makePtr<Sum5x5sameType<APPLY_SCALING, int, v_int32> >(ksize, scale);
-                if( sdepth == CV_32F )
-                    return makePtr<Sum5x5sameType<APPLY_SCALING, float, v_float32> >(ksize, scale);
-#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-                if( sdepth == CV_64F )
-                    return makePtr<Sum5x5sameType<APPLY_SCALING, double, v_float64> >(ksize, scale);
-#endif
             }
         }
     }
