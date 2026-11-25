@@ -2830,6 +2830,49 @@ TEST(Test_ONNX_fp16_target, set_after_readNet)
     }
 }
 
+// BF16 models keep float I/O through Cast; only DNN_TARGET_CPU_FP16 runs the layers in bfloat.
+typedef testing::TestWithParam<tuple<std::string, int> > Test_ONNX_bf16;
+TEST_P(Test_ONNX_bf16, Accuracy)
+{
+    const std::string basename = get<0>(GetParam());
+    const int target = get<1>(GetParam());
+    Mat inp = blobFromNPY(_tf("data/input_" + basename + ".npy"));
+    Mat ref = blobFromNPY(_tf("data/output_" + basename + ".npy"));
+
+    Mat out = runFP16Model(basename, target, inp);
+    ASSERT_EQ(CV_32F, out.depth());
+    normAssert(ref, out, basename.c_str(), 1e-2, 4e-2);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_bf16, Combine(
+    Values("bf16_conv_relu_pools", "bf16_gemm", "bf16_gemm_transB",
+           "bf16_matmul", "bf16_layernorm_softmax"),
+    Values((int)DNN_TARGET_CPU, (int)DNN_TARGET_CPU_FP16)
+));
+
+// (x + 256) - 256 is exact in float but rounds x in bfloat, so the values show which precision ran.
+TEST(Test_ONNX_bf16_target, runs_in_bfloat)
+{
+    const std::string basename = "bf16_add_sub_probe";
+    Mat inp = blobFromNPY(_tf("data/input_" + basename + ".npy"));
+
+    for (int target : {(int)DNN_TARGET_CPU, (int)DNN_TARGET_CPU_FP16})
+    {
+        SCOPED_TRACE(target == DNN_TARGET_CPU ? "DNN_TARGET_CPU" : "DNN_TARGET_CPU_FP16");
+        Mat out = runFP16Model(basename, target, inp);
+        ASSERT_EQ(CV_32F, out.depth());
+
+        Mat expected = inp.clone();
+        if (target == DNN_TARGET_CPU_FP16)
+        {
+            float* p = expected.ptr<float>();
+            for (size_t i = 0; i < expected.total(); i++)
+                p[i] = (float)bfloat(p[i] + 256.f) - 256.f;
+        }
+        EXPECT_EQ(0, cvtest::norm(expected, out, NORM_INF));
+    }
+}
+
 class Test_ONNX_nets : public Test_ONNX_layers
 {
 public:
