@@ -55,22 +55,10 @@ static inline V roundScale(const V& s, const v_float32&) { return s; }
 // Sum3x3sameType/Sum5x5sameType
 static inline v_int32 scaleSameType(const v_int32& s, double, const v_float32& v_scale)
 { return v_round(v_mul(v_cvt_f32(s), v_scale)); }
-static inline v_float32 scaleSameType(const v_float32& s, double, const v_float32& v_scale)
-{ return v_mul(s, v_scale); }
-#endif
-#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-static inline v_float64 scaleSameType(const v_float64& s, double scale, const v_float32&)
-{ return v_mul(s, vx_setall_f64(scale)); }
 #endif
 
-// scalar tails scale floating-point sums in ET, as the vector loops do
 template<typename ET, typename AT>
-static inline typename std::enable_if<std::is_floating_point<ET>::value, ET>::type
-scaleSum(AT s, double scale) { return s * (ET)scale; }
-
-template<typename ET, typename AT>
-static inline typename std::enable_if<!std::is_floating_point<ET>::value, ET>::type
-scaleSum(AT s, double scale) { return saturate_cast<ET>(s * scale); }
+static inline ET scaleSum(AT s, double scale) { return saturate_cast<ET>(s * scale); }
 
 // Rows and x range of one call for a (2R+1)x(2R+1) kernel: output rows start at dstRow0
 // (src row 0 is the first tap row), and the first/last R columns are left to the caller.
@@ -661,21 +649,10 @@ struct Sum5x5sameType :
                 loadRowAdd(src_4, VECSZ, cn, b4, b4v1, b4v2, b4v3);
                 src_4 += src_inc;
 
-                if (std::is_floating_point<ET>::value)
-                {
-                    // a running sum would accumulate rounding error down the column
-                    sum   = v_add(v_add(v_add(v_add(b1, b0), b2), b3), b4);
-                    sumv1 = v_add(v_add(v_add(v_add(b1v1, b0v1), b2v1), b3v1), b4v1);
-                    sumv2 = v_add(v_add(v_add(v_add(b1v2, b0v2), b2v2), b3v2), b4v2);
-                    sumv3 = v_add(v_add(v_add(v_add(b1v3, b0v3), b2v3), b3v3), b4v3);
-                }
-                else
-                {
-                    sum = v_add(sum, b4);
-                    sumv1 = v_add(sumv1, b4v1);
-                    sumv2 = v_add(sumv2, b4v2);
-                    sumv3 = v_add(sumv3, b4v3);
-                }
+                sum = v_add(sum, b4);
+                sumv1 = v_add(sumv1, b4v1);
+                sumv2 = v_add(sumv2, b4v2);
+                sumv3 = v_add(sumv3, b4v3);
                 VET out = sum, outv1 = sumv1, outv2 = sumv2, outv3 = sumv3;
                 if (SCALE_T==APPLY_SCALING)
                 {
@@ -689,13 +666,10 @@ struct Sum5x5sameType :
                 v_store(dstx + x + VECSZ_2, outv2);
                 v_store(dstx + x + VECSZ_3, outv3);
 
-                if (!std::is_floating_point<ET>::value)
-                {
-                    sum   = v_sub(sum, b0);
-                    sumv1 = v_sub(sumv1, b0v1);
-                    sumv2 = v_sub(sumv2, b0v2);
-                    sumv3 = v_sub(sumv3, b0v3);
-                }
+                sum   = v_sub(sum, b0);
+                sumv1 = v_sub(sumv1, b0v1);
+                sumv2 = v_sub(sumv2, b0v2);
+                sumv3 = v_sub(sumv3, b0v3);
 
                 b0 = b1; b0v1 = b1v1; b0v2 = b1v2; b0v3 = b1v3;
                 b1 = b2; b1v1 = b2v1; b1v2 = b2v2; b1v3 = b2v3;
