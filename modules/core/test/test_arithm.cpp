@@ -3776,4 +3776,95 @@ TEST(Core_InRange, unsupported_depth_throws)
     EXPECT_THROW(cv::inRange(src, lower, upper, dst), cv::Exception);
 }
 
+// Products of two int values with a scale that is not a power of two. Operands are even in
+// [-80000, 80000], so most products exceed 2^31 and are divisible by 4: x * y * 0.3, 0.2 and -0.3
+// are never exact ties, and every scaled result fits in an int (at most 1.92e9).
+typedef testing::TestWithParam<double> Core_MulScale32S;
+
+TEST_P(Core_MulScale32S, large_products)
+{
+    RNG& rng = theRNG();
+    const double scale = GetParam();
+    Mat a(2, 37, CV_32S), b(2, 37, CV_32S), dst;
+    rng.fill(a, RNG::UNIFORM, -40000, 40001);
+    rng.fill(b, RNG::UNIFORM, -40000, 40001);
+    a *= 2;
+    b *= 2;
+    cv::multiply(a, b, dst, scale);
+    ASSERT_EQ(CV_32S, dst.type());
+    for (int y = 0; y < a.rows; y++)
+        for (int x = 0; x < a.cols; x++)
+        {
+            int expected = saturate_cast<int>((double)a.at<int>(y, x) * b.at<int>(y, x) * scale);
+            ASSERT_EQ(expected, dst.at<int>(y, x))
+                << "a=" << a.at<int>(y, x) << " b=" << b.at<int>(y, x);
+        }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_MulScale32S, testing::Values(0.3, -0.3, 0.2));
+
+// Power-of-two scales of 2^-14 .. 2^-20: 2^-16 and smaller used to index past the shift table.
+typedef testing::TestWithParam< tuple<int, int> > Core_MulTinyPowerOfTwoScale;
+
+TEST_P(Core_MulTinyPowerOfTwoScale, result_within_one)
+{
+    RNG& rng = theRNG();
+    const int depth = get<0>(GetParam());
+    const double scale = std::ldexp(1.0, -get<1>(GetParam()));
+    const int maxValue = depth == CV_16U ? 32000 : depth == CV_16S ? 22000 : 100000;
+
+    Mat a(2, 37, depth), b(2, 37, depth), dst;
+    rng.fill(a, RNG::UNIFORM, 1, maxValue);
+    rng.fill(b, RNG::UNIFORM, 1, maxValue);
+    cv::multiply(a, b, dst, scale);
+    ASSERT_EQ(depth, dst.depth());
+
+    // exact value is at most one away from the result, whatever the rounding
+    Mat a64, b64, dst64;
+    a.convertTo(a64, CV_64F);
+    b.convertTo(b64, CV_64F);
+    dst.convertTo(dst64, CV_64F);
+    Mat exact = a64.mul(b64) * scale;
+    EXPECT_LE(cvtest::norm(exact, dst64, NORM_INF), 1.0);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_MulTinyPowerOfTwoScale,
+    testing::Combine(testing::Values((int)CV_16U, (int)CV_16S, (int)CV_32S), testing::Range(14, 21)));
+
+// For signed types the largest absolute product is min() * min(), not max() * max(). Widths cover
+// the 128-bit and 64-bit vector bodies and the scalar tail of the Carotene kernels.
+typedef testing::TestWithParam<int> Core_MulScale;
+
+template <typename T>
+static void checkMulLargestProduct(int width, T a, T b, double scale, T expected)
+{
+    Mat src1(2, width, DataType<T>::type, Scalar::all((double)a));
+    Mat src2(2, width, DataType<T>::type, Scalar::all((double)b));
+    Mat dst;
+    cv::multiply(src1, src2, dst, scale);
+    ASSERT_EQ(src1.type(), dst.type());
+    Mat ref(src1.size(), src1.type(), Scalar::all((double)expected));
+    EXPECT_EQ(0, cvtest::norm(ref, dst, NORM_INF))
+        << "width=" << width << " a=" << (double)a << " b=" << (double)b << " scale=" << scale;
+}
+
+TEST_P(Core_MulScale, signed_min_times_min_is_not_rounded_to_zero)
+{
+    const int width = GetParam();
+    checkMulLargestProduct<schar>(width, -128, -128, std::ldexp(1.0, -14), 1);
+    checkMulLargestProduct<short>(width, -32768, -32768, std::ldexp(1.0, -30), 1);
+    checkMulLargestProduct<int>(width, INT_MIN, INT_MIN, std::ldexp(1.0, -62), 1);
+}
+
+// An exact 0.5 result rounds to even, i.e. to 0, like saturate_cast does
+TEST_P(Core_MulScale, signed_min_times_min_exact_half_rounds_to_even)
+{
+    const int width = GetParam();
+    checkMulLargestProduct<schar>(width, -128, -128, std::ldexp(1.0, -15), 0);
+    checkMulLargestProduct<short>(width, -32768, -32768, std::ldexp(1.0, -31), 0);
+    checkMulLargestProduct<int>(width, INT_MIN, INT_MIN, std::ldexp(1.0, -63), 0);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_MulScale, testing::Values(1, 7, 8, 15, 16, 37, 64));
+
 }} // namespace
