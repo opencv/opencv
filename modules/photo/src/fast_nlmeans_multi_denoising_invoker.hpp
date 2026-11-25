@@ -120,9 +120,10 @@ FastNlMeansMultiDenoisingInvoker<T, IT, UIT, D, WT>::FastNlMeansMultiDenoisingIn
     temporal_window_size_ = temporal_window_half_size_ * 2 + 1;
 
     border_size_ = search_window_half_size_ + template_window_half_size_;
+    // Isolate sub-matrix ROIs so border padding does not read pixels outside the ROI.
     for (int i = 0; i < temporal_window_size_; i++)
         copyMakeBorder(srcImgs[imgToDenoiseIndex - temporal_window_half_size_ + i], extended_srcs_[i],
-            border_size_, border_size_, border_size_, border_size_, cv::BORDER_DEFAULT);
+            border_size_, border_size_, border_size_, border_size_, cv::BORDER_DEFAULT | cv::BORDER_ISOLATED);
 
     main_extended_src_ = extended_srcs_[temporal_window_half_size_];
     const IT max_estimate_sum_value =

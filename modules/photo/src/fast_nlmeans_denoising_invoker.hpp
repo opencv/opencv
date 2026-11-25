@@ -115,7 +115,8 @@ FastNlMeansDenoisingInvoker<T, IT, UIT, D, WT>::FastNlMeansDenoisingInvoker(
     search_window_size_        = search_window_half_size_   * 2 + 1;
 
     border_size_ = search_window_half_size_ + template_window_half_size_;
-    copyMakeBorder(src_, extended_src_, border_size_, border_size_, border_size_, border_size_, BORDER_DEFAULT);
+    // Isolate sub-matrix ROIs so border padding does not read pixels outside the ROI.
+    copyMakeBorder(src_, extended_src_, border_size_, border_size_, border_size_, border_size_, BORDER_DEFAULT | BORDER_ISOLATED);
 
     const IT max_estimate_sum_value =
         (IT)search_window_size_ * (IT)search_window_size_ * (IT)pixelInfo<T>::sampleMax();
