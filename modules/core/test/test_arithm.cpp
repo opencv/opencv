@@ -4,6 +4,8 @@
 #include "test_precomp.hpp"
 #include "ref_reduce_arg.impl.hpp"
 #include <algorithm>
+#include <cstdint>
+#include <cstring>
 
 namespace opencv_test { namespace {
 
@@ -1014,6 +1016,15 @@ struct RotateOp : public BaseElemWiseOp
 
 typedef testing::TestWithParam<tuple<int, Size, int> > RotatePaddedTest;
 
+static void expectRotateBytes(const Mat& expected, const Mat& actual)
+{
+    ASSERT_EQ(expected.size(), actual.size());
+    ASSERT_EQ(expected.type(), actual.type());
+    for (int y = 0; y < expected.rows; ++y)
+        ASSERT_EQ(0, std::memcmp(expected.ptr(y), actual.ptr(y),
+                                expected.cols * expected.elemSize())) << "row " << y;
+}
+
 TEST_P(RotatePaddedTest, accuracy)
 {
     const int type = get<0>(GetParam());
@@ -1023,22 +1034,53 @@ TEST_P(RotatePaddedTest, accuracy)
 
     Mat storage(size.height + 2, size.width + 2, type);
     Mat src = storage(Rect(1, 1, size.width, size.height));
-    rng.fill(src, RNG::UNIFORM, Scalar::all(0), Scalar::all(255));
+    // Rotation must preserve every bit, including NaN payloads and signed zeros.
+    Mat storageBytes(storage.rows, static_cast<int>(storage.cols * storage.elemSize()),
+                     CV_8U, storage.data, storage.step);
+    rng.fill(storageBytes, RNG::UNIFORM, 0, 256);
+    if (type == CV_32FC3)
+    {
+        const uint32_t bits[] = { 0x80000000U, 0x7fc01234U, 0x7f800001U };
+        std::memcpy(src.ptr(), bits, sizeof(bits));
+    }
+    else if (type == CV_64FC3)
+    {
+        const uint64_t bits[] = { 0x8000000000000000ULL, 0x7ff8000000001234ULL,
+                                  0x7ff0000000000001ULL };
+        std::memcpy(src.ptr(), bits, sizeof(bits));
+    }
+    const Mat originalStorage = storage.clone();
     const Size dstSize = rotateCode == ROTATE_180 ? size : Size(size.height, size.width);
     Mat dstStorage(dstSize.height + 2, dstSize.width + 2, type, Scalar::all(0));
     Mat actual = dstStorage(Rect(1, 1, dstSize.width, dstSize.height));
     Mat expected;
     reference::rotate(src, expected, rotateCode);
     cv::rotate(src, actual, rotateCode);
-    EXPECT_EQ(0, cvtest::norm(expected, actual, NORM_INF));
+    expectRotateBytes(expected, actual);
     Mat expectedStorage(dstStorage.size(), type, Scalar::all(0));
     expected.copyTo(expectedStorage(Rect(1, 1, dstSize.width, dstSize.height)));
-    EXPECT_EQ(0, cvtest::norm(expectedStorage, dstStorage, NORM_INF));
+    expectRotateBytes(expectedStorage, dstStorage);
+    expectRotateBytes(originalStorage, storage);
+
+    Mat packed = src.clone(), packedResult;
+    cv::rotate(packed, packedResult, rotateCode);
+    expectRotateBytes(expected, packedResult);
+
+    Mat inplaceStorage = storage.clone();
+    Mat inplace = inplaceStorage(Rect(1, 1, size.width, size.height));
+    cv::rotate(inplace, inplace, rotateCode);
+    expectRotateBytes(expected, inplace);
+    Mat expectedInplaceStorage = originalStorage.clone();
+    if (rotateCode == ROTATE_180 || size.width == size.height)
+        expected.copyTo(expectedInplaceStorage(Rect(1, 1, size.width, size.height)));
+    expectRotateBytes(expectedInplaceStorage, inplaceStorage);
 }
 
 INSTANTIATE_TEST_CASE_P(Core_Rotate, RotatePaddedTest, testing::Combine(
-    testing::Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_64FC1),
-    testing::Values(Size(3550, 3), Size(513, 7), Size(1025, 9), Size(17, 19)),
+    testing::Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_64FC1,
+                    CV_8UC3, CV_16UC3, CV_32FC3, CV_64FC3),
+    testing::Values(Size(3550, 3), Size(513, 7), Size(1025, 9), Size(17, 19),
+                    Size(1, 1), Size(1, 19), Size(17, 1), Size(32, 8)),
     testing::Values(ROTATE_90_CLOCKWISE, ROTATE_180, ROTATE_90_COUNTERCLOCKWISE)));
 
 typedef testing::TestWithParam<tuple<Size, int, bool, bool> > FlipWideTest;
