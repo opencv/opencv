@@ -8863,9 +8863,8 @@ static void bilinearWarpHalf(const float* x, const float* y, int len,
         }
         if (borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT)
         {
-            const float lower = borderType == BORDER_TRANSPARENT ? 0.f : -1.f;
             const bool outside = !std::isfinite(sx) || !std::isfinite(sy) ||
-                                 (borderType == BORDER_TRANSPARENT ? sx < lower || sy < lower : sx <= lower || sy <= lower) ||
+                                 (borderType == BORDER_TRANSPARENT ? sx < -1.f || sy < -1.f : sx <= -1.f || sy <= -1.f) ||
                                  double(sx) >= size.width || double(sy) >= size.height;
             if (outside)
             {
@@ -8890,25 +8889,16 @@ static void bilinearWarpHalf(const float* x, const float* y, int len,
                 pixels[row*2 + column] = rowData && columns[column] >= 0 ?
                                          rowData + size_t(columns[column])*channels : nullptr;
         }
-        float scale = 1.f;
-        if (borderType == BORDER_TRANSPARENT && !(pixels[0] && pixels[1] && pixels[2] && pixels[3]))
-        {
-            float weightSum = 0.f;
-            for (int tap = 0; tap < 4; ++tap)
-                if (pixels[tap])
-                    weightSum += weights[tap];
-            if (weightSum == 0.f)
-                continue;
-            scale = 1.f/weightSum;
-        }
         for (int channel = 0; channel < channels; ++channel)
         {
-            const float border = borderType == BORDER_CONSTANT ? float(fill[channel]) : 0.f;
+            // Taps outside the image read the existing destination pixel under BORDER_TRANSPARENT, like float32.
+            const float border = borderType == BORDER_CONSTANT ? float(fill[channel]) :
+                                 borderType == BORDER_TRANSPARENT ? float(dst[channel]) : 0.f;
             const float v0 = pixels[0] ? float(pixels[0][channel]) : border;
             const float v1 = pixels[1] ? float(pixels[1][channel]) : border;
             const float v2 = pixels[2] ? float(pixels[2][channel]) : border;
             const float v3 = pixels[3] ? float(pixels[3][channel]) : border;
-            dst[channel] = hfloat((v0*weights[0] + v1*weights[1] + v2*weights[2] + v3*weights[3])*scale);
+            dst[channel] = hfloat(v0*weights[0] + v1*weights[1] + v2*weights[2] + v3*weights[3]);
         }
     }
 }

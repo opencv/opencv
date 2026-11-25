@@ -1633,20 +1633,7 @@ TEST(Imgproc_Warp, float16_interpolation)
             expected.convertTo(rounded, CV_16F);
             rounded.convertTo(reference, CV_32F);
             result.convertTo(actual, CV_32F);
-            if (interpolation == INTER_LINEAR && border == BORDER_TRANSPARENT && operation != 4 &&
-                (channels == 1 || channels == 3 || channels == 4))
-            {
-                // The float32 transparent fast-path issue is tracked in #29412; partial borders are tested separately.
-                Mat interior(size, CV_32F, Scalar(0)), support;
-                if (size.width > 2 && size.height > 2)
-                    interior(Rect(1, 1, size.width - 2, size.height - 2)).setTo(1.f);
-                warp(interior, support, BORDER_CONSTANT);
-                Mat valid = support == 1.f;
-                if (countNonZero(valid))
-                    ASSERT_LE(cv::norm(actual, reference, NORM_INF, valid), 1./1024.);
-            }
-            else
-                ASSERT_LE(cvtest::norm(actual, reference, NORM_INF), 1./1024.);
+            ASSERT_LE(cvtest::norm(actual, reference, NORM_INF), 1./1024.);
         }
         Mat unchanged;
         src.convertTo(unchanged, CV_32F);
@@ -1826,11 +1813,13 @@ TEST(Imgproc_Warp, float16_linear_transparent)
         Mat dst(1, 5, src.type());
         dst.reshape(1).setTo(0.125);
         remap(src, dst, mapx, mapy, INTER_LINEAR, BORDER_TRANSPARENT);
-        const float expected[] = {2.5f, 3.f, 0.125f, 0.125f, 3.5f};
+        // Taps outside the image read the destination value 0.125, as in float32; column 3 lies fully outside.
+        const float expected[] = {2.5f, 1.5625f, 0.5625f, 0.125f, 1.8125f};
+        const float inside[] = {1.f, 0.5f, 0.5f, 0.f, 0.5f};
         for (int column = 0; column < 5; ++column)
         for (int channel = 0; channel < channels; ++channel)
             EXPECT_EQ(float(dst.ptr<hfloat>(0, column)[channel]),
-                      expected[column] + (column == 2 || column == 3 ? 0.f : channel/8.f));
+                      expected[column] + inside[column]*channel/8.f);
         Mat uninitialized, center(1, 1, CV_32F, Scalar(0.5));
         remap(src, uninitialized, center, center, INTER_LINEAR, BORDER_TRANSPARENT);
         for (int channel = 0; channel < channels; ++channel)
@@ -1839,7 +1828,7 @@ TEST(Imgproc_Warp, float16_linear_transparent)
     Mat unit(1, 1, CV_16F, Scalar(1)), dst(1, 1, CV_16F, Scalar(0.125));
     Mat mapx(1, 1, CV_32F, Scalar(0.5)), mapy(1, 1, CV_32F, Scalar(0));
     remap(unit, dst, mapx, mapy, INTER_LINEAR, BORDER_TRANSPARENT);
-    EXPECT_EQ(float(dst.at<hfloat>(0, 0)), 1.f);
+    EXPECT_EQ(float(dst.at<hfloat>(0, 0)), 0.5625f);
 }
 
 TEST(Imgproc_Warp, float16_linear_extreme_coordinates)
