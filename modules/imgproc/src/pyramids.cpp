@@ -1095,12 +1095,17 @@ void PyrDownInvoker<CastOp>::operator()(const Range& range) const
                     }
                 }
 
-                // tabR
+                // tabR: advance by 2*cn per output pixel so each right-border column samples 2 source columns apart.
                 const int* tabR = *_tabR;
-                for (int x_ = 0; x < dsize.width; x++, x_++)
+                for (int tab_off = 0; x < dsize.width; tab_off += cn * 2)
                 {
-                    row[x] = src[tabR[x_+cn*2]]*6 + (src[tabR[x_+cn]] + src[tabR[x_+cn*3]])*4 +
-                        src[tabR[x_]] + src[tabR[x_+cn*4]];
+                    for (int k = 0; k < cn && x < dsize.width; k++, x++)
+                    {
+                        int tx = tab_off + k;
+                        row[x] = src[tabR[tx + cn * 2]] * 6 +
+                                 (src[tabR[tx + cn]] + src[tabR[tx + cn * 3]]) * 4 +
+                                 src[tabR[tx]] + src[tabR[tx + cn * 4]];
+                    }
                 }
             } while (0);
         }
@@ -1264,6 +1269,10 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
     int kercn = 1;
     if (depth == CV_8U && float_depth == CV_32F && cn == 1 && ocl::Device::getDefault().isIntel())
         kercn = 4;
+    int borderTypeNI = borderType & ~BORDER_ISOLATED;
+    if (borderTypeNI <= BORDER_CONSTANT || borderTypeNI > BORDER_REFLECT_101)
+        return false;
+
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
                                        "BORDER_REFLECT_101" };
     char cvt[2][50];
@@ -1274,7 +1283,7 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
             ocl::convertTypeStr(float_depth, depth, cn, cvt[0], sizeof(cvt[0])),
             ocl::convertTypeStr(depth, float_depth, cn, cvt[1], sizeof(cvt[1])),
             doubleSupport ? " -D DOUBLE_SUPPORT" : "", ocl::typeToStr(depth),
-            cn, kercn, float_depth, borderMap[borderType], local_size
+            cn, kercn, float_depth, borderMap[borderTypeNI], local_size
     );
     ocl::Kernel k("pyrDown", ocl::imgproc::pyr_down_oclsrc, buildOptions);
     if (k.empty())
@@ -1349,7 +1358,8 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(borderType != BORDER_CONSTANT);
+    int borderTypeNI = borderType & ~BORDER_ISOLATED;
+    CV_Assert(borderTypeNI != BORDER_CONSTANT);
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_pyrDown(_src, _dst, _dsz, borderType))
@@ -1367,11 +1377,11 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
         src.locateROI( wsz, ofs );
         CALL_HAL(pyrDown, cv_hal_pyrdown_offset, src.data, src.step, src.cols, src.rows,
                  dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(),
-                 ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, borderType & (~BORDER_ISOLATED));
+                 ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, borderTypeNI);
     }
     else
     {
-        CALL_HAL(pyrDown, cv_hal_pyrdown, src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(), borderType);
+        CALL_HAL(pyrDown, cv_hal_pyrdown, src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(), borderTypeNI);
     }
     bool use_avx512vbmi = checkHardwareSupport(CPU_AVX_512VBMI);
 
@@ -1401,7 +1411,7 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
     else
         CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
-    func( src, dst, borderType );
+    func( src, dst, borderTypeNI );
 }
 
 
