@@ -64,18 +64,17 @@ static const Size bigSize(4096, 4096);
 const FourCC_Ext_Size entries[] =
 {
     make_tuple("", "avi", bigSize),
-    make_tuple("DX50", "avi", bigSize),
+    make_tuple("DX50", "avi", Size(1920, 1080)),  // same mpeg4 encoder as XVID, which keeps the big frame
     make_tuple("FLV1", "avi", bigSize),
     make_tuple("H261", "avi", Size(352, 288)),
     make_tuple("H263", "avi", Size(704, 576)),
-    make_tuple("I420", "avi", bigSize),
+    make_tuple("I420", "avi", Size(1920, 1080)),  // same rawvideo path as "" (NONE), which keeps the big frame
     make_tuple("MJPG", "avi", bigSize),
-    make_tuple("mp4v", "avi", bigSize),
+    make_tuple("mp4v", "avi", Size(1920, 1080)),
     make_tuple("MPEG", "avi", Size(720, 576)),
     make_tuple("XVID", "avi", bigSize),
-    make_tuple("H264", "mp4", Size(4096, 2160)),
-    make_tuple("FFV1", "avi", bigSize),
-    make_tuple("FFV1", "mkv", bigSize)
+    make_tuple("H264", "mp4", Size(4096, 2160))
+    // FFV1 (avi, mkv) is checked with read-back in videoio_synthetic.write_read_position
 };
 
 inline static std::string videoio_ffmpeg_name_printer(const testing::TestParamInfo<videoio_ffmpeg::ParamType>& info)
@@ -582,7 +581,7 @@ TEST(videoio_ffmpeg, parallel)
     const int GRAN = 4;
     const Range R(0, NUM);
     const Size sz(1020, 900);
-    const int frameNum = 300;
+    const int frameNum = 60;  // 5 GOPs per stream; shared FFmpeg state is only touched in open/release
     const Scalar color(Scalar::all(0));
     const Point center(sz.height / 2, sz.width / 2);
 

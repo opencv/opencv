@@ -2635,4 +2635,55 @@ TEST(Core_InputOutput, YAML_Compatibility)
     remove(filename.c_str());
 }
 
+TEST(Core_InputOutput, filestorage_read_uppercase_exponent)
+{
+    // JSON, YAML and XML all allow an upper-case exponent marker. A number whose
+    // mantissa has no '.' was only read as a real for a lower-case 'e', so "1E5"
+    // was read as the integer 1 followed by stray "E5".
+    const char* contents[] = {
+        "{\n  \"a\": 1E5,\n  \"b\": -3E-2,\n  \"c\": 1e5\n}\n",
+        "%YAML:1.0\n---\na: 1E5\nb: -3E-2\nc: 1e5\n",
+        "<?xml version=\"1.0\"?>\n<opencv_storage>\n<a>1E5</a>\n<b>-3E-2</b>\n<c>1e5</c>\n</opencv_storage>\n",
+    };
+    for (const char* content : contents)
+    {
+        SCOPED_TRACE(content);
+        double a = 0, b = 0, c = 0;
+        ASSERT_NO_THROW({
+            FileStorage fs(content, FileStorage::READ | FileStorage::MEMORY);
+            EXPECT_TRUE(fs["a"].isReal());
+            fs["a"] >> a;
+            fs["b"] >> b;
+            fs["c"] >> c;
+        });
+        EXPECT_EQ(1e5, a);
+        EXPECT_EQ(-3e-2, b);
+        EXPECT_EQ(1e5, c);
+    }
+}
+
+// CV_32U values above INT_MAX must survive saving and loading, in every format
+TEST(Core_InputOutput, filestorage_32u_large_values)
+{
+    const unsigned values[] = { 0u, 1u, 2147483647u, 2147483648u, 4294967295u };
+    const Mat src(1, 5, CV_32U, (void*)values);
+
+    for (const char* ext : { ".yml", ".xml", ".json" })
+    {
+        for (int base64 : { 0, (int)FileStorage::WRITE_BASE64 })
+        {
+            FileStorage writer(ext, FileStorage::WRITE | FileStorage::MEMORY | base64);
+            writer << "m" << src;
+            const std::string text = writer.releaseAndGetString();
+
+            FileStorage reader(text, FileStorage::READ | FileStorage::MEMORY);
+            Mat dst;
+            reader["m"] >> dst;
+
+            EXPECT_EQ(CV_32U, dst.type()) << ext << " base64=" << base64;
+            EXPECT_EQ(0, cv::norm(src, dst, NORM_INF)) << ext << " base64=" << base64;
+        }
+    }
+}
+
 }} // namespace

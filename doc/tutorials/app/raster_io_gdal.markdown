@@ -71,7 +71,7 @@ Mercator.
 
 One easy method to find the corner coordinates of an image is to use the command-line tool gdalinfo.
 For imagery which is ortho-rectified and contains the projection information, you can use the [USGS
-EarthExplorer](http://http://earthexplorer.usgs.gov).
+EarthExplorer](https://earthexplorer.usgs.gov).
 @code{.bash}
 \f$> gdalinfo N37W123.hgt
 

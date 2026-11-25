@@ -88,7 +88,11 @@ __kernel void TEMPLATE(softmax_forward_slm,Dtype)(const int num, const int chann
   for (int index = get_global_id(0); index < channels * spatial_dim;
       index += get_global_size(0)) {
     int s = index % spatial_dim;
+#ifdef LOG_SOFTMAX
+    out_tmp[index] = data[n * channels * spatial_dim + index] - scale_tmp[s];
+#else
     out_tmp[index] = exp(data[n * channels * spatial_dim + index] - scale_tmp[s]);
+#endif
   }
   barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -96,7 +100,11 @@ __kernel void TEMPLATE(softmax_forward_slm,Dtype)(const int num, const int chann
       get_global_size(0), ++s) {
     Dtype sum = 0;
     for (int c = get_global_id(0); c < channels; c += get_global_size(0)) {
+#ifdef LOG_SOFTMAX
+      sum += exp(out_tmp[c * spatial_dim + s]);
+#else
       sum += out_tmp[c * spatial_dim + s];
+#endif
     }
     sum = sub_group_reduce_add(sum);
     group_tmp[get_sub_group_id() * spatial_dim + s] = sum;
@@ -115,9 +123,10 @@ __kernel void TEMPLATE(softmax_forward_slm,Dtype)(const int num, const int chann
   for (int index = get_global_id(0); index < channels * spatial_dim;
       index += get_global_size(0)) {
     int s = index % spatial_dim;
-    Dtype v = out_tmp[index] / scale_tmp[s];
 #ifdef LOG_SOFTMAX
-    v = log(v);
+    Dtype v = out_tmp[index] - log(scale_tmp[s]);
+#else
+    Dtype v = out_tmp[index] / scale_tmp[s];
 #endif
     out[n * channels * spatial_dim + index] = v;
   }
@@ -157,7 +166,11 @@ __kernel void TEMPLATE(softmax_forward,Dtype)(const int num, const int channels,
   for (int index = get_global_id(0); index < channels * spatial_dim;
       index += get_global_size(0)) {
     int s = index % spatial_dim;
+#ifdef LOG_SOFTMAX
+    out[n * channels * spatial_dim + index] = data[n * channels * spatial_dim + index] - scale[n * spatial_dim + s];
+#else
     out[n * channels * spatial_dim + index] = exp(data[n * channels * spatial_dim + index] - scale[n * spatial_dim + s]);
+#endif
   }
   barrier(CLK_GLOBAL_MEM_FENCE);
 
@@ -165,7 +178,11 @@ __kernel void TEMPLATE(softmax_forward,Dtype)(const int num, const int channels,
       get_global_size(0), ++s) {
     Dtype sum = 0;
     for (int c = get_global_id(0); c < channels; c += get_global_size(0)) {
+#ifdef LOG_SOFTMAX
+      sum += exp(out[n * channels * spatial_dim + c * spatial_dim + s]);
+#else
       sum += out[n * channels * spatial_dim + c * spatial_dim + s];
+#endif
     }
     sum = sub_group_reduce_add(sum);
     group_tmp[get_sub_group_id() * spatial_dim + s] = sum;
@@ -184,9 +201,10 @@ __kernel void TEMPLATE(softmax_forward,Dtype)(const int num, const int channels,
   for (int index = get_global_id(0); index < channels * spatial_dim;
       index += get_global_size(0)) {
     int s = index % spatial_dim;
-    Dtype v = out[n * channels * spatial_dim + index] / scale[n * spatial_dim + s];
 #ifdef LOG_SOFTMAX
-    v = log(v);
+    Dtype v = out[n * channels * spatial_dim + index] - log(scale[n * spatial_dim + s]);
+#else
+    Dtype v = out[n * channels * spatial_dim + index] / scale[n * spatial_dim + s];
 #endif
     out[n * channels * spatial_dim + index] = v;
   }

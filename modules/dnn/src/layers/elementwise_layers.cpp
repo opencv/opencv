@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../net_impl.hpp"
 #include "cpu_kernels/blocked_pointwise.hpp"
 #include "../adjacency_graph.hpp"
 #include "../op_cuda.hpp"
@@ -277,6 +278,15 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+        if (backendId == DNN_BACKEND_CUDA) {
+            // the CUDA activation ops are float/half only; an intermediate arg has no type until the first forward
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (netimpl_ && !this->inputs.empty()) {
+                const int t = netimpl_->argData(this->inputs[0]).type;
+                if (t >= 0 && t != CV_32F && t != CV_16F)
+                    return false;
+            }
+        }
         return func.supportBackend(backendId, this->preferableTarget);
     }
 
@@ -1173,7 +1183,7 @@ struct GeluApproximationFunctor : public BaseDefaultFunctor<GeluApproximationFun
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
     }
 
     inline float calculate(float x) const
@@ -1181,6 +1191,13 @@ struct GeluApproximationFunctor : public BaseDefaultFunctor<GeluApproximationFun
         return 0.5f * x * (1.f + tanh(x * (GeluApproximationConstants::sqrt_2_pi +
                                            GeluApproximationConstants::coef_sqrt_2_pi * x * x)));
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::GeluApproximationOp>(target, stream);
+    }
+#endif
 
     void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
     {

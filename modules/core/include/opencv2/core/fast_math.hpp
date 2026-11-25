@@ -494,6 +494,18 @@ inline int cvIsInf( double value )
 
 #ifdef __cplusplus
 
+namespace cv { namespace detail {
+// Same as cvFloor without the saturation check. Safe only if the caller validated the range.
+inline int cvFloorUnsaturated(double value)
+{
+#if defined CV__FASTMATH_HAVE_MSVC_ARM64
+    return (int)vcvtmd_s64_f64(value);
+#else
+    return cvFloor(value);
+#endif
+}
+}} // namespace cv::detail
+
 /** @overload
 
  If the value is outside of INT_MIN ... INT_MAX range, the result is saturated: INT_MIN for values

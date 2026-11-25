@@ -151,14 +151,14 @@ of them, you need to download and install them on your system.
     of color conversion, Haar training and DFT functions of the OpenCV library. Watch out, since
     this is not a free service.
 -   OpenCV offers a somewhat fancier and more useful graphical user interface, than the default one
-    by using the [Qt framework](http://qt.nokia.com/downloads). For a quick overview of what this has to offer, look into the
+    by using the [Qt framework](https://www.qt.io/development/offline-installers). For a quick overview of what this has to offer, look into the
     documentations *highgui* module, under the *Qt New Functions* section. Version 4.6 or later of
     the framework is required.
--   [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page#Download) is a C++ template library for linear algebra.
+-   [Eigen](https://gitlab.com/libeigen/eigen/-/releases) is a C++ template library for linear algebra.
 -   The latest [CUDA Toolkit](http://developer.nvidia.com/cuda-downloads) will allow you to use the power lying inside your GPU. This will
     drastically improve performance for some algorithms (e.g the HOG descriptor). Getting more and
     more of our algorithms to work on the GPUs is a constant effort of the OpenCV team.
--   [OpenEXR](http://www.openexr.com/downloads.html) source files are required for the library to work with this high dynamic range (HDR)
+-   [OpenEXR](https://github.com/AcademySoftwareFoundation/openexr/releases) source files are required for the library to work with this high dynamic range (HDR)
     image file format.
 -   The OpenNI Framework contains a set of open source APIs that provide support for natural interaction with devices via methods such as voice command recognition, hand gestures, and body
     motion tracking. Prebuilt binaries can be found [here](http://structure.io/openni). The source code of [OpenNI](https://github.com/OpenNI/OpenNI) and [OpenNI2](https://github.com/OpenNI/OpenNI2) are also available on Github.
@@ -212,7 +212,7 @@ libraries). If you do not need the support for some of these, you can just freel
 
     -#  In case of the [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page#Download) library it is again a case of download and extract to the
         `D:/OpenCV/dep` directory.
-    -#  Same as above with [OpenEXR](http://www.openexr.com/downloads.html).
+    -#  Same as above with [OpenEXR](https://github.com/AcademySoftwareFoundation/openexr/releases).
     -#  For the [OpenNI Framework](http://www.openni.org/) you need to install both the [development
         build](http://www.openni.org/downloadfiles/opennimodules/openni-binaries/21-stable) and the
         [PrimeSensor
@@ -222,7 +222,7 @@ libraries). If you do not need the support for some of these, you can just freel
         according to your OS.
     -#  In case of the Qt framework you need to build yourself the binary files (unless you use the
         Microsoft Visual Studio 2008 with 32 bit compiler). To do this go to the [Qt
-        Downloads](http://qt.nokia.com/downloads) page. Download the source files (not the
+        Downloads](https://download.qt.io/archive/qt/) page. Download the source files (not the
         installers!!!):
 
         ![](images/qtDownloadThisPackage.png)

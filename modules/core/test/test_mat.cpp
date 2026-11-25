@@ -1183,6 +1183,49 @@ protected:
 
 TEST(Core_Reduce, accuracy) { Core_ReduceTest test; test.safe_run(); }
 
+typedef testing::TestWithParam<testing::tuple<int, int, int> > Core_ReduceFP16;
+
+TEST_P(Core_ReduceFP16, matches_widened_reference)
+{
+    const int channels = get<0>(GetParam());
+    const int dim = get<1>(GetParam());
+    const int op = get<2>(GetParam());
+    Mat1f values(9, 11 * channels);
+    for (int row = 0; row < values.rows; ++row)
+        for (int col = 0; col < values.cols; ++col)
+            values(row, col) = ((row * 11 + col) % 49 - 24) * 0.0625f;
+    Mat storage;
+    values.reshape(channels).convertTo(storage, CV_16F);
+    Mat src = storage(Rect(1, 1, 9, 7));
+    const bool extrema = op == REDUCE_MIN || op == REDUCE_MAX;
+    const int dtype = extrema ? CV_16F : CV_64F;
+    Mat dst, wide, expected;
+    cv::reduce(src, dst, dim, op, dtype);
+    src.convertTo(wide, CV_64F);
+    cv::reduce(wide, expected, dim, op, CV_64F);
+    ASSERT_EQ(dst.size(), expected.size());
+    ASSERT_EQ(dst.type(), CV_MAKETYPE(dtype, channels));
+    dst.convertTo(dst, CV_64F);
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 1e-12);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_ReduceFP16,
+                        testing::Combine(testing::Values(1, 3, 9), testing::Values(0, 1),
+                                         testing::Values(REDUCE_SUM, REDUCE_AVG, REDUCE_SUM2, REDUCE_MIN, REDUCE_MAX)));
+
+TEST(Core_Reduce, fp16_vector_keeps_matrix_output)
+{
+    const Mat1f values({4}, {1, 2, 3, 4});
+    Mat src, dst;
+    values.convertTo(src, CV_16F);
+    ASSERT_EQ(src.dims, 1);
+    cv::reduce(src, dst, 0, REDUCE_SUM, CV_32F);
+    ASSERT_EQ(dst.dims, 2);
+    ASSERT_EQ(dst.size(), Size(1, 1));
+    ASSERT_EQ(dst.type(), CV_32F);
+    EXPECT_EQ(dst.at<float>(0, 0), 10.f);
+}
+
 // Core_ReduceTest fills with randu(0, 100), so it never reaches the range where a 32-bit
 // accumulator would overflow. CV_32S reduces through a double accumulator for that reason.
 TEST(Core_Reduce, int32_accumulator_does_not_overflow)
@@ -1549,6 +1592,39 @@ TEST(Core_Mat, extractChannel_inplace_29568)
     EXPECT_EQ(Size(3, 3), mat.size());
     EXPECT_EQ(0, cv::norm(mat, Mat(3, 3, CV_8UC1, Scalar(2)), NORM_INF));
 }
+
+// insertChannel and extractChannel on every depth: only the chosen channel changes
+typedef testing::TestWithParam<std::tuple<perf::MatType, int> > Core_InsertExtractChannel;
+TEST_P(Core_InsertExtractChannel, accuracy)
+{
+    const int depth = std::get<0>(GetParam());
+    const int cn = std::get<1>(GetParam());
+
+    for (int coi = 0; coi < cn; coi++)
+    {
+        Mat dst(5, 7, CV_MAKETYPE(depth, cn), Scalar::all(1));
+        Mat channel(5, 7, depth, Scalar::all(0));
+
+        insertChannel(channel, dst, coi);
+
+        std::vector<Mat> planes;
+        split(dst, planes);
+        for (int c = 0; c < cn; c++)
+        {
+            Mat expected(5, 7, depth, Scalar::all(c == coi ? 0 : 1));
+            EXPECT_EQ(0, cv::norm(planes[c], expected, NORM_INF)) << "coi=" << coi << " c=" << c;
+        }
+
+        Mat extracted;
+        extractChannel(dst, extracted, coi);
+        EXPECT_EQ(depth, extracted.type());
+        EXPECT_EQ(0, cv::norm(extracted, channel, NORM_INF)) << "coi=" << coi;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_InsertExtractChannel, testing::Combine(
+    testing::Range(perf::MatType(CV_8U), perf::MatType(CV_DEPTH_CURR_MAX)),
+    testing::Range(2, 5)));
 
 TEST(Core_Mat, empty)
 {
@@ -2824,6 +2900,17 @@ TEST(Mat1D, basic)
         EXPECT_EQ(0, pt.y);
         EXPECT_EQ(50, pt.x);
     }
+}
+
+TEST(Mat1D, forEach_position)
+{
+    std::vector<int> sizes { 10 };
+    Mat m(sizes, CV_32SC1, Scalar::all(-1));
+    m.forEach<int>([](int& v, const int* position) { v = position[0]; });
+
+    ASSERT_EQ(1, m.dims);
+    for (int i = 0; i < 10; i++)
+        EXPECT_EQ(i, m.at<int>(i));
 }
 
 TEST(Mat, ptrVecni_20044)

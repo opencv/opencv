@@ -5,7 +5,10 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
-//#include "../op_cuda.hpp"
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/permute.hpp"
+#endif
 //#include "../op_inf_engine.hpp"
 //#include "../ie_ngraph.hpp"
 //#include "../op_webnn.hpp"
@@ -37,8 +40,40 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_ || inputs.size() != 1)
+                return false;
+            const ArgData& adata = netimpl_->argData(inputs[0]);
+            if (adata.shape.dims > CSL_MAX_TENSOR_RANK)
+                return false;
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
+            const int t = adata.type;
+            return t < 0 || isCudaNodeType(t);
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_,
+                              InputArrayOfArrays inputs_arr,
+                              InputArrayOfArrays) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        const int ndims = inputs_arr.shape(0).dims;
+        std::vector<std::size_t> order(ndims);
+        for (int i = 0; i < ndims; i++) {
+            int j = perm.empty() ? ndims - i - 1 : perm[i];
+            order[i] = (std::size_t)(j < 0 ? j + ndims : j);
+        }
+        if (inputs_arr.depth(0) == CV_Bool)
+            return make_cuda_node_bool<cuda4dnn::PermuteOp>(std::move(context->stream), std::move(order));
+        return make_cuda_node_with_type<cuda4dnn::PermuteOp>(preferableTarget, inputs_arr.type(0),
+                                                             std::move(context->stream), std::move(order));
+    }
+#endif
 
     MatShape getOutShape(const MatShape& inpShape) const
     {

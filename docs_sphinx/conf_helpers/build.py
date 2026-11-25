@@ -411,6 +411,16 @@ def _esc(s: str) -> str:
     return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+def _api_index_toctree(prefixes) -> str:
+    """Include every generated view, including nested types and redirects."""
+    pages = sorted(
+        p.relative_to(SPHINX_INPUT_ROOT).with_suffix("").as_posix()
+        for folder in ("main_modules", "extra_modules")
+        for p in (SPHINX_INPUT_ROOT / folder).glob("*.md")
+        if p.name.startswith(prefixes))
+    return "\n```{toctree}\n:hidden:\n:maxdepth: 1\n\n" + "\n".join(pages) + "\n```\n"
+
+
 def _write_namespace_list_index() -> None:
     """Generate `namespace_list.markdown` — local analog of Doxygen's
     namespaces.html (the header "Namespaces" target).
@@ -454,6 +464,7 @@ def _write_namespace_list_index() -> None:
         "# Namespace List\n\n"
         "Here is a list of all documented namespaces with brief descriptions.\n\n"
         f'<div class="ocv-namespace-list">\n{chr(10).join(render(tree))}\n</div>\n'
+        + _api_index_toctree(("namespace_",))
     )
     try:
         (SPHINX_INPUT_ROOT / "namespace_list.markdown").write_text(
@@ -501,6 +512,7 @@ def _write_class_list_index() -> None:
         "# Class List\n\n"
         "Here are the classes, structs and unions with brief descriptions.\n\n"
         f'<div class="ocv-class-list-wrap">\n{chr(10).join(body)}\n</div>\n'
+        + _api_index_toctree(("class", "struct", "union"))
     )
     try:
         (SPHINX_INPUT_ROOT / "class_list.markdown").write_text(

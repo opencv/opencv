@@ -153,7 +153,7 @@ public:
         std::vector<MatType>& outputs,
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
-        CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_16F || inputs[0] == CV_8U || inputs[0] == CV_8S, "");
+        CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_32U || inputs[0] == CV_64U || inputs[0] == CV_16F || inputs[0] == CV_8U || inputs[0] == CV_8S, "");
         outputs.assign(1, inputs[0]);
     }
 
@@ -527,6 +527,8 @@ public:
             case CV_8S: opDispatch<int8_t>(std::forward<Args>(args)...); break;
             case CV_32S: opDispatch<int32_t>(std::forward<Args>(args)...); break;
             case CV_64S: opDispatch<int64_t>(std::forward<Args>(args)...); break;
+            case CV_32U: opDispatch<uint32_t>(std::forward<Args>(args)...); break;
+            case CV_64U: opDispatch<uint64_t>(std::forward<Args>(args)...); break;
             case CV_32F: opDispatch<float>(std::forward<Args>(args)...); break;
             default: CV_Error(cv::Error::BadDepth, "DNN/Reduce: Unsupported type.");
         }

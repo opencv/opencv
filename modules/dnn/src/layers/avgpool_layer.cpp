@@ -587,9 +587,17 @@ public:
         setParamsFrom(params);
         auto_pad = getAutoPadding(params);
         kernel_shape = params.getVector<int>("kernel_size");
+        if (kernel_shape.empty() && params.has("kernel_shape"))
+            kernel_shape = params.getVector<int>("kernel_shape");
         strides = params.getVector<int>("stride");
+        if (strides.empty() && params.has("strides"))
+            strides = params.getVector<int>("strides");
         dilations = params.getVector<int>("dilation");
+        if (dilations.empty() && params.has("dilations"))
+            dilations = params.getVector<int>("dilations");
         pads = params.getVector<int>("pad");
+        if (pads.empty() && params.has("pads"))
+            pads = params.getVector<int>("pads");
         ceil_mode = params.get<bool>("ceil_mode", false);
         count_include_pad = params.get<bool>("count_include_pad", false);
     }

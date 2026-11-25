@@ -36,7 +36,6 @@ class TriluLayerImpl CV_FINAL : public TriluLayer {
             const int w = inputs[0].size[shape_input.size() - 1];
             const int h = shape_input.size() >= 2 ? inputs[0].size[shape_input.size() - 2] : 1;
 
-            const int m = std::min(h,w);
             int loops = 1;
             for (int i = 0; i < cdims; ++i)
                 loops *= shape_input[i];
@@ -45,15 +44,16 @@ class TriluLayerImpl CV_FINAL : public TriluLayer {
             uchar *dst = outputs[0].ptr<uchar>();
             auto fn = [&](const Range &r) {
                 for (int i = r.start; i < r.end; i++) {
-                    for(int l=0; l < m; l+=1) {
+                    for(int l=0; l < h; l+=1) {
                         int cmin = upperTri ? 0 : (l + k + 1);
                         cmin = std::max(cmin, 0);
                         const int cmax = upperTri ? min(l + k -1, w-1) : w-1;
                         const int num_zeros = cmax - cmin + 1;
-                        size_t offset = (static_cast<size_t>(w) * h * i + (static_cast<size_t>(w) * l + cmin)) * elemSize;
-                        auto *cur_dst = dst + offset;
                         if (cmin < w && num_zeros > 0)
-                            std::memset(cur_dst, 0, elemSize * num_zeros);
+                        {
+                            size_t offset = (static_cast<size_t>(w) * h * i + (static_cast<size_t>(w) * l + cmin)) * elemSize;
+                            std::memset(dst + offset, 0, elemSize * num_zeros);
+                        }
                     }
                 }
             };

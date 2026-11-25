@@ -1,0 +1,49 @@
+if(COMMAND toolchain_save_config)
+  return() # prevent recursive call
+endif()
+
+set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_VERSION 1)
+if(NOT DEFINED CMAKE_SYSTEM_PROCESSOR)
+  set(CMAKE_SYSTEM_PROCESSOR loongarch)
+else()
+  #message("CMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR}")
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/gnu.toolchain.cmake")
+
+if(NOT "x${GCC_COMPILER_VERSION}" STREQUAL "x")
+  set(__GCC_VER_SUFFIX "-${GCC_COMPILER_VERSION}")
+endif()
+
+if(NOT DEFINED CMAKE_C_COMPILER)
+  find_program(CMAKE_C_COMPILER NAMES ${GNU_MACHINE}-gcc${__GCC_VER_SUFFIX})
+else()
+  #message(WARNING "CMAKE_C_COMPILER=${CMAKE_C_COMPILER} is defined")
+endif()
+if(NOT DEFINED CMAKE_CXX_COMPILER)
+  find_program(CMAKE_CXX_COMPILER NAMES ${GNU_MACHINE}-g++${__GCC_VER_SUFFIX})
+else()
+  #message(WARNING "CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} is defined")
+endif()
+if(NOT DEFINED CMAKE_LINKER)
+  find_program(CMAKE_LINKER NAMES ${GNU_MACHINE}-ld${__GCC_VER_SUFFIX} ${GNU_MACHINE}-ld)
+else()
+  #message(WARNING "CMAKE_LINKER=${CMAKE_LINKER} is defined")
+endif()
+if(NOT DEFINED CMAKE_AR)
+  find_program(CMAKE_AR NAMES ${GNU_MACHINE}-ar${__GCC_VER_SUFFIX} ${GNU_MACHINE}-ar)
+else()
+  #message(WARNING "CMAKE_AR=${CMAKE_AR} is defined")
+endif()
+
+if(NOT DEFINED LOONGARCH_LINUX_SYSROOT AND DEFINED GNU_MACHINE)
+  set(LOONGARCH_LINUX_SYSROOT /usr/${GNU_MACHINE})
+endif()
+
+set(CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH} ${LOONGARCH_LINUX_SYSROOT})
+
+set(TOOLCHAIN_CONFIG_VARS ${TOOLCHAIN_CONFIG_VARS}
+    LOONGARCH_LINUX_SYSROOT)
+
+toolchain_save_config()

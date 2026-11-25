@@ -604,6 +604,24 @@ struct GeluFunctor {
 };
 
 template <class T>
+struct GeluApproximationFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE GeluApproximationFunctor() { }
+    CUDA4DNN_DEVICE GeluApproximationFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::tanh;
+        constexpr float GELU_TANH_COEF = 0.044715f;  // cubic term of the tanh approximation
+        const T sqrt_2_pi = static_cast<T>(M_2_SQRTPI * M_SQRT1_2);
+        const T inner = sqrt_2_pi * (value + static_cast<T>(GELU_TANH_COEF) * value * value * value);
+        return static_cast<T>(0.5f) * value * (static_cast<T>(1.f) + tanh(inner));
+    }
+};
+
+template <class T>
 struct ThresholdedReluFunctor {
     struct Params {
         CUDA4DNN_HOST_DEVICE Params() : alpha(1) { }
@@ -847,6 +865,12 @@ struct PowFunctor {
         return pow(x, y);
     }
 };
+
+// powf is not correctly rounded and its last bit differs across CUDA versions; double rounds back to the CPU result
+template <>
+inline CUDA4DNN_DEVICE float PowFunctor<float>::operator()(float x, float y) {
+    return static_cast<float>(::pow(static_cast<double>(x), static_cast<double>(y)));
+}
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
 

@@ -21,7 +21,11 @@ double minPSNR(UMat src1, UMat src2)
 TEST(ExposureCompensate, SimilarityThreshold)
 {
     UMat source;
-    imread(cvtest::TS::ptr()->get_data_path() + "stitching/s1.jpg").copyTo(source);
+    Mat full = imread(cvtest::TS::ptr()->get_data_path() + "stitching/s1.jpg");
+    ASSERT_FALSE(full.empty());
+    // 13x13 blocks of 32 px: contains the artifact below and keeps the gain system (338 unknowns) on the
+    // same solver path, without a dense 1716x1716 solve per channel for the full image
+    full(Rect(0, 0, 416, 416)).copyTo(source);
 
     UMat image1 = source.clone();
     UMat image2 = source.clone();

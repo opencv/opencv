@@ -42,6 +42,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 #include "umatrix.hpp"
+#include "accel/accel_impl.hpp"
 
 #include <opencv2/core/utils/tls.hpp>
 
@@ -345,6 +346,9 @@ UMat& UMat::operator=(const UMat& m)
 UMat UMat::clone() const
 {
     UMat m;
+    const accel::Device device = accel::getDevice(*this);
+    if (!device.empty())
+        m.createOn(device, shape(), type());    // the copy stays on the device
     copyTo(m);
     return m;
 }
@@ -532,7 +536,13 @@ UMat Mat::getUMat(AccessFlag accessFlags, UMatUsageFlags usageFlags) const
             int dleft = ofs.x;
             int dright = wholeSize.width - src.cols - ofs.x;
             src.adjustROI(dtop, dbottom, dleft, dright);
-            return src.getUMat(accessFlags, usageFlags)(cv::Rect(ofs.x, ofs.y, sz.width, sz.height));
+            UMat whole = src.getUMat(accessFlags, usageFlags);
+            if (dims == 1)
+            {
+                Range r(ofs.x, ofs.x + sz.width);
+                return whole(&r);
+            }
+            return whole(cv::Rect(ofs.x, ofs.y, sz.width, sz.height));
         }
     }
     CV_Assert(data == datastart);
@@ -666,6 +676,63 @@ void UMat::create(int d0, const int* _sizes, int _type, UMatUsageFlags _usageFla
     finalizeHdr(*this);
     addref();
     size.dims = dims = d0;
+}
+
+void UMat::createOn(const accel::Device& device, const MatShape& _shape, int _type, UMatUsageFlags _usageFlags)
+{
+    if (accel::getDevice(*this) != device)
+        release();      // create() alone would keep a buffer of the same size where it is
+    if (device.empty())
+    {
+        create(_shape, _type, _usageFlags);
+        return;
+    }
+    const MatShape shape0 = _shape;
+    _type = CV_MAT_TYPE(_type);
+    if (_usageFlags == cv::USAGE_DEFAULT)
+        _usageFlags = usageFlags;
+    if (u && _type == type() && _usageFlags == usageFlags && shape() == shape0)
+        return;
+    release();
+    if (shape0.dims < 0)
+        return;
+    usageFlags = _usageFlags;
+    flags = _type | MAGIC_VAL;
+    int one = 1;
+    setSize(*this, std::max(shape0.dims, 1), shape0.dims > 0 ? shape0.p : &one, 0, true);
+    offset = 0;
+    if (total() > 0)
+        u = device.impl()->allocator->allocate(device.impl(), dims, size.p, _type, step.p);
+    finalizeHdr(*this);
+    addref();
+    size.dims = dims = shape0.dims;
+    size.layout = shape0.layout;
+    size.C = shape0.C;
+}
+
+void UMat::createOn(const accel::Device& device, Size _size, int _type, UMatUsageFlags _usageFlags)
+{
+    createOn(device, MatShape({_size.height, _size.width}), _type, _usageFlags);
+}
+
+UMat UMat::upload(const accel::Device& device) const
+{
+    if (empty() || accel::getDevice(*this) == device)
+        return *this;
+    UMat dst;
+    dst.createOn(device, shape(), type());
+    copyTo(dst);
+    return dst;
+}
+
+UMat Mat::upload(const accel::Device& device) const
+{
+    UMat dst;
+    if (empty())
+        return dst;
+    dst.createOn(device, shape(), type());
+    copyTo(dst);
+    return dst;
 }
 
 void UMat::create(const std::vector<int>& _sizes, int _type, UMatUsageFlags _usageFlags)
@@ -931,6 +998,16 @@ void UMat::locateROI( Size& wholeSize, Point& ofs ) const
     size_t esz = elemSize(), minstep;
     ptrdiff_t delta1 = (ptrdiff_t)offset, delta2 = (ptrdiff_t)u->size;
 
+    if( dims == 1 )
+    {
+        ofs.x = (int)(delta1/esz);
+        ofs.y = 0;
+
+        wholeSize.width = std::max((int)(delta2/esz), ofs.x + cols);
+        wholeSize.height = 1;
+        return;
+    }
+
     if( delta1 == 0 )
         ofs.x = ofs.y = 0;
     else
@@ -1169,11 +1246,15 @@ Mat UMat::getMat(AccessFlag accessFlags) const
     if(!u)
         return Mat();
     // TODO Support ACCESS_READ (ACCESS_WRITE) without unnecessary data transfers
-    accessFlags |= ACCESS_RW;
+    // Accelerator memory does: a CPU read leaves the device copy current, and map() is called for
+    // every view, so a write view taken after read views upgrades the mapping.
+    const bool accelMemory = !!(u->flags & UMatData::ACCEL_MEMORY);
+    if (!accelMemory || !(accessFlags & ACCESS_RW))
+        accessFlags |= ACCESS_RW;
     UMatDataAutoLock autolock(u);
     try
     {
-        if(CV_XADD(&u->refcount, 1) == 0)
+        if(CV_XADD(&u->refcount, 1) == 0 || accelMemory)
             u->currAllocator->map(u, accessFlags);
         if (u->data != 0)
         {

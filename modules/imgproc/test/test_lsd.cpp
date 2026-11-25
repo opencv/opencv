@@ -128,15 +128,17 @@ TEST_F(Imgproc_LSD_ADV, whiteNoise)
 
 TEST_F(Imgproc_LSD_ADV, constColor)
 {
-    for (int i = 0; i < EPOCHS; ++i)
+    // the gradient of a constant image is zero whatever the value, so a few values cover the code path
+    const int values[] = {0, 128, 255};
+    for (int value : values)
     {
-        GenerateConstColor(test_image);
+        test_image = Mat(img_size, CV_8UC1, Scalar::all(value));
         Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_ADV);
         detector->detect(test_image, lines);
 
         if(0u == lines.size()) ++passedtests;
     }
-    ASSERT_EQ(EPOCHS, passedtests);
+    ASSERT_EQ((int)(sizeof(values) / sizeof(values[0])), passedtests);
 }
 
 TEST_F(Imgproc_LSD_ADV, lines)
@@ -181,15 +183,17 @@ TEST_F(Imgproc_LSD_STD, whiteNoise)
 
 TEST_F(Imgproc_LSD_STD, constColor)
 {
-    for (int i = 0; i < EPOCHS; ++i)
+    // the gradient of a constant image is zero whatever the value, so a few values cover the code path
+    const int values[] = {0, 128, 255};
+    for (int value : values)
     {
-        GenerateConstColor(test_image);
+        test_image = Mat(img_size, CV_8UC1, Scalar::all(value));
         Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_STD);
         detector->detect(test_image, lines);
 
         if(0u == lines.size()) ++passedtests;
     }
-    ASSERT_EQ(EPOCHS, passedtests);
+    ASSERT_EQ((int)(sizeof(values) / sizeof(values[0])), passedtests);
 }
 
 TEST_F(Imgproc_LSD_STD, lines)
@@ -234,15 +238,17 @@ TEST_F(Imgproc_LSD_NONE, whiteNoise)
 
 TEST_F(Imgproc_LSD_NONE, constColor)
 {
-    for (int i = 0; i < EPOCHS; ++i)
+    // the gradient of a constant image is zero whatever the value, so a few values cover the code path
+    const int values[] = {0, 128, 255};
+    for (int value : values)
     {
-        GenerateConstColor(test_image);
+        test_image = Mat(img_size, CV_8UC1, Scalar::all(value));
         Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_NONE);
         detector->detect(test_image, lines);
 
         if(0u == lines.size()) ++passedtests;
     }
-    ASSERT_EQ(EPOCHS, passedtests);
+    ASSERT_EQ((int)(sizeof(values) / sizeof(values[0])), passedtests);
 }
 
 TEST_F(Imgproc_LSD_NONE, lines)

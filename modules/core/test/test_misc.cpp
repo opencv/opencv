@@ -417,7 +417,7 @@ public:
             // FP state is not supported
             // no checks
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
 
     cv::details::FPDenormalsModeState base_state;
@@ -440,6 +440,34 @@ TEST(Core_Parallel, propagate_fp_denormals_ignore_hint)
         EXPECT_TRUE(job.isOK);
     }
 }
+
+class CountingParallelLoopBody : public cv::ParallelLoopBody
+{
+public:
+    explicit CountingParallelLoopBody(std::vector<int>& hits) : hits_(hits) {}
+    void operator()(const cv::Range& r) const CV_OVERRIDE
+    {
+        for (int i = r.start; i < r.end; i++)
+            CV_XADD(&hits_[i], 1);
+    }
+    std::vector<int>& hits_;
+};
+
+typedef testing::TestWithParam<int> Core_Parallel_IndexCoverage;
+
+TEST_P(Core_Parallel_IndexCoverage, every_index_exactly_once)
+{
+    const int total = GetParam();
+    std::vector<int> hits(total, 0);
+    parallel_for_(cv::Range(0, total), CountingParallelLoopBody(hits));
+    for (int i = 0; i < total; i++)
+        ASSERT_EQ(1, hits[i]) << "index " << i << " of " << total;
+}
+
+// Brackets pplParallelFor's total<=workers fast path, and goes well past it to also
+// exercise the shrinking-chunk claim loop.
+INSTANTIATE_TEST_CASE_P(/**/, Core_Parallel_IndexCoverage,
+    testing::Values(1, 2, 4, 8, 16, 17, 32, 64, 100, 300, 100000));
 
 TEST(Core_Version, consistency)
 {
@@ -1134,6 +1162,19 @@ TEST(Core_KeyPoint, ConvertOutOfBounds) {
     EXPECT_NO_THROW(cv::KeyPoint::convert(kpts, pts, { 0 }));
     ASSERT_EQ(pts.size(), 1u);
     EXPECT_EQ(pts[0], cv::Point2f(1.0f, 2.0f));
+}
+
+TEST(Core_KeyPoint, OverlapInternallyTangent)
+{
+    // a small circle (radius 0.5) just inside a big one (radius 5.5), touching its edge;
+    // float rounding pushed the cosine below -1 here and acos() returned NaN
+    cv::KeyPoint kpBig(0.f, 0.f, 11.f);
+    cv::KeyPoint kpSmall(std::nextafter(5.f, 6.f), 0.f, 1.f);
+
+    float ovrl = cv::KeyPoint::overlap(kpBig, kpSmall);
+    EXPECT_FALSE(cvIsNaN(ovrl));
+    EXPECT_NEAR(ovrl, 1.f / 121.f, 1e-4);
+    EXPECT_NEAR(cv::KeyPoint::overlap(kpSmall, kpBig), ovrl, 1e-6);
 }
 
 TEST(Core_EmptyMat, FuzzRegressions) {

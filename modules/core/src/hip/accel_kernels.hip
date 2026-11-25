@@ -1,0 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
+
+// Non-CPU HAL: the kernels of the HIP backend, the same source as CUDA's.
+#define CV_ACCEL_GPU_HIP
+#include "../accel/gpu/gpu_kernels.impl.hpp"

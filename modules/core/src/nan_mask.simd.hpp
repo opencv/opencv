@@ -13,7 +13,7 @@ typedef void (*FiniteMaskFunc)(const uchar *src, uchar *dst, size_t total);
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 PatchNanFunc getPatchNanFunc(int depth);
-FiniteMaskFunc getFiniteMaskFunc(bool isDouble, int cn);
+FiniteMaskFunc getFiniteMaskFunc(int depth, int cn);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
@@ -453,7 +453,84 @@ void finiteMask_(const uchar *src, uchar *dst, size_t total)
     }
 }
 
-FiniteMaskFunc getFiniteMaskFunc(bool isDouble, int cn)
+// CV_16F and CV_16BF: a value is finite unless its exponent bits are all 1 (infinity or NaN)
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+
+// One vector of pixels: a lane is all ones if every channel of that pixel is finite
+template <int cn>
+v_uint16 finiteLanes16(const ushort* src, const v_uint16& vmaskExp);
+
+template <>
+inline v_uint16 finiteLanes16<1>(const ushort* src, const v_uint16& vmaskExp)
+{
+    return v_ne(v_and(vx_load(src), vmaskExp), vmaskExp);
+}
+
+template <>
+inline v_uint16 finiteLanes16<2>(const ushort* src, const v_uint16& vmaskExp)
+{
+    v_uint16 v0, v1;
+    v_load_deinterleave(src, v0, v1);
+    return v_and(v_ne(v_and(v0, vmaskExp), vmaskExp),
+                 v_ne(v_and(v1, vmaskExp), vmaskExp));
+}
+
+template <>
+inline v_uint16 finiteLanes16<3>(const ushort* src, const v_uint16& vmaskExp)
+{
+    v_uint16 v0, v1, v2;
+    v_load_deinterleave(src, v0, v1, v2);
+    return v_and(v_and(v_ne(v_and(v0, vmaskExp), vmaskExp),
+                       v_ne(v_and(v1, vmaskExp), vmaskExp)),
+                 v_ne(v_and(v2, vmaskExp), vmaskExp));
+}
+
+template <>
+inline v_uint16 finiteLanes16<4>(const ushort* src, const v_uint16& vmaskExp)
+{
+    v_uint16 v0, v1, v2, v3;
+    v_load_deinterleave(src, v0, v1, v2, v3);
+    return v_and(v_and(v_and(v_ne(v_and(v0, vmaskExp), vmaskExp),
+                             v_ne(v_and(v1, vmaskExp), vmaskExp)),
+                       v_ne(v_and(v2, vmaskExp), vmaskExp)),
+                 v_ne(v_and(v3, vmaskExp), vmaskExp));
+}
+
+#endif
+
+template <typename T, int cn>
+void finiteMask16_(const uchar *src, uchar *dst, size_t total)
+{
+    CV_INSTRUMENT_REGION();
+    const ushort expMask = std::is_same<T, hfloat>::value ? 0x7c00 : 0x7f80;
+    const ushort* tsrc = (const ushort*)src;
+    size_t i = 0;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    // with 1 channel, the compiler vectorizes the scalar loop below, and it runs faster than this path
+    if (cn > 1)
+    {
+        const v_uint16 vmaskExp = vx_setall_u16(expMask);
+        const size_t nlanes = VTraits<v_uint16>::vlanes();
+        for (; i + 2 * nlanes <= total; i += 2 * nlanes)
+        {
+            v_uint16 finite0 = finiteLanes16<cn>(tsrc + i * cn, vmaskExp);
+            v_uint16 finite1 = finiteLanes16<cn>(tsrc + (i + nlanes) * cn, vmaskExp);
+            v_store(dst + i, v_pack_b(finite0, finite1));
+        }
+    }
+#endif
+
+    for (; i < total; i++)
+    {
+        bool finite = true;
+        for (int c = 0; c < cn; c++)
+            finite = finite && (tsrc[i * cn + c] & expMask) != expMask;
+        dst[i] = finite ? 255 : 0;
+    }
+}
+
+FiniteMaskFunc getFiniteMaskFunc(int depth, int cn)
 {
     static FiniteMaskFunc tab[CV_DEPTH_MAX] =
     {
@@ -465,9 +542,17 @@ FiniteMaskFunc getFiniteMaskFunc(bool isDouble, int cn)
         finiteMask_<double, 2>,
         finiteMask_<double, 3>,
         finiteMask_<double, 4>,
+        finiteMask16_<hfloat, 1>,
+        finiteMask16_<hfloat, 2>,
+        finiteMask16_<hfloat, 3>,
+        finiteMask16_<hfloat, 4>,
+        finiteMask16_<bfloat, 1>,
+        finiteMask16_<bfloat, 2>,
+        finiteMask16_<bfloat, 3>,
+        finiteMask16_<bfloat, 4>,
     };
 
-    int idx = (isDouble ? 4 : 0) + cn - 1;
+    int idx = (depth == CV_64F ? 4 : depth == CV_16F ? 8 : depth == CV_16BF ? 12 : 0) + cn - 1;
     return tab[idx];
 }
 

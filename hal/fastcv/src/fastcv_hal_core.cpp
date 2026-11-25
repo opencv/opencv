@@ -164,6 +164,9 @@ int fastcv_hal_transpose2d(
     if (src_data == dst_data)
         CV_HAL_RETURN_NOT_IMPLEMENTED("In-place not supported");
 
+    if (src_step % element_size != 0 || dst_step % element_size != 0)
+        CV_HAL_RETURN_NOT_IMPLEMENTED("Row step not divisible by the element size is not supported");
+
     fcvStatus status = FASTCV_SUCCESS;
 
     switch (element_size)

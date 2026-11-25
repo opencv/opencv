@@ -124,6 +124,10 @@ template<> struct Sum_SIMD<T, ST> \
     ST maskbuf[VTraits<VecT>::max_nlanes*9]; \
 };
 
+// The channel limit is 4 only once the vector holds at least four lanes: init_maskbuf builds
+// the cn == 4 masks under that condition, so a narrower vector would reduce against all-zero
+// masks and silently drop the vectorized elements. Every 32-bit register type has four lanes
+// or more; v_float64 on an SSE2 baseline has two.
 #undef DEFINE_SUM_SIMD_16
 #define DEFINE_SUM_SIMD_16(T, ST, iST, VecT, load_op) \
 template<> struct Sum_SIMD<T, ST> \
@@ -134,10 +138,10 @@ template<> struct Sum_SIMD<T, ST> \
     } \
     int operator ()(const T* src, const uchar* mask, ST* dst, int len, int cn) const \
     { \
-        if (mask || (cn < 1 || cn > 4)) \
+        int x = 0, simd_width = VTraits<VecT>::vlanes(); \
+        if (mask || (cn < 1 || cn > 3+(simd_width>=4))) \
             return 0; \
         len *= cn; \
-        int x = 0, simd_width = VTraits<VecT>::vlanes(); \
         VecT m0 = vx_load(maskbuf), m1, m2, m3, m4, m5, m6, m7, m8; \
         if (cn == 1) { \
             m1 = m2 = m3 = m4 = m5 = m6 = m7 = m8 = m0; \
@@ -229,6 +233,8 @@ template<> struct Sum_SIMD<T, ST> \
 
 DEFINE_SUM_SIMD_32(int, double, int64, v_float64)
 DEFINE_SUM_SIMD_32(float, double, int64, v_float64)
+
+DEFINE_SUM_SIMD_16(double, double, int64, v_float64, vx_load)
 #endif
 #endif
 
@@ -386,6 +392,12 @@ static int sum16f( const hfloat* src, const uchar* mask, float* dst, int len, in
 static int sum16bf( const bfloat* src, const uchar* mask, float* dst, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sum_<bfloat, float, float>(src, mask, dst, len, cn); }
 
+static int sum8f( const fp8_t* src, const uchar* mask, float* dst, int len, int cn )
+{ CV_INSTRUMENT_REGION(); return sum_<fp8_t, float, float>(src, mask, dst, len, cn); }
+
+static int sum8fnuz( const fp8a_t* src, const uchar* mask, float* dst, int len, int cn )
+{ CV_INSTRUMENT_REGION(); return sum_<fp8a_t, float, float>(src, mask, dst, len, cn); }
+
 SumFunc getSumFunc(int depth)
 {
     static SumFunc sumTab[CV_DEPTH_MAX] =
@@ -403,6 +415,8 @@ SumFunc getSumFunc(int depth)
         sumWrap<uint64, double, sum64u>,
         sumWrap<int64, double, sum64s>,
         sumWrap<unsigned, double, sum32u>,
+        sumWrap<fp8_t, float, sum8f>,
+        sumWrap<fp8a_t, float, sum8fnuz>,
         0
     };
 

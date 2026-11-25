@@ -604,7 +604,7 @@ def _doxygen_desc_to_md(el, h_level: int = 3) -> str:
             admon = _ADMON_BY_KIND.get(kind)
             body = "\n\n".join(_blocks(sub, level))
             if admon:
-                result.append(f":::{{{admon}}}\n{body}\n:::")
+                result.append(f":::{{{admon}}}\n\n{body}\n:::")
             elif body:
                 result.append(body)
         elif t == "xrefsect":
@@ -731,7 +731,7 @@ def _doxygen_desc_to_md(el, h_level: int = 3) -> str:
                     i += 1
                 body = "\n\n".join(b for b in bodies if b)
                 if admon and body:
-                    result.append(f":::{{{admon}}}\n{body}\n:::")
+                    result.append(f":::{{{admon}}}\n\n{body}\n:::")
                 elif body:
                     result.append(body)
                 continue

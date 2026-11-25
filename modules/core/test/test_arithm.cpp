@@ -1946,9 +1946,8 @@ TEST_P(ArithmMixedTest, accuracy)
             mask = cvtest::randomMat(rng, size, CV_8UC1, 0, 2, true);
         }
 
-        dst0 = cvtest::randomMat(rng, size, dstType, minval, maxval, false);
         dst = cvtest::randomMat(rng, size, dstType, minval, maxval, true);
-        cvtest::copy(dst, dst0);
+        cvtest::copy(dst, dst0);   // creates a continuous dst0 holding dst's initial content
 
         op->generateScalars(dstDepth, rng);
 
@@ -2484,6 +2483,20 @@ TEST(Core_FindNonZero, wide_rows_8u)
 
     std::vector<Point> pts;
     findNonZero(src, pts);
+    EXPECT_EQ(expected, pts);
+}
+
+TEST(Core_FindNonZero, mat_1d)
+{
+    int sz[] = {7};
+    Mat src(1, sz, CV_8U, Scalar(0));
+    src.at<uchar>(2) = 5;
+    src.at<uchar>(6) = 1;
+
+    std::vector<Point> pts;
+    findNonZero(src, pts);
+
+    std::vector<Point> expected = { Point(2, 0), Point(6, 0) };
     EXPECT_EQ(expected, pts);
 }
 
@@ -3331,6 +3344,30 @@ TEST(Core_CvAbs, lowest_signed_values)
     EXPECT_EQ(1ull,                     cv_abs((int64)-1));
 }
 
+// cv_absdiff() on int64 must return the exact distance, even when it does not fit in int64.
+TEST(Core_CvAbsDiff, int64_full_range)
+{
+    EXPECT_EQ((uint64)ULLONG_MAX, cv_absdiff((int64)LLONG_MAX, (int64)LLONG_MIN));
+    EXPECT_EQ((uint64)ULLONG_MAX, cv_absdiff((int64)LLONG_MIN, (int64)LLONG_MAX));
+    EXPECT_EQ(3ull,               cv_absdiff((int64)-1, (int64)2));
+}
+
+// norm(a, b) on CV_64S must not overflow when |a - b| is larger than INT64_MAX.
+TEST(Core_Norm, diff_64S_beyond_int64_range)
+{
+    for (int len : {1, 7, 64})
+    {
+        Mat a(1, len, CV_64S, Scalar(5e18));
+        Mat b(1, len, CV_64S, Scalar(-5e18));
+        Mat mask(1, len, CV_8U, Scalar(255));
+
+        EXPECT_EQ(1e19,       cv::norm(a, b, NORM_INF))       << "length " << len;
+        EXPECT_EQ(1e19,       cv::norm(a, b, NORM_INF, mask)) << "length " << len << ", masked";
+        EXPECT_EQ(len * 1e19, cv::norm(a, b, NORM_L1))        << "length " << len;
+        EXPECT_EQ(len * 1e19, cv::norm(a, b, NORM_L1, mask))  << "length " << len << ", masked";
+    }
+}
+
 // An L1 norm is a sum of magnitudes: never negative, and never dependent on the array length.
 // Checked over both signed integer depths, masked and unmasked, at lengths straddling the vector
 // width so the body, the tail and the two together are covered.
@@ -3408,6 +3445,76 @@ TEST(Core_Norm, NORM_L2SQR_16SC4_large)
     const double expected = static_cast<double>(src.total()) * src.channels() * 16384.0 * 16384.0;
     EXPECT_EQ(expected, cv::norm(src, NORM_L2SQR));
 }
+
+TEST(Core_Norm, NORM_L2SQR_16S_min_value)
+{
+    // (-32768)^2 + (-32768)^2 does not fit into int32
+    for (int cn = 1; cn <= 4; cn++)
+    {
+        Mat src(4, 64, CV_16SC(cn), Scalar::all(SHRT_MIN));
+        const double expected = static_cast<double>(src.total()) * cn * 32768.0 * 32768.0;
+        EXPECT_EQ(expected, cv::norm(src, NORM_L2SQR)) << "cn=" << cn;
+        EXPECT_EQ(std::sqrt(expected), cv::norm(src, NORM_L2)) << "cn=" << cn;
+    }
+}
+
+TEST(Core_Norm, NORM_L2SQR_32S_min_value)
+{
+    // INT_MIN^2 + INT_MIN^2 does not fit into int64
+    for (int cn = 1; cn <= 4; cn++)
+    {
+        Mat src(4, 64, CV_32SC(cn), Scalar::all(INT_MIN));
+        const double expected = static_cast<double>(src.total()) * cn * 2147483648.0 * 2147483648.0;
+        EXPECT_EQ(expected, cv::norm(src, NORM_L2SQR)) << "cn=" << cn;
+        EXPECT_EQ(std::sqrt(expected), cv::norm(src, NORM_L2)) << "cn=" << cn;
+    }
+}
+
+// sum and mean on the fp8 depths, compared with the same values in CV_32F
+class Core_Sum_FP8 : public testing::TestWithParam< tuple<int, int, int> >
+{
+public:
+    int len;
+    Mat a32f, a;
+
+    void SetUp()
+    {
+        const int depth = get<0>(GetParam());
+        const int cn = get<1>(GetParam());
+        len = get<2>(GetParam());
+        const float vals[] = { 1.f, -2.f, 3.5f, 0.5f, 7.f, -0.25f };   // exact in both fp8 formats
+
+        a32f.create(1, len, CV_MAKETYPE(CV_32F, cn));
+        for (int i = 0; i < len * cn; i++)
+            a32f.ptr<float>()[i] = vals[i % 6];
+        a32f.convertTo(a, depth);
+    }
+};
+
+TEST_P(Core_Sum_FP8, sum)
+{
+    EXPECT_EQ(cv::sum(a32f), cv::sum(a));
+}
+
+TEST_P(Core_Sum_FP8, mean)
+{
+    EXPECT_EQ(cv::mean(a32f), cv::mean(a));
+}
+
+TEST_P(Core_Sum_FP8, mean_mask)
+{
+    // every third element is left out, so the mean divides by the selected count
+    Mat mask(1, len, CV_8U);
+    for (int i = 0; i < len; i++)
+        mask.at<uchar>(i) = i % 3 != 0;
+    EXPECT_EQ(cv::mean(a32f, mask), cv::mean(a, mask));
+}
+
+// (1 << 15) + 1 needs a second block, so the float total gets moved to the result and reset
+INSTANTIATE_TEST_CASE_P(/**/, Core_Sum_FP8, testing::Combine(
+    testing::Values(CV_8F_E4M3FN, CV_8F_E4M3FNUZ),
+    testing::Range(1, 5),
+    testing::Values(37, (1 << 15) + 1)));
 
 // cv::sum() returns doubles, so a CV_32U or CV_32S array whose total exceeds the 32-bit range must
 // still come back exact. The scalar step of the accumulation adds four elements to each other in
@@ -3816,6 +3923,27 @@ TEST(Core_ConvertTo, regression_12121)
     }
 }
 
+// convertTo(CV_Bool) must treat -0.0 as zero for every floating-point depth
+typedef testing::TestWithParam<perf::MatDepth> Core_ConvertTo_NegativeZeroToBool;
+
+TEST_P(Core_ConvertTo_NegativeZeroToBool, accuracy)
+{
+    const int depth = GetParam();
+    const float vals[] = { -0.f, 0.f, 1.f, -1.f, 0.5f, -0.5f };
+    const uchar expected[] = { 0, 0, 1, 1, 1, 1 };
+    Mat src32f(1, 6, CV_32F, (void*)vals);
+
+    Mat src, dst;
+    src32f.convertTo(src, depth);
+    src.convertTo(dst, CV_Bool);
+    ASSERT_EQ(CV_Bool, dst.type());
+    for (int i = 0; i < 6; i++)
+        EXPECT_EQ(expected[i], dst.at<uchar>(i)) << "i=" << i;
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_ConvertTo_NegativeZeroToBool,
+    testing::Values(perf::MatDepth(CV_32F), CV_64F, CV_16F, CV_16BF, CV_8F_E4M3FN, CV_8F_E4M3FNUZ));
+
 TEST(Core_MeanStdDev, regression_multichannel)
 {
     {
@@ -3831,6 +3959,23 @@ TEST(Core_MeanStdDev, regression_multichannel)
         EXPECT_EQ(0, cv::norm(dst_m, ref_m, NORM_L1));
         EXPECT_EQ(0, cv::norm(dst_sd, ref_sd, NORM_L1));
     }
+}
+
+TEST(Core_MeanStdDev, bool_input)
+{
+    uchar src_buf[] = { 0, 1, 0, 255, 1, 0 };   // any non-zero byte means true
+    Mat src(1, 6, CV_Bool, src_buf);
+
+    EXPECT_EQ(0.5, cv::mean(src)[0]);
+
+    Scalar m, sd;
+    meanStdDev(src, m, sd);
+    EXPECT_EQ(0.5, m[0]);
+    EXPECT_EQ(0.5, sd[0]);
+
+    Mat mask(1, 6, CV_8U, Scalar(1));
+    EXPECT_THROW(cv::mean(src, mask), cv::Exception);
+    EXPECT_THROW(meanStdDev(src, m, sd, mask), cv::Exception);
 }
 
 // Related issue : https://github.com/opencv/opencv/issues/26861
@@ -4170,6 +4315,35 @@ INSTANTIATE_TEST_CASE_P(Core_CartPolar, Core_CartToPolar_inplace,
     )
 );
 
+typedef testing::TestWithParam<int> Core_CartToPolar_inplace_mag;
+
+// only the magnitude overwrites an input, so the last elements must not be processed twice.
+// CV_64F is not tested: it works on separate float buffers, so it can't hit this.
+TEST_P(Core_CartToPolar_inplace_mag, accuracy)
+{
+    const int len = GetParam();
+    cv::Mat x(1, len, CV_32F), y(1, len, CV_32F);
+    cv::randu(x, cv::Scalar::all(-1000), cv::Scalar::all(1000));
+    cv::randu(y, cv::Scalar::all(-1000), cv::Scalar::all(1000));
+
+    cv::Mat expectedMag, expectedAngle;
+    cv::cartToPolar(x, y, expectedMag, expectedAngle);
+
+    // magnitude into x
+    cv::Mat x1 = x.clone(), angle1;
+    cv::cartToPolar(x1, y, x1, angle1);
+    EXPECT_MAT_NEAR(expectedMag, x1, 1e-2);
+    EXPECT_MAT_NEAR(expectedAngle, angle1, 1e-2);
+
+    // magnitude into y
+    cv::Mat y1 = y.clone(), angle2;
+    cv::cartToPolar(x, y1, y1, angle2);
+    EXPECT_MAT_NEAR(expectedMag, y1, 1e-2);
+    EXPECT_MAT_NEAR(expectedAngle, angle2, 1e-2);
+}
+
+INSTANTIATE_TEST_CASE_P(Core_CartPolar, Core_CartToPolar_inplace_mag, testing::Range(1, 40));
+
 PARAM_TEST_CASE(Core_PolarToCart_inplace, int, bool, bool)
 {
     int  depth;
@@ -4311,6 +4485,79 @@ TEST_P(FiniteMaskFixture, flags)
 // Params are: depth, channels 1 to 4
 INSTANTIATE_TEST_CASE_P(Core_FiniteMask, FiniteMaskFixture, ::testing::Combine(::testing::Values(CV_32F, CV_64F), ::testing::Range(1, 5)));
 
+
+// finiteMask on every float depth, including CV_16F and CV_16BF: a pixel is finite if no channel is NaN or infinity
+typedef testing::TestWithParam<std::tuple<int, int> > Core_FiniteMask_depths;
+
+TEST_P(Core_FiniteMask_depths, accuracy)
+{
+    const int depth = get<0>(GetParam()), cn = get<1>(GetParam());
+    Mat src64(3, 37, CV_64FC(cn));
+    double* p = src64.ptr<double>();
+    for (int i = 0; i < (int)src64.total() * cn; i++)
+        p[i] = i % 11 == 0 ? NAN : i % 13 == 0 ? (i % 2 ? INFINITY : -INFINITY) : i - 50.0;
+
+    Mat src, mask;
+    src64.convertTo(src, depth);
+    cv::finiteMask(src, mask);
+    ASSERT_EQ(CV_8UC1, mask.type());
+
+    for (int i = 0; i < (int)src64.total(); i++)
+    {
+        bool finite = true;
+        for (int c = 0; c < cn; c++)
+            finite = finite && std::isfinite(p[i * cn + c]);
+        EXPECT_EQ(finite ? 255 : 0, mask.at<uchar>(i)) << i;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_FiniteMask_depths,
+    testing::Combine(testing::Values(CV_16F, CV_16BF, CV_32F, CV_64F), testing::Range(1, 5)));
+
+// finiteMask on exact bit patterns at the edges of the exponent, on the SIMD loop and the scalar tail
+typedef testing::TestWithParam<std::tuple<int, int> > Core_FiniteMask_bits;
+
+TEST_P(Core_FiniteMask_bits, boundary_values)
+{
+    const int depth = std::get<0>(GetParam());
+    const int cn = std::get<1>(GetParam());
+
+    const struct { ushort f16, bf16; bool finite; } values[] =
+    {
+        { 0x0000, 0x0000, true  },  // +0
+        { 0x8000, 0x8000, true  },  // -0
+        { 0x0001, 0x0001, true  },  // smallest subnormal
+        { 0x8001, 0x8001, true  },  // smallest negative subnormal
+        { 0x03ff, 0x007f, true  },  // largest subnormal
+        { 0x7bff, 0x7f7f, true  },  // largest finite
+        { 0xfbff, 0xff7f, true  },  // largest negative finite
+        { 0x7c00, 0x7f80, false },  // +inf
+        { 0xfc00, 0xff80, false },  // -inf
+        { 0x7c01, 0x7f81, false },  // signalling NaN
+        { 0x7e00, 0x7fc0, false },  // quiet NaN
+        { 0xfe00, 0xffc0, false },  // negative NaN
+        { 0x7fff, 0x7fff, false },  // largest NaN
+    };
+    const int nvalues = (int)(sizeof(values) / sizeof(values[0]));
+
+    // 111 pixels: wide enough for the SIMD loop, odd for the scalar tail
+    Mat src(3, 37, CV_MAKETYPE(depth, cn), Scalar::all(0));
+    ushort* p = src.ptr<ushort>();
+    for (int i = 0; i < (int)src.total(); i++)
+    {
+        const ushort bits = depth == CV_16F ? values[i % nvalues].f16 : values[i % nvalues].bf16;
+        p[i * cn + i % cn] = bits;  // one channel holds the value, the others stay 0
+    }
+
+    Mat mask;
+    finiteMask(src, mask);
+
+    for (int i = 0; i < (int)src.total(); i++)
+        EXPECT_EQ(values[i % nvalues].finite ? 255 : 0, mask.at<uchar>(i)) << "pixel " << i;
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_FiniteMask_bits,
+    testing::Combine(testing::Values(CV_16F, CV_16BF), testing::Range(1, 5)));
 
 ///////////////////////////////////////////////////////////////////////////////////
 typedef testing::TestWithParam<perf::MatDepth> NonZeroSupportedMatDepth;
@@ -4772,14 +5019,6 @@ TEST_P(Core_LUT, accuracy)
     cv::Mat gt = reference(input, table);
     ASSERT_FALSE(gt.empty());
 
-    // Force convert to 8U as CV_Bool is not supported in cv::norm for now
-    // TODO: Remove conversion after cv::norm fix
-    if (value_type == CV_Bool)
-    {
-        output.convertTo(output, CV_8U);
-        gt.convertTo(gt, CV_8U);
-    }
-
     ASSERT_EQ(0, cv::norm(output, gt, cv::NORM_INF));
 }
 
@@ -4803,14 +5042,6 @@ TEST_P(Core_LUT, accuracy_multi)
 
     cv::Mat gt = reference<3>(input, table);
     ASSERT_FALSE(gt.empty());
-
-    // Force convert to 8U as CV_Bool is not supported in cv::norm for now
-    // TODO: Remove conversion after cv::norm fix
-    if (value_type == CV_Bool)
-    {
-        output.convertTo(output, CV_8U);
-        gt.convertTo(gt, CV_8U);
-    }
 
     ASSERT_EQ(0, cv::norm(output, gt, cv::NORM_INF));
 }
@@ -4836,18 +5067,36 @@ TEST_P(Core_LUT, accuracy_multi2)
     cv::Mat gt = reference<3, true>(input, table);
     ASSERT_FALSE(gt.empty());
 
-    // Force convert to 8U as CV_Bool is not supported in cv::norm for now
-    // TODO: Remove conversion after cv::norm fix
-    if (value_type == CV_Bool)
-    {
-        output.convertTo(output, CV_8U);
-        gt.convertTo(gt, CV_8U);
-    }
-
     ASSERT_EQ(0, cv::norm(output, gt, cv::NORM_INF));
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_LUT, testing::Combine( LutIdxType::all(), LutMatType::all()));
+
+// A 0D Mat holds one element and has no rows. LUT must handle it, and the result stays 0D.
+TEST(Core_LUT_0D, regression)
+{
+    uchar v8 = 7;
+    const Mat src8(0, nullptr, CV_8U, &v8);
+    Mat lut8(1, 256, CV_8U);
+    for (int i = 0; i < 256; i++)
+        lut8.at<uchar>(i) = (uchar)(255 - i);
+    Mat dst8;
+    ASSERT_NO_THROW(cv::LUT(src8, lut8, dst8));
+    EXPECT_EQ(0, dst8.dims);
+    EXPECT_EQ(CV_8U, dst8.type());
+    EXPECT_EQ(255 - 7, (int)*dst8.ptr<uchar>());
+
+    ushort v16 = 1000;
+    const Mat src16(0, nullptr, CV_16U, &v16);
+    Mat lut16(1, 65536, CV_16U);
+    for (int i = 0; i < 65536; i++)
+        lut16.at<ushort>(i) = (ushort)(65535 - i);
+    Mat dst16;
+    ASSERT_NO_THROW(cv::LUT(src16, lut16, dst16));
+    EXPECT_EQ(0, dst16.dims);
+    EXPECT_EQ(CV_16U, dst16.type());
+    EXPECT_EQ(65535 - 1000, (int)*dst16.ptr<ushort>());
+}
 
 CV_ENUM(MaskType, CV_8U, CV_8S, CV_Bool)
 typedef testing::TestWithParam<MaskType> Core_MaskTypeTest;
@@ -5138,7 +5387,7 @@ TEST(Core_Arithm, inRange_unsupported_depth_30153)
 
 TEST(Core_Arithm, sum_unsupported_depth)
 {
-    for (int depth : {CV_Bool, CV_8F_E4M3FN, CV_8F_E4M3FNUZ})
+    for (int depth : {CV_Bool})
     {
         for (int cn : {1, 3})
         {
@@ -5322,5 +5571,129 @@ TEST_P(Core_PatchNaNs, replaces_only_nans)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_PatchNaNs, testing::Values(CV_16F, CV_16BF, CV_32F, CV_64F));
+
+TEST(Core_Multiply, scale_simd_scalar_consistency)
+{
+    const float big = std::ldexp(1.0f, 80);    // exact power of 2 (< FLT_MAX = 2^128)
+    const float small = std::ldexp(1.0f, -80);
+
+    // Two contiguous inputs: (a * s) * b = 2^80 vs (a * b) * s = +inf.
+    {
+        Mat a(1, 65, CV_32F, Scalar(big));
+        Mat b(1, 65, CV_32F, Scalar(big));
+        cv::multiply(a, b, a, small);   // in-place -> tail element 64 uses EwMul::scl
+        EXPECT_EQ(a.at<float>(0),  big);
+        EXPECT_EQ(a.at<float>(64), big);
+    }
+
+    // src1 scalar/column broadcast (s1x == 0): SIMD folds scale into src1, computing (b * s) * a = 2^80;
+    // without canonicalizing src1 onto src0, the scalar tail would compute (a * s) * b = +inf.
+    {
+        Mat a(1, 65, CV_32F, Scalar(big));
+        Mat b(1, 1, CV_32F, Scalar(small));
+        cv::multiply(a, b, a, big);
+        EXPECT_EQ(a.at<float>(0),  big);
+        EXPECT_EQ(a.at<float>(64), big);
+    }
+    {
+        Mat a(1, 65, CV_32F, Scalar(big));
+        cv::multiply(a, Scalar(small), a, big);
+        EXPECT_EQ(a.at<float>(0),  big);
+        EXPECT_EQ(a.at<float>(64), big);
+    }
+
+    // src1 short-row broadcast (s1y == 0, width <= 4): short-row SIMD processes full row blocks and
+    // leaves row 64 for the scalar loop.
+    {
+        Mat a(65, 3, CV_32F, Scalar(big));
+        Mat b(1, 3, CV_32F, Scalar(small));
+        cv::multiply(a, b, a, big);
+        EXPECT_EQ(a.at<float>(0, 0),  big);
+        EXPECT_EQ(a.at<float>(64, 0), big);
+    }
+
+    // src1 wide-row broadcast (s1y == 0, width > 4):
+    {
+        Mat a(2, 65, CV_32F, Scalar(big));
+        Mat b(1, 65, CV_32F, Scalar(small));
+        cv::multiply(a, b, a, big);
+        EXPECT_EQ(a.at<float>(0, 0),  big);
+        EXPECT_EQ(a.at<float>(1, 64), big);
+    }
+
+    // CV_64F broadcast (covers v_float64 SIMD and scalarBinaryKernel fallback):
+    {
+        const double big64 = std::ldexp(1.0, 600);
+        const double small64 = std::ldexp(1.0, -600);
+        Mat a(1, 65, CV_64F, Scalar(big64));
+        Mat b(1, 1, CV_64F, Scalar(small64));
+        cv::multiply(a, b, a, big64);
+        EXPECT_EQ(a.at<double>(0),  big64);
+        EXPECT_EQ(a.at<double>(64), big64);
+    }
+}
+
+// cv::compare had no CV_Bool kernel for the matrix/matrix form, so every comparison of two
+// CV_Bool matrices threw "no kernel for this op/type combination" while the matrix/scalar
+// overload of the same function worked. CV_Bool is logical: a byte is true when it is non-zero,
+// which is how countNonZero, norm and the scalar overload already read it. A matrix wrapping an
+// external buffer is never converted, so bytes other than 0 and 1 are reachable through the
+// public API and must not compare as integers.
+typedef testing::TestWithParam<int> Core_CompareBool_canonical;
+typedef testing::TestWithParam<int> Core_CompareBool_nonCanonical;
+typedef testing::TestWithParam<int> Core_CompareBool_scalarAgreement;
+
+// Canonical 0/1 operands: the result must match the same comparison done on CV_8U.
+TEST_P(Core_CompareBool_canonical, matches_CV_8U)
+{
+    const int op = GetParam();
+    uchar abytes[4] = { 0, 0, 1, 1 };
+    uchar bbytes[4] = { 0, 1, 0, 1 };
+    const Mat ab(1, 4, CV_Bool, abytes), bb(1, 4, CV_Bool, bbytes);
+    const Mat au(1, 4, CV_8U, abytes), bu(1, 4, CV_8U, bbytes);
+
+    Mat got, want;
+    ASSERT_NO_THROW(cv::compare(ab, bb, got, op));
+    cv::compare(au, bu, want, op);
+    EXPECT_EQ(0, cv::norm(got, want, NORM_INF));
+}
+
+// Non-canonical bytes: 1, 2 and 255 all mean true, so each must compare exactly as 1 does.
+TEST_P(Core_CompareBool_nonCanonical, true_bytes_compare_as_one)
+{
+    const int op = GetParam();
+    uchar raw[4] = { 0, 1, 2, 255 };
+    uchar one[4] = { 0, 1, 1, 1 };
+    const Mat a(1, 4, CV_Bool, raw), canonical(1, 4, CV_Bool, one);
+    uchar ones[4] = { 1, 1, 1, 1 };
+    const Mat rhs(1, 4, CV_Bool, ones);
+
+    Mat got, want;
+    ASSERT_NO_THROW(cv::compare(a, rhs, got, op));
+    cv::compare(canonical, rhs, want, op);
+    EXPECT_EQ(0, cv::norm(got, want, NORM_INF)) << "non-canonical bytes must compare logically";
+}
+
+// The matrix/matrix form must agree with the matrix/scalar form, which already worked.
+TEST_P(Core_CompareBool_scalarAgreement, matrix_matrix_matches_matrix_scalar)
+{
+    const int op = GetParam();
+    uchar raw[4] = { 0, 1, 2, 255 };
+    const Mat a(1, 4, CV_Bool, raw);
+    uchar ones[4] = { 1, 1, 1, 1 };
+    const Mat rhs(1, 4, CV_Bool, ones);
+
+    Mat fromMat, fromScalar;
+    cv::compare(a, rhs, fromMat, op);
+    cv::compare(a, Scalar(1), fromScalar, op);
+    EXPECT_EQ(0, cv::norm(fromMat, fromScalar, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_CompareBool_canonical,
+    testing::Values(CMP_EQ, CMP_NE, CMP_GT, CMP_GE, CMP_LT, CMP_LE));
+INSTANTIATE_TEST_CASE_P(/**/, Core_CompareBool_nonCanonical,
+    testing::Values(CMP_EQ, CMP_NE, CMP_GT, CMP_GE, CMP_LT, CMP_LE));
+INSTANTIATE_TEST_CASE_P(/**/, Core_CompareBool_scalarAgreement,
+    testing::Values(CMP_EQ, CMP_NE, CMP_GT, CMP_GE, CMP_LT, CMP_LE));
 
 }} // namespace

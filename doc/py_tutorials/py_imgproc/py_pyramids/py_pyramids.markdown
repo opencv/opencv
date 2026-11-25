@@ -135,7 +135,3 @@ real = np.hstack((A[:,:cols//2],B[:,cols//2:]))
 cv.imwrite('Pyramid_blending2.jpg',ls_)
 cv.imwrite('Direct_blending.jpg',real)
 @endcode
-Additional Resources
---------------------
-
--#  [Image Blending](http://pages.cs.wisc.edu/~csverma/CS766_09/ImageMosaic/imagemosaic.html)

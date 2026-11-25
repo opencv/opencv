@@ -38,6 +38,7 @@ namespace cv { namespace dnn {
             Stream stream;
             cublas::Handle cublas_handle;
             cudnn::Handle cudnn_handle;
+            int* error_flag = nullptr;  // device alias of a mapped host int; set by a kernel on invalid input
         };
 
         /** @brief creates Tensor object from cv::Mat (only the header is created, i.e. no data is copied)
@@ -265,9 +266,16 @@ namespace cv { namespace dnn {
         return Ptr<BackendNode>();
     }
 
+    /** element types with a CUDA node: make_cuda_node_with_type() plus, if allowBool, make_cuda_node_bool() */
+    static inline bool isCudaNodeType(int type, bool allowBool = true)
+    {
+        return (allowBool && type == CV_Bool) || type == CV_32F || type == CV_16F || type == CV_8S ||
+               type == CV_8U || type == CV_32S || type == CV_64S;
+    }
+
     template <template <class> class NodeType, class ...Args>
     cv::Ptr<BackendNode> make_cuda_node_with_type(int targetId, int hostMatType, Args&& ...args) {
-        CV_CheckType(hostMatType, hostMatType == CV_32F || hostMatType == CV_16F || hostMatType == CV_8S || hostMatType == CV_8U || hostMatType == CV_32S || hostMatType == CV_64S, "");
+        CV_CheckType(hostMatType, isCudaNodeType(hostMatType, false), "");
 
         if (hostMatType == CV_8S)
             return Ptr<BackendNode>(new NodeType<int8_t>(std::forward<Args>(args)...));
@@ -292,7 +300,7 @@ namespace cv { namespace dnn {
 
     template <template <class, class> class NodeType, class T_INDEX, class ...Args>
     cv::Ptr<BackendNode> make_cuda_node_with_indices(int targetId, int hostMatType, Args&& ...args) {
-        CV_CheckType(hostMatType, hostMatType == CV_32F || hostMatType == CV_16F || hostMatType == CV_8S || hostMatType == CV_8U || hostMatType == CV_32S || hostMatType == CV_64S, "");
+        CV_CheckType(hostMatType, isCudaNodeType(hostMatType, false), "");
 
         if (hostMatType == CV_8S)
             return Ptr<BackendNode>(new NodeType<int8_t, T_INDEX>(std::forward<Args>(args)...));

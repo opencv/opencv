@@ -432,4 +432,114 @@ TEST(Core_EW_AddSub, saturation_s32_u32)
     }
 }
 
+TEST(Core_EW_AddSub, saturation_s64_u64)
+{
+    {
+        const int64_t mx = INT64_MAX, mn = INT64_MIN;
+        const int64_t a[]    = { mx, mn, mx, mn, 0,  -1,     mx,     mx, mn, 12345 };
+        const int64_t b[]    = { 1,  -1, mx, mn, mn, mx,     -1,     mn, mx, -54321 };
+        const int64_t rsum[] = { mx, mn, mx, mn, mn, mx - 1, mx - 1, -1, -1, -41976 };
+        const int64_t rdif[] = { mx - 1, mn + 1, 0, 0, mx, mn, mx, mx, mn, 66666 };
+        Mat A(1, 10, CV_64S, (void*)a), B(1, 10, CV_64S, (void*)b), sum, dif;
+        cv::add(A, B, sum);
+        cv::subtract(A, B, dif);
+        for (int i = 0; i < 10; i++)
+        {
+            EXPECT_EQ(rsum[i], sum.at<int64_t>(i)) << "add s64 case " << i;
+            EXPECT_EQ(rdif[i], dif.at<int64_t>(i)) << "sub s64 case " << i;
+        }
+    }
+    {
+        const uint64_t mx = UINT64_MAX, half = 1ULL << 63;
+        const uint64_t a[]    = { mx, 0, mx, 5,  0, 100, half };
+        const uint64_t b[]    = { 1,  1, mx, 5,  0, 7,   half };
+        const uint64_t rsum[] = { mx, 1, mx, 10, 0, 107, mx };
+        const uint64_t rdif[] = { mx - 1, 0, 0, 0, 0, 93, 0 };
+        Mat A(1, 7, CV_64U, (void*)a), B(1, 7, CV_64U, (void*)b), sum, dif;
+        cv::add(A, B, sum);
+        cv::subtract(A, B, dif);
+        for (int i = 0; i < 7; i++)
+        {
+            EXPECT_EQ(rsum[i], sum.at<uint64_t>(i)) << "add u64 case " << i;
+            EXPECT_EQ(rdif[i], dif.at<uint64_t>(i)) << "sub u64 case " << i;
+        }
+    }
+}
+
+// A 64-bit integer array mixed with a narrower integer one is added and subtracted in 64-bit integers,
+// not through double, so values above 2^53 keep their low bits and saturate at the 64-bit limits.
+TEST(Core_EW_AddSub, mixed_depth_s64_u64_exact)
+{
+    const int64_t big = 3074457345618258602LL, mx = INT64_MAX, mn = INT64_MIN;
+    const int64_t a[]    = { big,     -big,     big + 1, mx,     mn,     mx,     mn };
+    const int32_t b[]    = { 5,       -7,       1,       1,      -1,     -1,     1 };
+    const int64_t rsum[] = { big + 5, -big - 7, big + 2, mx,     mn,     mx - 1, mn + 1 };
+    const int64_t rdif[] = { big - 5, -big + 7, big,     mx - 1, mn + 1, mx,     mn };
+    Mat A(1, 7, CV_64S, (void*)a), B32(1, 7, CV_32S, (void*)b);
+    for (int bdepth : { CV_32S, CV_16S, CV_8S })
+    {
+        Mat B; B32.convertTo(B, bdepth);
+        for (int dtype : { -1, (int)CV_64S })
+        {
+            Mat sum, dif;
+            cv::add(A, B, sum, noArray(), dtype);
+            cv::subtract(A, B, dif, noArray(), dtype);
+            ASSERT_EQ(CV_64S, sum.type());
+            ASSERT_EQ(CV_64S, dif.type());
+            for (int i = 0; i < 7; i++)
+            {
+                EXPECT_EQ(rsum[i], sum.at<int64_t>(i)) << "add s64 + depth " << bdepth << " dtype " << dtype << " case " << i;
+                EXPECT_EQ(rdif[i], dif.at<int64_t>(i)) << "sub s64 - depth " << bdepth << " dtype " << dtype << " case " << i;
+            }
+        }
+    }
+    {
+        // CV_32U fits in CV_64S, so the mixed-sign pair is exact too
+        const uint32_t ub[] = { 5, 4000000000u };
+        Mat As(1, 2, CV_64S, (void*)a), Bu(1, 2, CV_32U, (void*)ub), sum;
+        cv::add(As, Bu, sum, noArray(), CV_64S);
+        EXPECT_EQ(big + 5, sum.at<int64_t>(0));
+        EXPECT_EQ(-big + 4000000000LL, sum.at<int64_t>(1));
+    }
+    {
+        // CV_Bool is an integer depth too; the results saturate at the 64-bit limits
+        const bool one[] = { true, true, true, true };
+        const int64_t sa[]   = { big,     -big,     mx,     mn };
+        const int64_t ssum[] = { big + 1, -big + 1, mx,     mn + 1 };
+        const int64_t sdif[] = { big - 1, -big - 1, mx - 1, mn };
+        const uint64_t ubig = 12297829382473034410ULL, umx = UINT64_MAX;
+        const uint64_t ua[]   = { ubig,     ubig + 1, umx,     0 };
+        const uint64_t usum[] = { ubig + 1, ubig + 2, umx,     1 };
+        const uint64_t udif[] = { ubig - 1, ubig,     umx - 1, 0 };
+        Mat M(1, 4, CV_Bool, (void*)one), As(1, 4, CV_64S, (void*)sa), Au(1, 4, CV_64U, (void*)ua);
+        Mat sum, dif, usum_, udif_;
+        cv::add(As, M, sum, noArray(), CV_64S);
+        cv::subtract(As, M, dif, noArray(), CV_64S);
+        cv::add(Au, M, usum_, noArray(), CV_64U);
+        cv::subtract(Au, M, udif_, noArray(), CV_64U);
+        for (int i = 0; i < 4; i++)
+        {
+            EXPECT_EQ(ssum[i], sum.at<int64_t>(i)) << "add s64 + bool case " << i;
+            EXPECT_EQ(sdif[i], dif.at<int64_t>(i)) << "sub s64 - bool case " << i;
+            EXPECT_EQ(usum[i], usum_.at<uint64_t>(i)) << "add u64 + bool case " << i;
+            EXPECT_EQ(udif[i], udif_.at<uint64_t>(i)) << "sub u64 - bool case " << i;
+        }
+    }
+    {
+        const uint64_t ubig = 12297829382473034410ULL, umx = UINT64_MAX;
+        const uint64_t ua[]   = { ubig,     umx,     ubig };
+        const uint32_t ub[]   = { 5,        1,       4000000000u };
+        const uint64_t usum[] = { ubig + 5, umx,     ubig + 4000000000ULL };
+        const uint64_t udif[] = { ubig - 5, umx - 1, ubig - 4000000000ULL };
+        Mat Au(1, 3, CV_64U, (void*)ua), Bu(1, 3, CV_32U, (void*)ub), sum, dif;
+        cv::add(Au, Bu, sum, noArray(), CV_64U);
+        cv::subtract(Au, Bu, dif, noArray(), CV_64U);
+        for (int i = 0; i < 3; i++)
+        {
+            EXPECT_EQ(usum[i], sum.at<uint64_t>(i)) << "add u64 + u32 case " << i;
+            EXPECT_EQ(udif[i], dif.at<uint64_t>(i)) << "sub u64 - u32 case " << i;
+        }
+    }
+}
+
 }} // namespace

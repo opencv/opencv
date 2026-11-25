@@ -81,7 +81,7 @@ public:
         int m = X.size[X.dims - 2];
         CV_Assert(n == m);
 
-        size_t batch = X.total() / (X.size[X.dims - 2] * X.size[X.dims - 1]);
+        size_t batch = X.total(0, X.dims - 2);
 
         if (X.dims > 2)
         {
@@ -90,6 +90,13 @@ public:
             outputs[0].create(outDims, outSizes.data(), X.type());
         }
         // else: scalar output is pre-allocated by the engine; create() would detach it.
+
+        if (n == 0)
+        {
+            // the determinant of a 0x0 matrix is 1
+            outputs[0].setTo(Scalar(1));
+            return;
+        }
 
         const int type = X.type();
         const size_t elemSz = X.elemSize();

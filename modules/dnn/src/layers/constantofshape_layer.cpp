@@ -5,6 +5,10 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/constant_of_shape.hpp"
+#endif
 
 namespace cv
 {
@@ -60,8 +64,38 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            if (blobs.size() != 1 || blobs[0].total() != 1)
+                return false;
+            // make_cuda_node_with_type() hard-errors outside these types; bool goes through make_cuda_node_bool()
+            return isCudaNodeType(blobs[0].type());
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_,
+                              InputArrayOfArrays,
+                              InputArrayOfArrays) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        CV_Assert(blobs.size() == 1);
+        const Mat& value = blobs[0];
+
+        if (value.type() == CV_Bool)
+            return make_cuda_node_bool<cuda4dnn::ConstantOfShapeOp>(std::move(context->stream), value);
+        // the FP16 target stores float tensors as half, and the op reads the value's raw bytes as T
+        if (value.type() == CV_32F && preferableTarget == DNN_TARGET_CUDA_FP16) {
+            Mat halfValue;
+            value.convertTo(halfValue, CV_16F);
+            return Ptr<BackendNode>(new cuda4dnn::ConstantOfShapeOp<half>(std::move(context->stream), halfValue));
+        }
+        return make_cuda_node_with_type<cuda4dnn::ConstantOfShapeOp>(preferableTarget, value.type(),
+                                                                     std::move(context->stream), value);
+    }
+#endif
 
     virtual bool dynamicOutputShapes() const CV_OVERRIDE
     {
@@ -76,11 +110,11 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(!dynamicOutputShapes());
-
         CV_Assert(this->inputs.size() == (size_t)1);
         Net::Impl* netimpl_ = getNetImpl(this);
         Mat shapeTensor = netimpl_->argTensor(this->inputs[0]);
+        // a dynamic shape is readable once its values are on the host (CUDA downloads them first)
+        CV_Assert(!dynamicOutputShapes() || !shapeTensor.empty());
         MatShape shape = tensorToShape(shapeTensor);
         outputs.assign(1, shape);
         internals.clear();

@@ -148,6 +148,44 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 kernels::biasN<T>(stream, output, input, inner_size, bias);
         }
 
+        void forward(
+            const std::vector<UMat>& inputs,
+            const std::vector<UMat>& outputs,
+            csl::Workspace& workspace) override
+        {
+            CV_UNUSED(workspace);
+            // the new engine builds this only with constant (trainable) scale and shift
+            CV_Assert(scaleMode != ScaleShiftConfiguration::OpMode::UNTRAINABLE &&
+                      shiftMode != ScaleShiftConfiguration::OpMode::UNTRAINABLE);
+            CV_Assert(!inputs.empty() && outputs.size() == 1);
+
+            auto input = csl::viewOf<T>(inputs[0]);
+            auto output = csl::spanOf<T>(outputs[0]);
+            csl::TensorView<T> weights, bias;
+            if (!weightsTensor.empty())
+                weights = csl::TensorView<T>(weightsTensor);
+            if (!biasTensor.empty())
+                bias = csl::TensorView<T>(biasTensor);
+            if (!weights.empty() && !bias.empty())
+                CV_CheckEQ(weights.size(), bias.size(), "different broadcasting options for weights and bias is not supported");
+
+            const auto num_parameters = !weights.empty() ? weights.size() : bias.size();
+            int end_axis = static_cast<int>(axis + 1);
+            if (num_parameters != 1) {
+                while (end_axis <= input.rank() && input.size_range(axis, end_axis) != num_parameters)
+                    end_axis++;
+                CV_Assert(end_axis <= input.rank() /* failed to find a broadcast config */);
+            }
+            std::size_t inner_size = input.size_range(end_axis, input.rank());
+
+            if (!weights.empty() && !bias.empty())
+                kernels::scaleN_with_biasN<T>(stream, output, input, inner_size, weights, bias);
+            else if (!weights.empty())
+                kernels::scaleN<T>(stream, output, input, inner_size, weights);
+            else
+                kernels::biasN<T>(stream, output, input, inner_size, bias);
+        }
+
     private:
         csl::Stream stream;
         csl::Tensor<T> weightsTensor, biasTensor;

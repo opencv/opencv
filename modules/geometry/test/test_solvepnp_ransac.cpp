@@ -144,14 +144,14 @@ static void generatePose(const vector<Point3d>& points, Mat& rvec, Mat& tvec, RN
             tvec.at<double>(i,0) = (i == 2) ? rng.uniform(minVal*10, maxVal) : rng.uniform(-maxVal, maxVal);
         }
 
-        Mat R;
+        Matx33d R;
         cv::Rodrigues(rvec, R);
+        const Vec3d t(tvec.at<double>(0,0), tvec.at<double>(1,0), tvec.at<double>(2,0));
         bool positiveDepth = true;
         for (size_t i = 0; i < points.size() && positiveDepth; i++)
         {
-            Matx31d objPts(points[i].x, points[i].y, points[i].z);
-            Mat camPts = R*objPts + tvec;
-            if (camPts.at<double>(2,0) <= 0)
+            const Vec3d camPt = R * Vec3d(points[i].x, points[i].y, points[i].z) + t;
+            if (camPt[2] <= 0)
             {
                 positiveDepth = false;
             }
@@ -2342,6 +2342,39 @@ TEST(Calib3d_SolvePnP, regression_30402)
     cv::Rodrigues(rvecGT, RGT);
     EXPECT_LE(cvtest::norm(R, RGT, NORM_INF), 1e-6);
     EXPECT_LE(cvtest::norm(tvec, Mat(tvecGT), NORM_INF), 1e-6);
+}
+
+TEST(Calib3d_SolvePnPRansac, regression_27098)
+{
+    // Planar target seen at an angle: refining only from the minimal sample model
+    // converged to the mirrored pose, which misses several points by about 10 px.
+    std::vector<Point3f> objectPoints = {
+        Point3f(20, 17.5f, 0), Point3f(208, 17.5f, 0), Point3f(208, 40.5f, 0),
+        Point3f(20, 40.5f, 0), Point3f(440, 97.5f, 0), Point3f(440, 120.5f, 0),
+        Point3f(20, 137.5f, 0), Point3f(208, 137.5f, 0), Point3f(208, 160.5f, 0),
+        Point3f(20, 160.5f, 0)
+    };
+    std::vector<Point2f> imagePoints = {
+        Point2f(545.44006f, 387.48523f), Point2f(613.87695f, 387.2843f),
+        Point2f(613.37036f, 391.72394f), Point2f(544.3327f, 391.97958f),
+        Point2f(700.9006f, 403.2526f), Point2f(701.5016f, 408.12985f),
+        Point2f(538.9222f, 411.964f), Point2f(611.1791f, 411.69757f),
+        Point2f(610.6426f, 416.74878f), Point2f(537.5011f, 416.98953f)
+    };
+    Matx33d intrinsics(609.472778, 0, 642.603699,
+                       0, 609.341736, 393.885529,
+                       0, 0, 1);
+    std::vector<double> distCoeffs = {
+        -1.117186, 0.620454, 0.000008, 0.000002, -0.116633, -1.098497, 0.594703, -0.106835
+    };
+
+    Mat rvec, tvec;
+    ASSERT_TRUE(solvePnPRansac(objectPoints, imagePoints, intrinsics, distCoeffs, rvec, tvec,
+                               false, 1000, 3.0f, 0.99, noArray(), SOLVEPNP_ITERATIVE));
+
+    std::vector<Point2f> projected;
+    projectPoints(objectPoints, rvec, tvec, intrinsics, distCoeffs, projected);
+    EXPECT_LE(cvtest::norm(projected, imagePoints, NORM_INF), 1.0);
 }
 
 }} // namespace

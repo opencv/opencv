@@ -1837,6 +1837,10 @@ ushort FileStorage::Impl::Base64Decoder::getUInt16() {
     return val;
 }
 
+unsigned FileStorage::Impl::Base64Decoder::getUInt32() {
+    return (unsigned)getInt32();
+}
+
 int FileStorage::Impl::Base64Decoder::getInt32() {
     size_t sz = decoded.size();
     if (ofs + 4 > sz && !readMore(4))
@@ -1914,7 +1918,7 @@ char *FileStorage::Impl::parseBase64(char *ptr, int indent, FileNode &collection
                         ival = (short) base64decoder.getUInt16();
                         break;
                     case CV_32U:
-                        ival = base64decoder.getInt32();
+                        ival = base64decoder.getUInt32();
                         break;
                     case CV_32S:
                         ival = base64decoder.getInt32();
@@ -2743,7 +2747,7 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                     FileNode node = *(*this);
                     if( node.isInt() )
                     {
-                        int64_t ival = static_cast<int64_t>(elem_size == 8 ? (int64_t)node : (int)node);
+                        int64_t ival = (int64_t)node;
                         switch( elem_type )
                         {
                         case CV_8U:

@@ -21,7 +21,7 @@ bin/
 *.suo
 *.log
 *.tlog
-build
+build*
 node_modules
 CMakeSettings.json
 xcuserdata/

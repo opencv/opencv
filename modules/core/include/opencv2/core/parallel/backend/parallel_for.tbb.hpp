@@ -27,14 +27,18 @@ using namespace ::tbb;
 #if TBB_INTERFACE_VERSION >= 8000
 static tbb::task_arena& getArena()
 {
-    static tbb::task_arena tbbArena(tbb::task_arena::automatic);
-    return tbbArena;
+    // Keep the TBB object alive until process termination to avoid static
+    // destruction during process teardown on Windows.
+    static tbb::task_arena* tbbArena = new tbb::task_arena(tbb::task_arena::automatic);
+    return *tbbArena;
 }
 #else
 static tbb::task_scheduler_init& getScheduler()
 {
-    static tbb::task_scheduler_init tbbScheduler(tbb::task_scheduler_init::deferred);
-    return tbbScheduler;
+    // Keep the TBB object alive until process termination to avoid static
+    // destruction during process teardown on Windows.
+    static tbb::task_scheduler_init* tbbScheduler = new tbb::task_scheduler_init(tbb::task_scheduler_init::deferred);
+    return *tbbScheduler;
 }
 #endif
 

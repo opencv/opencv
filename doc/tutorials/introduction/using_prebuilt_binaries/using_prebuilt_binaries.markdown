@@ -12,7 +12,7 @@ Goal
 ----
 
 The objective of this tutorial is to show how to configure a local build environment to use
-pre-built OpenCV 5.0 binaries that are already present on your device.
+pre-built OpenCV 5.x binaries that are already present on your device.
 
 By the end of this guide you will know how to reference, link, and use an existing OpenCV
 installation from your own C++ or Python application, without rebuilding the library from
@@ -25,7 +25,7 @@ When OpenCV is installed via an installer, a system package manager (apt, Homebr
 or built into a local workspace directory, it exports configuration scripts that let build
 tools locate and link it automatically.
 
-Because OpenCV 5.0 modernizes its build requirements, keep two things in mind:
+Because OpenCV 5.x modernizes its build requirements, keep two things in mind:
 
 -   **C++17 is required.** The library headers use modern language features, so your project
     must be compiled with the C++17 standard or higher.
@@ -55,14 +55,14 @@ my_opencv_project/
 cmake_minimum_required(VERSION 3.22)
 project(OpenCV5_Local_Project)
 
-# OpenCV 5.0 requires C++17
+# OpenCV 5.x requires C++17
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Locate the pre-built OpenCV installation. If CMake cannot find it
 # automatically, pass the path explicitly:
 #   cmake -DOpenCV_DIR=/absolute/path/to/opencv/build/ ..
-find_package(OpenCV 5.0 REQUIRED)
+find_package(OpenCV 5 REQUIRED)
 
 message(STATUS "Found OpenCV version: ${OpenCV_VERSION}")
 message(STATUS "OpenCV include directories: ${OpenCV_INCLUDE_DIRS}")
@@ -142,6 +142,6 @@ Troubleshooting
 
 -   **CMake: "Could not find a package configuration file ..."** &mdash; CMake cannot locate
     the install. Pass the path explicitly: `cmake -DOpenCV_DIR=/path/to/opencv/build/ ..`
--   **Compiler: "OpenCV 5.0 requires C++17"** &mdash; the toolchain fell back to an older
+-   **Compiler: "OpenCV 5.x requires C++17"** &mdash; the toolchain fell back to an older
     standard. Add `-std=c++17` to the g++ command, or `set(CMAKE_CXX_STANDARD 17)` before
     `find_package` in CMake.
