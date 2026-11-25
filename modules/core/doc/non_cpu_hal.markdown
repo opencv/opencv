@@ -156,15 +156,17 @@ A built-in backend registers itself in `registry.cpp`; tests register theirs wit
   while the pool holds less than a quarter of the device's memory; integrated GPUs from Xavier on
   use pinned host memory mapped into the GPU, which the CPU uses in place. It implements `flip`
   and `transpose`, in place too, and for imgproc `GaussianBlur` (bit-exact with the CPU for 8U
-  and 16U) and `warpAffine` with nearest and linear interpolation. Its kernels and runtime calls
-  (`src/accel/gpu/`) are written once for the CUDA and HIP runtimes. The imgproc operations and
-  kernels live in `non_cpu_hal/gpu/imgproc/`, laid out like the CPU HAL in `hal/ipp/`:
-  `include/gpu_hal_imgproc.hpp` declares the kernels and lists the operations,
-  `src/<family>.impl.hpp` holds one family (`smooth`, `warp`) with both its kernels and the
-  operations that launch them, and `src/precomp.hpp` what the families share (border indices,
-  saturation, launch checks) followed by the list of families. They are compiled into the same
-  backends: core includes `src/precomp.hpp` once with `CV_ACCEL_GPU_KERNELS` for the kernels
-  and once for the operations.
+  and 16U) and `warpAffine` with nearest and linear interpolation. Its devices, memory and streams
+  (`src/accel/gpu/`) are written once for the CUDA and HIP runtimes, and so are its kernels and
+  operations, which live in the non-CPU HAL, `non_cpu_hal/gpu/`, one folder per module laid out like
+  the CPU HAL in `hal/ipp/`. `<module>/include/gpu_hal_<module>.hpp` declares only how the backend
+  creates the module's operations. `<module>/src/<family>.impl.hpp` holds one family (`flip`,
+  `transpose`, `smooth`, `warp`): it declares its own kernels, as the CPU's `*.simd.hpp` files do,
+  and holds them and the operations that launch them, as a mixin the module combines.
+  `<module>/src/precomp.hpp` has what the families share, the list of families and that combination,
+  and `non_cpu_hal/gpu/precomp.hpp` the launch geometry and the list of modules. Core compiles it
+  twice: from `src/cuda/accel_kernels.cu` and `src/hip/accel_kernels.hip` with
+  `CV_ACCEL_GPU_KERNELS` for the kernels, and from its GPU backend for the operations.
 * HIP (`src/accel/backend_hip.cpp`), built in when OpenCV is configured with `WITH_HIP=ON`, which
   needs CMake 3.21 or newer. `opencv_core` then links `libamdhip64`, so ROCm must be installed
   wherever that build runs. It has the operations of the CUDA backend, from the same sources. By
@@ -214,10 +216,10 @@ CV_ACCEL_RUN(_src.isUMat() && borderType != BORDER_TRANSPARENT,
                         _src.type(), _M0, flags, borderType, borderValue))
 ```
 
-3. Implement it in the backends that can. For the GPU backends and an imgproc operation: declare the
-   kernel and the operation in `non_cpu_hal/gpu/imgproc/include/gpu_hal_imgproc.hpp`, and write
-   both in the family's `src/<family>.impl.hpp` (a new family file is added at the end of
-   `src/precomp.hpp`).
+3. Implement it in the backends that can. For the GPU backends, everything goes in the family's
+   `non_cpu_hal/gpu/<module>/src/<family>.impl.hpp`: the kernel's declaration, the kernel, and the
+   operation in the family's mixin. A new family file is listed at the end of the module's
+   `src/precomp.hpp` and its mixin added to the module's operations there.
 
 Not in this version
 -------------------

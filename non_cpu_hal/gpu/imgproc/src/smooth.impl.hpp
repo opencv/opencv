@@ -5,10 +5,19 @@
 // Third party copyrights are property of their respective owners.
 
 // Non-CPU HAL, GPU: GaussianBlur, a row pass into a buffer, then a column pass. Compiled twice through
-// precomp.hpp, which supplies the shared helpers: the kernels with CV_ACCEL_GPU_KERNELS, the
-// operation that launches them without.
+// ../../precomp.hpp: the kernels with CV_ACCEL_GPU_KERNELS, the operation that launches them without.
 
-#include "gpu/imgproc/include/gpu_hal_imgproc.hpp"
+namespace cv { namespace accel { namespace CV_GPU_NS { namespace kernels {
+
+//! the longest GaussianBlur kernel, in taps
+const int GAUSSIAN_MAX_TAPS = 63;
+/** @brief GaussianBlur, a row pass into @p buf, then a column pass. @p kx, @p ky and @p buf are
+CV_16U for CV_8U images, CV_32U for CV_16U (fixed point, as the CPU's), CV_32F otherwise. */
+CV_GPU(Error_t) gaussianBlur(const unsigned char* src, size_t sstep, unsigned char* buf, size_t bstep,
+                             unsigned char* dst, size_t dstep, int rows, int cols, int depth, int cn,
+                             const void* kx, int kxn, const void* ky, int kyn, int border, CV_GPU(Stream_t) s);
+
+}}}} // namespace cv::accel::CV_GPU_NS::kernels
 
 #ifdef CV_ACCEL_GPU_KERNELS
 
@@ -181,11 +190,20 @@ Mat cpuTaps(const Mat& k, int depth)
     return taps;
 }
 
+//! gaussianBlur, one of the ImgprocOps the module mixes together (precomp.hpp)
+template<typename Base>
+struct GpuSmoothOps : Base
+{
+    bool gaussianBlur(const UMat& src, UMat& dst, const Mat& kx64, const Mat& ky64, int borderType,
+                      Stream& stream) CV_OVERRIDE;
+};
+
 // two passes through a buffer, so the output may alias the input in any way; BORDER_WRAP is left to
 // the CPU, whose floating-point filters reject it, and so is a region without BORDER_ISOLATED, which
 // reads its parent beyond its edges
-bool GpuImgprocOps::gaussianBlur(const UMat& src, UMat& dst, const Mat& kx64, const Mat& ky64, int borderType,
-                                 Stream& stream)
+template<typename Base>
+bool GpuSmoothOps<Base>::gaussianBlur(const UMat& src, UMat& dst, const Mat& kx64, const Mat& ky64, int borderType,
+                                      Stream& stream)
 {
     if (src.isSubmatrix() && !(borderType & BORDER_ISOLATED))
         return false;

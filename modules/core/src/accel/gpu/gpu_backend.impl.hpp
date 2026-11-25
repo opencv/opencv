@@ -12,7 +12,9 @@
 
 #include "opencv2/core/private/accel_backend.hpp"
 #include "opencv2/core/utils/logger.hpp"
-#include "gpu_kernels.hpp"
+#include "gpu_runtime.hpp"
+#include "gpu/core/include/gpu_hal_core.hpp"         // non_cpu_hal/: the operations of each module
+#include "gpu/imgproc/include/gpu_hal_imgproc.hpp"
 
 #include <memory>
 #include <mutex>
@@ -176,64 +178,6 @@ GpuStream& gpuStreamOf(Stream& s)
     return *gs;
 }
 
-/* Whether the kernels can run on @p src and @p dst: 2-D, an element size they move, no Mat view
-   alive (UMat::handle() needs that), and either separate buffers or the same view (in place).
-   Other views of one buffer may overlap, which the kernels do not handle. */
-bool runnable(const UMat& src, const UMat& dst)
-{
-    return src.dims == 2 && kernels::supportedElementSize((int)src.elemSize()) &&
-           src.u->refcount == 0 && dst.u->refcount == 0 &&
-           (src.u != dst.u || (src.offset == dst.offset && src.step[0] == dst.step[0]));
-}
-
-class GpuCoreOps CV_FINAL : public CoreOps
-{
-public:
-    bool flip(const UMat& src, UMat& dst, int flipCode, Stream& stream) CV_OVERRIDE
-    {
-        if (!runnable(src, dst))
-            return false;
-        GpuStream& s = gpuStreamOf(stream);
-        DeviceGuard g(s.device_);
-        const unsigned char* sp = (const unsigned char*)src.handle(ACCESS_READ) + src.offset;
-        unsigned char* dp = (unsigned char*)dst.handle(ACCESS_WRITE) + dst.offset;
-        const int esz = (int)src.elemSize();
-        const CV_GPU(Error_t) r = src.u == dst.u
-              ? kernels::flipInplace(dp, dst.step[0], src.rows, src.cols, esz, flipCode, s.s_)
-              : kernels::flip(sp, src.step[0], dp, dst.step[0], src.rows, src.cols, esz, flipCode, s.s_);
-        if (noKernelImage(r))
-        {
-            (void)CV_GPU(GetLastError)();
-            return false;   // no code for this GPU in the build: nothing was queued, the CPU runs it
-        }
-        check(r, "flip");
-        stream.retain({ src, dst });
-        return true;
-    }
-
-    bool transpose(const UMat& src, UMat& dst, Stream& stream) CV_OVERRIDE
-    {
-        if (!runnable(src, dst) || (src.u == dst.u && src.rows != src.cols))
-            return false;
-        GpuStream& s = gpuStreamOf(stream);
-        DeviceGuard g(s.device_);
-        const unsigned char* sp = (const unsigned char*)src.handle(ACCESS_READ) + src.offset;
-        unsigned char* dp = (unsigned char*)dst.handle(ACCESS_WRITE) + dst.offset;
-        const int esz = (int)src.elemSize();
-        const CV_GPU(Error_t) r = src.u == dst.u
-              ? kernels::transposeInplace(dp, dst.step[0], src.rows, esz, s.s_)
-              : kernels::transpose(sp, src.step[0], dp, dst.step[0], src.rows, src.cols, esz, s.s_);
-        if (noKernelImage(r))
-        {
-            (void)CV_GPU(GetLastError)();
-            return false;
-        }
-        check(r, "transpose");
-        stream.retain({ src, dst });
-        return true;
-    }
-};
-
 //! one device; a backend's constructor says whether the CPU addresses its memory (shared)
 struct GpuDevice
 {
@@ -246,9 +190,6 @@ struct GpuDevice
     CV_GPU(Stream_t) allocStream = 0;   // where pool memory is allocated and freed
 #endif
 };
-
-//! the imgproc operations, in non_cpu_hal/gpu/imgproc/ (included at the end)
-Ptr<ImgprocOps> createImgprocOps();
 
 /* Devices, streams, copies, memory and the core operations. Device memory comes from a
    stream-ordered pool where the device has pools; shared devices get mapped host memory. */
@@ -366,7 +307,7 @@ public:
     Ops* ops(const char* module) CV_OVERRIDE
     {
         if (strcmp(module, "core") == 0)
-            return &core_;
+            return core_.get();
         return strcmp(module, "imgproc") == 0 ? imgproc_.get() : 0;
     }
 
@@ -444,7 +385,7 @@ private:
     }
 #endif
 
-    GpuCoreOps core_;
+    Ptr<CoreOps> core_ = createCoreOps();
     Ptr<ImgprocOps> imgproc_ = createImgprocOps();
 };
 
@@ -452,6 +393,6 @@ private:
 
 }}} // namespace cv::accel::CV_GPU_NS
 
-#include "gpu/imgproc/src/precomp.hpp"   // the operation half of each family in non_cpu_hal/gpu/imgproc/src/
+#include "gpu/precomp.hpp"   // non_cpu_hal/: the operation half of each family
 
 #endif // OPENCV_CORE_SRC_ACCEL_GPU_BACKEND_IMPL_HPP

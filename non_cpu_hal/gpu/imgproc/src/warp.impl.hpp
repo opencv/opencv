@@ -5,10 +5,22 @@
 // Third party copyrights are property of their respective owners.
 
 // Non-CPU HAL, GPU: warpAffine with nearest and linear interpolation, in the CPU's float arithmetic.
-// Compiled twice through precomp.hpp, which supplies the shared helpers: the kernels with
-// CV_ACCEL_GPU_KERNELS, the operation that launches them without.
+// Compiled twice through ../../precomp.hpp: the kernels with CV_ACCEL_GPU_KERNELS, the operation that
+// launches them without.
 
-#include "gpu/imgproc/include/gpu_hal_imgproc.hpp"
+namespace cv { namespace accel { namespace CV_GPU_NS { namespace kernels {
+
+//! cv::InterpolationFlags, which core does not see
+enum { INTER_NEAREST = 0, INTER_LINEAR = 1 };
+
+/** @brief warpAffine with the inverse map @p M (2x3), INTER_NEAREST or INTER_LINEAR, @p bval the
+BORDER_CONSTANT pixel already in the range of @p depth. */
+CV_GPU(Error_t) warpAffine(const unsigned char* src, size_t sstep, int srows, int scols,
+                           unsigned char* dst, size_t dstep, int drows, int dcols, int depth, int cn,
+                           const float* M, int interpolation, int border, const float* bval,
+                           CV_GPU(Stream_t) s);
+
+}}}} // namespace cv::accel::CV_GPU_NS::kernels
 
 #ifdef CV_ACCEL_GPU_KERNELS
 
@@ -133,10 +145,19 @@ namespace {
 // cv::InterpolationFlags and cv::WarpPolynomial values that core does not see
 enum { INTER_AREA = 3, INTER_MAX = 7, WARP_INVERSE_MAP = 16 };
 
+//! warpAffine, one of the ImgprocOps the module mixes together (precomp.hpp)
+template<typename Base>
+struct GpuWarpOps : Base
+{
+    bool warpAffine(const UMat& src, UMat& dst, InputArray M0, int flags, int borderType,
+                    const Scalar& borderValue, Stream& stream) CV_OVERRIDE;
+};
+
 // the types the CPU warps in floating point (warp_kernels.simd.hpp), which the GPU follows, with M
 // inverted as cv::warpAffine inverts it; an output that is the input gets a copy of it first
-bool GpuImgprocOps::warpAffine(const UMat& src, UMat& dst, InputArray M0, int flags, int borderType,
-                               const Scalar& borderValue, Stream& stream)
+template<typename Base>
+bool GpuWarpOps<Base>::warpAffine(const UMat& src, UMat& dst, InputArray M0, int flags, int borderType,
+                                  const Scalar& borderValue, Stream& stream)
 {
     const Mat m0 = M0.getMat();
     int interpolation = flags & INTER_MAX;

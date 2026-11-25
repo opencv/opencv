@@ -112,7 +112,7 @@ if(ITT_INCLUDE_DIRS)
   ocv_module_include_directories(${ITT_INCLUDE_DIRS})
 endif()
 if(HAVE_CUDA OR HAVE_HIP)
-  # the GPU backends of the non-CPU HAL (src/accel/gpu/) take their imgproc operations and kernels from non_cpu_hal/gpu/imgproc/
+  # the GPU backends of the non-CPU HAL (src/accel/gpu/) take their kernels and operations from non_cpu_hal/gpu/
   ocv_module_include_directories("${OpenCV_SOURCE_DIR}/non_cpu_hal")
 endif()
 if(HAVE_POSIX_MEMALIGN)

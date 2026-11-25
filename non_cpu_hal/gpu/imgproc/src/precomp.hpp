@@ -7,13 +7,10 @@
 #ifndef OPENCV_NON_CPU_HAL_GPU_IMGPROC_PRECOMP_HPP
 #define OPENCV_NON_CPU_HAL_GPU_IMGPROC_PRECOMP_HPP
 
-// Non-CPU HAL, GPU, imgproc: what the families share, then the families, one file each. Core includes
-// this file twice: from src/accel/gpu/gpu_kernels.impl.hpp with CV_ACCEL_GPU_KERNELS, for the
-// kernels and the device functions they are built from (on its runtime and grid, BLOCK_X, BLOCK_Y),
-// and from src/accel/gpu/gpu_backend.impl.hpp, for the operations and the checks around a launch
-// (on its streams and error checks).
+// Non-CPU HAL, GPU, imgproc: what the families share, then the families, one file each (included by
+// ../../precomp.hpp). Images are of @p depth (CV_8U, ...) with @p cn channels; borders are
+// cv::BorderTypes.
 
-#include "gpu/imgproc/include/gpu_hal_imgproc.hpp"
 #include "opencv2/core/hal/interface.h"
 #include <string.h>
 
@@ -79,6 +76,8 @@ template<> __device__ inline short saturate<short>(float v)
 
 #else // the operations
 
+#include "gpu/imgproc/include/gpu_hal_imgproc.hpp"
+
 namespace cv { namespace accel { namespace CV_GPU_NS {
 
 namespace {
@@ -110,6 +109,28 @@ bool launched(CV_GPU(Error_t) r, const char* what)
 #include "smooth.impl.hpp"
 #include "warp.impl.hpp"
 
+#ifdef CV_ACCEL_GPU_KERNELS
+
 #undef CV_ACCEL_GPU_BY_CN
+
+#else
+
+namespace cv { namespace accel { namespace CV_GPU_NS {
+
+namespace {
+
+//! the imgproc operations: one mixin per family
+class GpuImgprocOps CV_FINAL : public GpuWarpOps<GpuSmoothOps<ImgprocOps> > {};
+
+Ptr<ImgprocOps> createImgprocOps()
+{
+    return makePtr<GpuImgprocOps>();
+}
+
+} // namespace
+
+}}} // namespace cv::accel::CV_GPU_NS
+
+#endif // CV_ACCEL_GPU_KERNELS
 
 #endif // OPENCV_NON_CPU_HAL_GPU_IMGPROC_PRECOMP_HPP

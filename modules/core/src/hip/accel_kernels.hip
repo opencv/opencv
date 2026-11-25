@@ -6,4 +6,6 @@
 
 // Non-CPU HAL: the kernels of the HIP backend, the same source as CUDA's.
 #define CV_ACCEL_GPU_HIP
-#include "../accel/gpu/gpu_kernels.impl.hpp"
+#include "../accel/gpu/gpu_runtime.hpp"
+#define CV_ACCEL_GPU_KERNELS
+#include "gpu/precomp.hpp"   // non_cpu_hal/
