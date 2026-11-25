@@ -11,7 +11,6 @@
 #ifdef HAVE_CUDA
 #include "umatrix.hpp"
 #include <opencv2/core/utils/logger.hpp>
-#include <cstdint>
 #include <limits>
 #endif
 
@@ -184,24 +183,7 @@ public:
         CV_Assert(u->currAllocator == this);
         if (u->deviceCopyObsolete() && u->data)
         {
-            size_t srcStart = 0, srcEnd = 0, dstStart = 0, dstEnd = 0;
-            size_t packedStep[CV_MAX_DIM] = { 0 };
-            size_t packedBytes = 0;
-            computeRegionSpan(dims, sz, srcofs, srcstep, srcStart, srcEnd, packedStep, packedBytes);
-            size_t dummyBytes = 0;
-            computeRegionSpan(dims, sz, NULL, dststep, dstStart, dstEnd, NULL, dummyBytes);
-            const size_t* effSrcStep = srcstep ? srcstep : packedStep;
-            const size_t* effDstStep = dststep ? dststep : packedStep;
-            if (hostSpansOverlap(u->data, srcStart, srcEnd, static_cast<const uchar*>(dstptr), dstStart, dstEnd))
-            {
-                AutoBuffer<uchar> tmp(packedBytes);
-                MatAllocator::download(u, tmp.data(), dims, sz, srcofs, effSrcStep, packedStep);
-                UMatData tmpU(NULL);
-                tmpU.data = tmp.data();
-                MatAllocator::download(&tmpU, dstptr, dims, sz, NULL, packedStep, effDstStep);
-                return;
-            }
-            MatAllocator::download(u, dstptr, dims, sz, srcofs, effSrcStep, effDstStep);
+            MatAllocator::download(u, dstptr, dims, sz, srcofs, srcstep, dststep);
             return;
         }
         if (!u->handle)
@@ -220,26 +202,8 @@ public:
         CV_Assert(u->currAllocator == this);
         if (u->refcount > 0 && u->data)
         {
-            size_t srcStart = 0, srcEnd = 0, dstStart = 0, dstEnd = 0;
-            size_t packedStep[CV_MAX_DIM] = { 0 };
-            size_t packedBytes = 0;
-            computeRegionSpan(dims, sz, NULL, srcstep, srcStart, srcEnd, packedStep, packedBytes);
-            size_t dummyBytes = 0;
-            computeRegionSpan(dims, sz, dstofs, dststep, dstStart, dstEnd, NULL, dummyBytes);
-            const size_t* effSrcStep = srcstep ? srcstep : packedStep;
-            const size_t* effDstStep = dststep ? dststep : packedStep;
-            if (hostSpansOverlap(static_cast<const uchar*>(srcptr), srcStart, srcEnd, u->data, dstStart, dstEnd))
-            {
-                AutoBuffer<uchar> tmp(packedBytes);
-                UMatData tmpU(NULL);
-                tmpU.data = const_cast<uchar*>(static_cast<const uchar*>(srcptr));
-                MatAllocator::download(&tmpU, tmp.data(), dims, sz, NULL, effSrcStep, packedStep);
-                MatAllocator::upload(u, tmp.data(), dims, sz, dstofs, effDstStep, packedStep);
-            }
-            else
-            {
-                MatAllocator::upload(u, srcptr, dims, sz, dstofs, effDstStep, effSrcStep);
-            }
+            // the host copy that Mat views use; unmap() uploads it
+            MatAllocator::upload(u, srcptr, dims, sz, dstofs, dststep, srcstep);
             u->markHostCopyObsolete(false);
             u->markDeviceCopyObsolete(true);
             return;
@@ -263,109 +227,33 @@ public:
     {
         if (!src || !dst || hasEmptyDim(dims, sz))
             return;
-        UMatDataAutoLock lock(src, dst);
         CV_Assert(src->currAllocator == this && dst->currAllocator == this);
-        const bool srcHost = src->deviceCopyObsolete() && src->data;
-        const bool dstHostView = dst->refcount > 0 && dst->data;
-
-        if (dstHostView)
         {
-            if (srcHost)
-            {
-                size_t srcStart = 0, srcEnd = 0, dstStart = 0, dstEnd = 0;
-                size_t packedStep[CV_MAX_DIM] = { 0 };
-                size_t packedBytes = 0;
-                computeRegionSpan(dims, sz, srcofs, srcstep, srcStart, srcEnd, packedStep, packedBytes);
-                size_t dummyBytes = 0;
-                computeRegionSpan(dims, sz, dstofs, dststep, dstStart, dstEnd, NULL, dummyBytes);
-                const size_t* effSrcStep = srcstep ? srcstep : packedStep;
-                const size_t* effDstStep = dststep ? dststep : packedStep;
-                if (hostSpansOverlap(src->data, srcStart, srcEnd, dst->data, dstStart, dstEnd))
-                {
-                    AutoBuffer<uchar> tmp(packedBytes);
-                    MatAllocator::download(src, tmp.data(), dims, sz, srcofs, effSrcStep, packedStep);
-                    MatAllocator::upload(dst, tmp.data(), dims, sz, dstofs, effDstStep, packedStep);
-                }
-                else
-                {
-                    MatAllocator::copy(src, dst, dims, sz, srcofs, effSrcStep, dstofs, effDstStep, false);
-                }
-            }
-            else
-            {
-                if (!src->handle)
-                    return;
-                copyPlanes((uchar*)src->handle, srcofs, srcstep, dst->data, dstofs, dststep,
-                           dims, sz, cudaMemcpyDeviceToHost);
-                if (sync)
-                    cudaSafeCall(cudaStreamSynchronize(0));
-            }
-            dst->markHostCopyObsolete(false);
-            dst->markDeviceCopyObsolete(true);
-            return;
-        }
-
-        if (!srcHost && !src->handle)
-            return;
-        if (!dst->handle && dst->size > 0)
-            allocate(dst, ACCESS_RW, USAGE_DEFAULT);
-        if (!dst->handle)
-            return;
-
-        if (dst->deviceCopyObsolete() && dst->data && !isFullOverwrite(dst, dims, sz, dstofs, dststep))
-            cudaSafeCall(cudaMemcpy(dst->handle, dst->data, dst->size, cudaMemcpyHostToDevice));
-
-        if (srcHost)
-        {
-            copyPlanes(src->data, srcofs, srcstep, (uchar*)dst->handle, dstofs, dststep,
-                       dims, sz, cudaMemcpyHostToDevice);
-        }
-        else if (src == dst)
-        {
-            size_t srcStart = 0, srcEnd = 0, dstStart = 0, dstEnd = 0;
-            size_t packedStep[CV_MAX_DIM] = { 0 };
-            size_t packedBytes = 0;
-            computeRegionSpan(dims, sz, srcofs, srcstep, srcStart, srcEnd, packedStep, packedBytes);
-            size_t dummyBytes = 0;
-            computeRegionSpan(dims, sz, dstofs, dststep, dstStart, dstEnd, NULL, dummyBytes);
-            if (srcStart < dstEnd && dstStart < srcEnd)
-            {
-                void* tmpDev = NULL;
-                cudaSafeCall(cudaMalloc(&tmpDev, packedBytes));
-                try
-                {
-                    copyPlanes((uchar*)src->handle, srcofs, srcstep, (uchar*)tmpDev, NULL, packedStep,
-                               dims, sz, cudaMemcpyDeviceToDevice);
-                    copyPlanes((uchar*)tmpDev, NULL, packedStep, (uchar*)dst->handle, dstofs, dststep,
-                               dims, sz, cudaMemcpyDeviceToDevice);
-                }
-                catch (...)
-                {
-                    (void)cudaFree(tmpDev);
-                    throw;
-                }
-                cudaError_t err = cudaFree(tmpDev);
-                if (err != cudaSuccess)
-                {
-                    (void)cudaGetLastError();
-                    CV_LOG_WARNING(NULL, "CudaUMatAllocator: cudaFree(tmp) failed: " << cudaGetErrorString(err));
-                }
-            }
-            else
+            UMatDataAutoLock lock(src, dst);
+            if (src != dst && src->refcount == 0 && dst->refcount == 0 && src->handle && dst->handle &&
+                !src->deviceCopyObsolete() && !dst->deviceCopyObsolete())
             {
                 copyPlanes((uchar*)src->handle, srcofs, srcstep, (uchar*)dst->handle, dstofs, dststep,
                            dims, sz, cudaMemcpyDeviceToDevice);
+                dst->markHostCopyObsolete(true);
+                if (sync)
+                    cudaSafeCall(cudaStreamSynchronize(0));
+                return;
             }
         }
-        else
+        // with a Mat view alive, a newer host copy, or within one buffer: through one host buffer,
+        // which also keeps overlapping regions safe
+        size_t tmpstep[CV_MAX_DIM];
+        size_t total = sz[dims - 1];
+        tmpstep[dims - 1] = 1;
+        for (int k = dims - 2; k >= 0; k--)
         {
-            copyPlanes((uchar*)src->handle, srcofs, srcstep, (uchar*)dst->handle, dstofs, dststep,
-                       dims, sz, cudaMemcpyDeviceToDevice);
+            tmpstep[k] = total;
+            total *= sz[k];
         }
-        dst->markHostCopyObsolete(true);
-        dst->markDeviceCopyObsolete(false);
-        if (sync)
-            cudaSafeCall(cudaStreamSynchronize(0));
+        AutoBuffer<uchar> tmp(total);
+        download(src, tmp.data(), dims, sz, srcofs, srcstep, tmpstep);
+        upload(dst, tmp.data(), dims, sz, dstofs, dststep, tmpstep);
     }
 
 private:
@@ -378,44 +266,6 @@ private:
             if (sz[i] == 0)
                 return true;
         return false;
-    }
-
-    static bool hostSpansOverlap(const uchar* baseA, size_t startA, size_t endA,
-                                 const uchar* baseB, size_t startB, size_t endB)
-    {
-        const std::uintptr_t a0 = reinterpret_cast<std::uintptr_t>(baseA) + startA;
-        const std::uintptr_t a1 = reinterpret_cast<std::uintptr_t>(baseA) + endA;
-        const std::uintptr_t b0 = reinterpret_cast<std::uintptr_t>(baseB) + startB;
-        const std::uintptr_t b1 = reinterpret_cast<std::uintptr_t>(baseB) + endB;
-        return a0 < b1 && b0 < a1;
-    }
-
-    static void computeRegionSpan(int dims, const size_t sz[],
-                                  const size_t ofs[], const size_t step[],
-                                  size_t& startOfs, size_t& endOfs,
-                                  size_t* packedStep, size_t& packedBytes)
-    {
-        size_t s = 1;
-        size_t relEnd = 0;
-        startOfs = 0;
-        for (int i = dims - 1; i >= 0; i--)
-        {
-            const size_t dimSz = sz[i];
-            if (packedStep)
-                packedStep[i] = s;
-            const size_t stride = (i <= dims - 2) ? (step ? step[i] : s) : 1;
-            if (ofs && ofs[i] != 0)
-            {
-                CV_Assert(i > dims - 2 || step != NULL);
-                startOfs += ofs[i] * stride;
-            }
-            relEnd += (dimSz - 1) * stride;
-            if (s > std::numeric_limits<size_t>::max() / dimSz)
-                CV_Error(Error::StsOutOfRange, "Copy region size overflows size_t");
-            s *= dimSz;
-        }
-        packedBytes = s;
-        endOfs = startOfs + relEnd + 1;
     }
 
     static bool isFullOverwrite(const UMatData* u, int dims, const size_t sz[],

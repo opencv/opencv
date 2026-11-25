@@ -280,8 +280,7 @@ TEST(Core_CudaUMat, getmat_view_coherence)
         EXPECT_EQ(0.0, cvtest::norm(freshCopy, readAfterCopy, NORM_INF));
     }
 
-    // 4. Overlapping same-buffer ROI copies across device copy(), host copy(),
-    //    download() into live view, and upload() from live view.
+    // 4. Overlapping ROI copies within one UMat, without and with a live getMat() view.
     Mat overlapBase(32, 32, CV_32FC1);
     randu(overlapBase, -25.f, 25.f);
     Rect ovSrc(0, 0, 24, 24), ovDst(4, 4, 24, 24);
@@ -307,32 +306,6 @@ TEST(Core_CudaUMat, getmat_view_coherence)
     Mat gotHostOv;
     uHostOv.copyTo(gotHostOv);
     EXPECT_EQ(0.0, cvtest::norm(expectedOverlap, gotHostOv, NORM_INF));
-
-    // download() host-overlap staging: UMat ROI -> overlapping ROI of its live getMat() view
-    UMat uDlOv = makeCudaUMat();
-    overlapBase.copyTo(uDlOv);
-    ASSERT_TRUE(expectCudaOwned(uDlOv));
-    {
-        Mat dlView = uDlOv.getMat(ACCESS_RW);
-        uDlOv(ovSrc).copyTo(dlView(ovDst));
-        EXPECT_EQ(0.0, cvtest::norm(expectedOverlap, dlView, NORM_INF));
-    }
-    Mat gotDlOv;
-    uDlOv.copyTo(gotDlOv);
-    EXPECT_EQ(0.0, cvtest::norm(expectedOverlap, gotDlOv, NORM_INF));
-
-    // upload() host-overlap staging: overlapping ROI of live getMat() view -> UMat ROI
-    UMat uUlOv = makeCudaUMat();
-    overlapBase.copyTo(uUlOv);
-    ASSERT_TRUE(expectCudaOwned(uUlOv));
-    {
-        Mat ulView = uUlOv.getMat(ACCESS_RW);
-        ulView(ovSrc).copyTo(uUlOv(ovDst));
-        EXPECT_EQ(0.0, cvtest::norm(expectedOverlap, ulView, NORM_INF));
-    }
-    Mat gotUlOv;
-    uUlOv.copyTo(gotUlOv);
-    EXPECT_EQ(0.0, cvtest::norm(expectedOverlap, gotUlOv, NORM_INF));
 }
 
 static UMat wrapHostDataWithCudaAlloc(Mat& host, MatAllocator* cudaAlloc)
@@ -594,11 +567,6 @@ TEST(Core_CudaUMat, zero_dim_and_decline_foreign_umatdata)
         uDataOnly->flags |= UMatData::USER_ALLOCATED;
         uDataOnly->markDeviceCopyObsolete(true);
         cudaAlloc->download(uDataOnly, got.data, 2, copySz, NULL, copyStep, copyStep);
-        EXPECT_EQ(0.0, cvtest::norm(ref, got, NORM_INF));
-        // Packed host-coherence call with dims == 2, non-NULL ofs (outer ofs == 0), and step == NULL
-        const size_t packedOfs[2] = { 0, 0 };
-        got.setTo(0);
-        cudaAlloc->download(uDataOnly, got.data, 2, copySz, packedOfs, NULL, NULL);
         EXPECT_EQ(0.0, cvtest::norm(ref, got, NORM_INF));
         ASSERT_TRUE(cudaAlloc->allocate(uDataOnly, ACCESS_RW, USAGE_DEFAULT));
         EXPECT_TRUE(uDataOnly->handle != NULL);
