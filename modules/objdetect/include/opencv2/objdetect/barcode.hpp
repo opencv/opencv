@@ -217,10 +217,11 @@ public:
      *
      * @param encoded_info Input string of digits to encode.
      * @param output Output Array allocated as CV_8UC1 binary raster.
-     * @throws cv::Exception with Error::StsBadArg if encoded_info is empty, contains non-digits,
-     *         has an incorrect length for the symbology/checksum policy, has an invalid check digit
-     *         under VALIDATE_CHECKSUM, or if module_width/bar_height are invalid or cause integer overflow.
-     * @throws cv::Exception with Error::StsNotImplemented if type is NONE or unsupported.
+     *
+     * An exception (cv::Error::StsBadArg) is thrown if encoded_info is empty, contains non-digits,
+     * has an incorrect length for the symbology/checksum policy, has an invalid check digit
+     * under VALIDATE_CHECKSUM, or if module_width/bar_height are invalid or cause integer overflow.
+     * An exception (cv::Error::StsNotImplemented) is thrown if type is NONE or unsupported.
      */
     CV_WRAP virtual void encode(const String& encoded_info, OutputArray output) = 0;
 };

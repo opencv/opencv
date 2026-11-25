@@ -578,4 +578,3 @@ TEST(Objdetect_Barcode_Encode, decode_roundtrip_corners)
 }
 
 }} // opencv_test::<anonymous>
-
