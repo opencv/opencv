@@ -5428,7 +5428,16 @@ typedef testing::TestWithParam<std::tuple<int, int>> Core_SumF32;
 // lengths straddle the boundaries that decide which loop runs: 1..3 take the plain tail, 4 and up
 // reach the four-element unrolled step, and a length the vectorized path consumes whole (24, 27)
 // is correct either way - without the others a test over only those would look thorough and prove
-// nothing. cn stops at 4 because cv::sum returns a Scalar.
+// nothing.
+//
+// Only cn == 1 actually reaches the defect, which is worth stating because the cn sweep otherwise
+// looks like it proves more than it does. sum_ picks its scalar loop on cn % 4, and only the
+// k == 1 branch unrolls over length, adding four elements together in the work type. cn 2 and 3
+// take branches that add one element at a time, and cn == 4 falls to the k += 4 block which does
+// the same per channel - all three accumulate straight into the double dst and cannot overflow.
+// cn == 5 would unroll again, but cv::sum and cv::mean return a Scalar, so through the public API
+// cn == 1 is the whole exposure. The other channel counts are kept as a guard that the fallback
+// does not disturb them.
 INSTANTIATE_TEST_CASE_P(/**/, Core_SumF32, testing::Combine(
     testing::Values(1, 2, 3, 4, 5, 7, 8, 16, 17, 24, 27, 64, 1000),
     testing::Values(1, 2, 3, 4)));
@@ -5486,9 +5495,12 @@ TEST_P(Core_SumF32, cancelling_values_do_not_leave_nan)
     }
 }
 
-// cv::sum has no mask, but cv::mean does, and a masked sum runs the scalar loop for its whole
-// length - Sum_SIMD::operator() returns 0 as soon as a mask is set. So this is the path the
-// narrow work type reaches most, and it has to agree with meanStdDev on the same data.
+// A masked sum runs the scalar loop for its whole length, because Sum_SIMD::operator() returns 0
+// as soon as a mask is set. It cannot overflow, though: the masked branch does dst[k] += (WT)src[k]
+// one element at a time, straight into the double accumulator, with no four-element step in the
+// work type. This test therefore passes with or without the fix, and is here for that reason -
+// widening the work type slowed this path down without fixing anything in it, and the fallback
+// must leave it both correct and untouched.
 TEST_P(Core_SumF32, masked_mean_matches_meanStdDev)
 {
     const int len = std::get<0>(GetParam()), cn = std::get<1>(GetParam());
