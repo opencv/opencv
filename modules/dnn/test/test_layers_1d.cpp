@@ -1779,6 +1779,30 @@ TEST(Layer_Einsum, DynamicLeadingDimensionReusesLayer)
     }
 }
 
+// subscripts may use uppercase letters as well as lowercase ones
+TEST(Layer_Einsum, UppercaseSubscripts)
+{
+    LayerParams lp;
+    lp.type = "Einsum";
+    lp.name = "uppercase_subscripts";
+    lp.set("equation", "Ij,jK->IK");
+    Ptr<Layer> layer = EinsumLayer::create(lp);
+
+    float aData[] = {1, 2, 3,
+                     4, 5, 6};
+    float bData[] = {1, 0,
+                     0, 1,
+                     1, 1};
+    float expectedData[] = {4, 5,
+                            10, 11};
+    Mat a(2, 3, CV_32F, aData), b(3, 2, CV_32F, bData), expected(2, 2, CV_32F, expectedData);
+    std::vector<Mat> inputs{a, b}, outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    normAssert(outputs[0], expected);
+}
+
 TEST(Layer_TopK2, ZeroK)
 {
     Mat input(MatShape{2, 5}, CV_32F);
