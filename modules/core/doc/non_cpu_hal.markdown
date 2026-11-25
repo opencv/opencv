@@ -154,7 +154,9 @@ A built-in backend registers itself in `registry.cpp`; tests register theirs wit
 * CUDA (`src/accel/backend_cuda.cpp`), built in when OpenCV is built with CUDA. Discrete GPUs use
   device memory from a stream-ordered pool of the backend's own, which keeps freed memory for reuse
   while the pool holds less than a quarter of the device's memory; integrated GPUs from Xavier on
-  use pinned host memory mapped into the GPU, which the CPU uses in place. It implements `flip`
+  use pinned host memory mapped into the GPU, which the CPU uses in place. Pinning and mapping a
+  block costs milliseconds, so freed blocks are kept for reuse, up to
+  `OPENCV_ACCEL_SHARED_BUFFERPOOL_LIMIT` bytes per device (1 GiB by default). It implements `flip`
   and `transpose`, in place too, and for imgproc `GaussianBlur` (bit-exact with the CPU for 8U
   and 16U) and `warpAffine` with nearest and linear interpolation. Its devices, memory and streams
   (`src/accel/gpu/`) are written once for the CUDA and HIP runtimes, and so are its kernels and
