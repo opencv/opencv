@@ -2726,6 +2726,132 @@ TEST(Core_SolvePoly, regression_23644)
     checkRoot<float>(r, -1, 0);
 }
 
+static void checkQuadraticRoots(const Mat& roots, int depth, double constant, double leading = 1)
+{
+    ASSERT_EQ(Size(1, 2), roots.size());
+    ASSERT_EQ(CV_MAKETYPE(depth, 2), roots.type());
+    Mat roots64;
+    roots.convertTo(roots64, CV_64F);
+    complex_type actual[2];
+    for (int i = 0; i < 2; ++i)
+    {
+        const Vec2d value = roots64.at<Vec2d>(i);
+        ASSERT_TRUE(std::isfinite(value[0])) << roots;
+        ASSERT_TRUE(std::isfinite(value[1])) << roots;
+        actual[i] = complex_type(value[0], value[1]);
+    }
+
+    const double tolerance = depth == CV_32F ? 1e-6 : 1e-12;
+    const double radius = std::sqrt(std::abs(constant) / leading);
+    const complex_type expected = constant < 0 ? complex_type(radius, 0) : complex_type(0, radius);
+    const double rootTolerance = tolerance * std::max(1.0, radius);
+    const bool direct = std::abs(actual[0] - expected) <= rootTolerance &&
+                        std::abs(actual[1] + expected) <= rootTolerance;
+    const bool swapped = std::abs(actual[1] - expected) <= rootTolerance &&
+                         std::abs(actual[0] + expected) <= rootTolerance;
+    ASSERT_TRUE(direct || swapped) << roots;
+
+    for (int i = 0; i < 2; ++i)
+    {
+        const complex_type z = actual[i];
+        const double magnitude = std::abs(z);
+        const double denominator = std::abs(constant) + leading * magnitude * magnitude;
+        ASSERT_TRUE(std::isfinite(denominator));
+        ASSERT_GT(denominator, 0);
+        EXPECT_LE(std::abs(leading * z * z + constant) / denominator, tolerance);
+    }
+}
+
+typedef testing::TestWithParam<std::tuple<MatDepth, int, double, int, bool> > Core_SolvePolyScaling;
+
+TEST_P(Core_SolvePolyScaling, coefficient_scale_invariance)
+{
+    const int depth = std::get<0>(GetParam());
+    const int channels = std::get<1>(GetParam());
+    const double scale = std::get<2>(GetParam());
+    const int constant = std::get<3>(GetParam());
+    const bool column = std::get<4>(GetParam());
+    Mat coeffs64 = Mat::zeros(column ? 3 : 1, column ? 1 : 3, CV_MAKETYPE(CV_64F, channels));
+    double* values = coeffs64.ptr<double>();
+    values[0] = constant * scale;
+    values[2 * channels] = scale;
+    if (channels == 2)
+    {
+        values[1] = constant * scale;
+        values[5] = scale;
+    }
+    Mat coeffs;
+    coeffs64.convertTo(coeffs, depth);
+    Mat components;
+    coeffs.reshape(1, 1).convertTo(components, CV_64F);
+    ASSERT_TRUE(checkRange(components));
+    ASSERT_NE(0, components.at<double>(0));
+    ASSERT_NE(0, components.at<double>(2 * channels));
+    const Mat original = coeffs.clone();
+
+    Mat roots;
+    const double error = solvePoly(coeffs, roots);
+    EXPECT_TRUE(std::isfinite(error)) << error;
+    EXPECT_EQ(0, cvtest::norm(coeffs, original, NORM_INF));
+    checkQuadraticRoots(roots, depth, constant);
+}
+
+INSTANTIATE_TEST_CASE_P(Float, Core_SolvePolyScaling, testing::Combine(
+    testing::Values(CV_32F), testing::Values(1, 2),
+    testing::Values(1., -1., 1e-20, 1e20), testing::Values(-1, 1), testing::Bool()));
+
+INSTANTIATE_TEST_CASE_P(Double, Core_SolvePolyScaling, testing::Combine(
+    testing::Values(CV_64F), testing::Values(1, 2),
+    testing::Values(1., -1., 1e-20, 1e20, 1e-200, 1e200),
+    testing::Values(-1, 1), testing::Bool()));
+
+TEST(Core_SolvePoly, small_nonzero_leading_coefficient)
+{
+    Mat coeffs = (Mat_<double>(1, 3) << -1, 0, 1e-20);
+    const Mat original = coeffs.clone();
+    Mat roots;
+    const double error = solvePoly(coeffs, roots);
+    EXPECT_TRUE(std::isfinite(error)) << error;
+    EXPECT_EQ(0, cvtest::norm(coeffs, original, NORM_INF));
+    checkQuadraticRoots(roots, CV_64F, -1, 1e-20);
+}
+
+TEST(Core_SolvePoly, zero_leading_coefficient)
+{
+    Mat coeffs = (Mat_<double>(1, 3) << -1, 1, 0);
+    const Mat original = coeffs.clone();
+    Mat roots;
+    const double error = solvePoly(coeffs, roots);
+    EXPECT_TRUE(std::isfinite(error)) << error;
+    EXPECT_EQ(0, cvtest::norm(coeffs, original, NORM_INF));
+    ASSERT_EQ(Size(1, 2), roots.size());
+    ASSERT_EQ(CV_64FC2, roots.type());
+    EXPECT_EQ(Vec2d(1, 0), roots.at<Vec2d>(0));
+    EXPECT_EQ(Vec2d(0, 0), roots.at<Vec2d>(1));
+}
+
+TEST(Core_SolvePoly, invalid_coefficient_representation)
+{
+    Mat roots;
+    EXPECT_THROW(solvePoly(Mat::ones(2, 2, CV_64F), roots), cv::Exception);
+    EXPECT_THROW(solvePoly(Mat::ones(1, 3, CV_32S), roots), cv::Exception);
+    EXPECT_THROW(solvePoly(Mat::ones(1, 3, CV_64FC3), roots), cv::Exception);
+}
+
+TEST(Core_SolvePoly, subnormal_coefficient_scale)
+{
+    const double scale = std::ldexp(1.0, -1050);
+    if (scale == 0)
+        throw SkipTestException("Subnormal double coefficients are unavailable");
+    Mat coeffs = (Mat_<double>(1, 3) << -scale, 0, scale);
+    const Mat original = coeffs.clone();
+    Mat roots;
+    const double error = solvePoly(coeffs, roots);
+    EXPECT_TRUE(std::isfinite(error)) << error;
+    EXPECT_EQ(0, cvtest::norm(coeffs, original, NORM_INF));
+    checkQuadraticRoots(roots, CV_64F, -1);
+}
+
 TEST(Core_SolvePoly, degree_2_polynomials)
 {
     cv::Mat_<float> coefs(1,3);

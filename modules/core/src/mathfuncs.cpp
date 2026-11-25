@@ -1810,9 +1810,32 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
             coeffs[i] = C(rcoeffs[i], 0);
     }
 
+    double maxCoeff = 0, minCoeff = DBL_MAX;
+    for( i = 0; i <= n; i++ )
+    {
+        const double re = std::abs(coeffs[i].re), im = std::abs(coeffs[i].im);
+        maxCoeff = std::max(maxCoeff, std::max(re, im));
+        if( re > 0 )
+            minCoeff = std::min(minCoeff, re);
+        if( im > 0 )
+            minCoeff = std::min(minCoeff, im);
+    }
+    if( maxCoeff > 0 && std::isfinite(maxCoeff) )
+    {
+        // Scale components before computing magnitudes; avoid forming an overflowing reciprocal.
+        int exponent = std::ilogb(maxCoeff);
+        // Keep nonzero components from underflowing when scaling down.
+        exponent = std::min(exponent, std::max(0, std::ilogb(minCoeff) - DBL_MIN_EXP + 1));
+        for( i = 0; i <= n; i++ )
+        {
+            coeffs[i].re = std::ldexp(coeffs[i].re, -exponent);
+            coeffs[i].im = std::ldexp(coeffs[i].im, -exponent);
+        }
+    }
+
     for( ; n > 1; n-- )
     {
-        if( std::abs(coeffs[n].re) + std::abs(coeffs[n].im) > DBL_EPSILON )
+        if( coeffs[n].re != 0 || coeffs[n].im != 0 )
             break;
     }
 
