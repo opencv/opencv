@@ -209,18 +209,6 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 
         int depth0 = inputs[0].depth();
 
-        // The importer copies half weights into blobs before widenHalfConstants() runs, so
-        // with FP16 off they still arrive as CV_16F/CV_16BF; match them to the activations.
-        if (depth0 == CV_32F || depth0 == CV_64F || depth0 == CV_16F || depth0 == CV_16BF) {
-            for (Mat& blob : blobs) {
-                if ((blob.depth() == CV_16F || blob.depth() == CV_16BF) && blob.depth() != depth0) {
-                    Mat widened;
-                    blob.convertTo(widened, depth0);
-                    blob = widened;
-                }
-            }
-        }
-
         // These types skip the float-only packed-B/MLAS caching below.
         if (depth0 == CV_64F || depth0 == CV_32S || depth0 == CV_64S || depth0 == CV_32U || depth0 == CV_64U ||
             depth0 == CV_16F || depth0 == CV_16BF)

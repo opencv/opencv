@@ -331,17 +331,7 @@ public:
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
 
-        // The importer copies half weights into blobs before widenHalfConstants() runs, so
-        // with FP16 off they still arrive as CV_16F/CV_16BF; match them to the activations.
         int d = inputs[0].depth();
-        for (Mat& blob : blobs) {
-            if ((blob.depth() == CV_16F || blob.depth() == CV_16BF) && blob.depth() != d) {
-                Mat widened;
-                blob.convertTo(widened, d);
-                blob = widened;
-            }
-        }
-
         // Packing below is float-only: CV_64F uses forwardDouble(), FP16/BF16 forwardHalfT().
         if (d == CV_64F || d == CV_16F || d == CV_16BF)
             return;

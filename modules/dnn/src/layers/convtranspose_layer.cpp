@@ -450,6 +450,7 @@ public:
     {
         int ninputs = (int)inptypes.size();
         CV_Assert(ninputs >= 1);
+        CV_CheckTypeEQ(inptypes[0], CV_32F, "DNN/ConvTranspose: only FP32 activations are supported");
         outtypes.assign(1, inferType(inptypes[0]));
         temptypes.clear();
     }
@@ -574,7 +575,6 @@ public:
         } else if (inptype == CV_32F && gemmCoversShape(inpshape, outshape)) {
             forwardGemm(inp, out);
         } else {
-            CV_CheckTypeEQ(inptype, CV_32F, "DNN/ConvTranspose: only FP32 activations are supported");
             DeconvFunc func = getDeconvFunc(inptype);
             CV_Assert(func != nullptr);
             CV_Assert(!weights.empty());
