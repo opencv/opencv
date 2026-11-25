@@ -1328,7 +1328,8 @@ public:
     /** @brief Sets all or some of the array elements to the specified value.
 
     This is an advanced variant of the Mat::operator=(const Scalar& s) operator.
-    @param value Assigned scalar converted to the actual array type.
+    @param value Assigned scalar converted to the actual array type. A single-element matrix
+    with the same number of channels as the destination supplies one value per channel.
     @param mask Operation mask of the same size as \*this. Its non-zero elements indicate which matrix
     elements need to be copied. The mask has to be of type CV_8U and can have 1 or multiple channels
      */

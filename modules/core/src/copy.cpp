@@ -104,6 +104,8 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
 void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t blocksize )
 {
     int scn = (int)sc.total(), cn = CV_MAT_CN(buftype);
+    if (scn == 1 && sc.channels() == cn && cn > 1)
+        scn = cn;
     size_t esz = CV_ELEM_SIZE(buftype);
     BinaryFunc cvtFn = getConvertFunc(sc.depth(), buftype);
     CV_Assert(cvtFn);
@@ -778,11 +780,14 @@ static bool ipp_Mat_setTo_Mat(Mat &dst, Mat &_val, Mat &mask)
     if(dst.channels() > 4)
         return false;
 
+    ::ipp::IwValueFloat s;
+    convertAndUnrollScalar(_val, CV_MAKETYPE(CV_64F, dst.channels()), (uchar*)((Ipp64f*)s), 1);
+
     if (dst.depth() == CV_32F)
     {
-        for (int i = 0; i < (int)(_val.total()); i++)
+        for (int i = 0; i < dst.channels(); i++)
         {
-            float v = (float)(_val.at<double>(i));  // cast to float
+            float v = (float)(((Ipp64f*)s)[i]);  // cast to float
             if (cvIsNaN(v) || cvIsInf(v))  // accept finite numbers only
                 return false;
         }
@@ -792,9 +797,6 @@ static bool ipp_Mat_setTo_Mat(Mat &dst, Mat &_val, Mat &mask)
     {
         IppiSize            size     = ippiSize(dst.size());
         IppDataType         dataType = ippiGetDataType(dst.depth());
-        ::ipp::IwValueFloat s;
-        convertAndUnrollScalar(_val, CV_MAKETYPE(CV_64F, dst.channels()), (uchar*)((Ipp64f*)s), 1);
-
         return CV_INSTRUMENT_FUN_IPP(llwiSetMask, s, dst.ptr(), (int)dst.step, size, dataType, dst.channels(), mask.ptr(), (int)mask.step) >= 0;
     }
     else
@@ -805,9 +807,6 @@ static bool ipp_Mat_setTo_Mat(Mat &dst, Mat &_val, Mat &mask)
 
         IppiSize            size     = {(int)it.size, 1};
         IppDataType         dataType = ippiGetDataType(dst.depth());
-        ::ipp::IwValueFloat s;
-        convertAndUnrollScalar(_val, CV_MAKETYPE(CV_64F, dst.channels()), (uchar*)((Ipp64f*)s), 1);
-
         for( size_t i = 0; i < it.nplanes; i++, ++it)
         {
             if(CV_INSTRUMENT_FUN_IPP(llwiSetMask, s, ptrs[0], 0, size, dataType, dst.channels(), ptrs[1], 0) < 0)

@@ -2005,7 +2005,11 @@ void _OutputArray::setTo(const _InputArray& arr, const _InputArray & mask) const
 #ifdef HAVE_CUDA
         Mat value = arr.getMat();
         CV_Assert( checkScalar(value, type(), arr.kind(), _InputArray::CUDA_GPU_MAT) );
-        ((cuda::GpuMat*)obj)->setTo(Scalar(Vec<double, 4>(value.ptr<double>())), mask);
+        const int cn = channels();
+        CV_Assert(cn <= 4);
+        Scalar scalar;
+        convertAndUnrollScalar(value, CV_MAKETYPE(CV_64F, cn), (uchar*)scalar.val, 1);
+        ((cuda::GpuMat*)obj)->setTo(scalar, mask);
 #else
         CV_Error(Error::StsNotImplemented, "CUDA support is not enabled in this OpenCV build (missing HAVE_CUDA)");
 #endif
