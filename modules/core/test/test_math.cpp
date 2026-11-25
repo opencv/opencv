@@ -2532,6 +2532,17 @@ TEST(Core_DotProduct, bool_nonzero_bytes)
     Mat ma = Mat(1, 5, CV_8U, a).reinterpret(CV_Bool);
     Mat mb = Mat(1, 5, CV_8U, b).reinterpret(CV_Bool);
     EXPECT_EQ(3., ma.dot(mb));
+
+    // long enough for the SIMD path and several 255-step blocks, with bytes 2 and 255
+    Mat la(1, 10007, CV_8U), lb(1, 10007, CV_8U);
+    int expected = 0;
+    for (int i = 0; i < la.cols; i++)
+    {
+        la.at<uchar>(i) = (uchar)(i % 97 == 0 ? 0 : 255);
+        lb.at<uchar>(i) = (uchar)(i % 89 == 0 ? 0 : 2);
+        expected += (i % 97 != 0) && (i % 89 != 0);
+    }
+    EXPECT_EQ((double)expected, la.reinterpret(CV_Bool).dot(lb.reinterpret(CV_Bool)));
 }
 
 TEST(Core_GEMM, accuracy) { Core_GEMMTest test; test.safe_run(); }

@@ -3792,8 +3792,42 @@ double dotProd_16bf(const bfloat* src1, const bfloat* src2, int len)
 double dotProd_bool(const uchar* src1, const uchar* src2, int len)
 {
     int r = 0;
-    for (int i = 0; i < len; i++)
-        r += src1[i] != 0 && src2[i] != 0;
+    int i = 0;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int cWidth = VTraits<v_uint8>::vlanes();
+    // each lane of the uchar counter goes up by at most 1 per step, so 255 steps fit
+    const int len0 = len & -cWidth, blockSize0 = 255 * cWidth;
+    const v_uint8 v_zero = vx_setzero_u8(), v_one = vx_setall_u8(1);
+    while (i < len0)
+    {
+        const int blockSize = std::min(len0 - i, blockSize0);
+        v_uint8 v_count = vx_setzero_u8();
+
+        v_uint8 v_count1 = vx_setzero_u8();
+        int j = i;
+        // two independent counters, so each add doesn't wait for the previous one
+        for (; j <= i + blockSize - cWidth * 2; j += cWidth * 2)
+        {
+            // v_ne gives 0xFF where a byte is non-zero, so v_and of both masks is 0xFF where both are true
+            v_uint8 v_both0 = v_and(v_ne(vx_load(src1 + j), v_zero), v_ne(vx_load(src2 + j), v_zero));
+            v_uint8 v_both1 = v_and(v_ne(vx_load(src1 + j + cWidth), v_zero), v_ne(vx_load(src2 + j + cWidth), v_zero));
+            v_count = v_add(v_count, v_and(v_both0, v_one));
+            v_count1 = v_add(v_count1, v_and(v_both1, v_one));
+        }
+        for (; j < i + blockSize; j += cWidth)
+        {
+            v_uint8 v_both = v_and(v_ne(vx_load(src1 + j), v_zero), v_ne(vx_load(src2 + j), v_zero));
+            v_count = v_add(v_count, v_and(v_both, v_one));
+        }
+
+        r += (int)v_reduce_sum(v_count) + (int)v_reduce_sum(v_count1);
+        i += blockSize;
+    }
+    vx_cleanup();
+#endif
+    for (; i < len; i++)
+        r += (src1[i] != 0) & (src2[i] != 0);
     return r;
 }
 

@@ -43,7 +43,7 @@ PERF_TEST_P( MatType_Length, dot_new_types,
     // small integers are exact in every depth
     randu(a, -8, 8);
     randu(b, -8, 8);
-    declare.in(a, b, WARMUP_NONE); // the default warmup calls cv::sum, which has no fp8 kernel
+    declare.in(a, b);
     declare.time(100);
 
     TEST_CYCLE_N(1000) a.dot(b);

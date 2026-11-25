@@ -1098,6 +1098,10 @@ static bool ocl_dot( InputArray _src1, InputArray _src2, double & res )
     if ( !doubleSupport && depth == CV_64F )
         return false;
 
+    // the OpenCL reduce kernel only has accumulators for CV_8U..CV_64F
+    if ( depth > CV_64F )
+        return false;
+
     int dbsize = ocl::Device::getDefault().maxComputeUnits();
     size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
     int ddepth = std::max(CV_32F, depth);
