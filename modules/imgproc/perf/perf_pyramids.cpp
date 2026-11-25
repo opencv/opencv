@@ -95,4 +95,62 @@ PERF_TEST_P(Size_MatType, buildPyramid, testing::Combine(
     SANITY_CHECK(dst4, eps, error_type);
 }
 
+PERF_TEST_P(Size_MatType, pyrDown_half, testing::Combine(
+                testing::Values(sz1080p, sz720p, szVGA, szQVGA, szODD),
+                testing::Values(CV_16FC1, CV_16FC3, CV_16FC4, CV_16BFC1, CV_16BFC3, CV_16BFC4)
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    int matType = get<1>(GetParam());
+
+    Mat src(sz, matType);
+    Mat dst((sz.height + 1)/2, (sz.width + 1)/2, matType);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() pyrDown(src, dst);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P(Size_MatType, pyrUp_half, testing::Combine(
+                testing::Values(sz720p, szVGA, szQVGA, szODD),
+                testing::Values(CV_16FC1, CV_16FC3, CV_16FC4, CV_16BFC1, CV_16BFC3, CV_16BFC4)
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    int matType = get<1>(GetParam());
+
+    Mat src(sz, matType);
+    Mat dst(sz.height*2, sz.width*2, matType);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() pyrUp(src, dst);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P(Size_MatType, buildPyramid_half, testing::Combine(
+                testing::Values(sz1080p, sz720p, szVGA, szQVGA, szODD),
+                testing::Values(CV_16FC1, CV_16FC3, CV_16FC4, CV_16BFC1, CV_16BFC3, CV_16BFC4)
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    int matType = get<1>(GetParam());
+    int maxLevel = 5;
+
+    Mat src(sz, matType);
+    std::vector<Mat> dst(maxLevel);
+
+    declare.in(src, WARMUP_RNG);
+
+    TEST_CYCLE() buildPyramid(src, dst, maxLevel);
+
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace

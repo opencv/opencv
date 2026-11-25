@@ -751,6 +751,52 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_RemapRelative, testing::Combine(
 TEST(Imgproc_Remap, accuracy) { CV_RemapTest test; test.safe_run(); }
 TEST(Imgproc_GetRectSubPix, accuracy) { CV_GetRectSubPixTest test; test.safe_run(); }
 
+typedef testing::TestWithParam<int> GetRectSubPix_HalfFloat;
+
+// same getRectSubPix_Cn_ template and float accumulator on both sides here,
+// so the fp32 run is a fair reference
+TEST_P(GetRectSubPix_HalfFloat, vs_fp32)
+{
+    const int depth = GetParam();
+    const double tol = depth == CV_16F ? 1e-3 : 8e-3;
+
+    cv::RNG& rng = cv::theRNG();
+
+    for (int cn = 1; cn <= 3; cn += 2)
+    {
+        Mat src32(Size(48, 40), CV_MAKETYPE(CV_32F, cn)), src, widened;
+        rng.fill(src32, cv::RNG::UNIFORM, Scalar::all(0), Scalar::all(1));
+        src32.convertTo(src, CV_MAKETYPE(depth, cn));
+        src.convertTo(widened, CV_MAKETYPE(CV_32F, cn));
+
+        const Point2f centers[] = { Point2f(20.f, 16.f), Point2f(20.3f, 16.7f),
+                                    Point2f(1.5f, 1.5f), Point2f(46.5f, 38.5f) };
+
+        for (int i = 0; i < 4; i++)
+        {
+            SCOPED_TRACE(cv::format("depth=%d cn=%d center=(%.1f,%.1f)",
+                                    depth, cn, centers[i].x, centers[i].y));
+
+            Mat patch, ref, patch32, patchF;
+            ASSERT_NO_THROW(cv::getRectSubPix(src, Size(9, 7), centers[i], patch));
+            ASSERT_EQ(depth, patch.depth());
+            ASSERT_EQ(Size(9, 7), patch.size());
+
+            cv::getRectSubPix(widened, Size(9, 7), centers[i], ref);
+            patch.convertTo(patch32, CV_MAKETYPE(CV_32F, cn));
+
+            EXPECT_LE(cvtest::norm(patch32, ref, NORM_INF), tol);
+
+            // 16F->32F and 16BF->32F: no output rounding, so it must match the FP32 run
+            ASSERT_NO_THROW(cv::getRectSubPix(src, Size(9, 7), centers[i], patchF, CV_32F));
+            ASSERT_EQ(CV_MAKETYPE(CV_32F, cn), patchF.type());
+            EXPECT_LE(cvtest::norm(patchF, ref, NORM_INF), 1e-6);
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, GetRectSubPix_HalfFloat, testing::Values(CV_16F, CV_16BF));
+
 //////////////////////////////////////////////////////////////////////////
 
 template <typename T, typename WT>

@@ -69,6 +69,14 @@ template<typename T, int shift> struct FltCast
     rtype operator ()(type1 arg) const { return arg*(T)(1./(1 << shift)); }
 };
 
+// half storage, float accumulator
+template<typename T, int shift> struct HalfCast
+{
+    typedef float type1;
+    typedef T rtype;
+    rtype operator ()(type1 arg) const { return saturate_cast<T>(arg*(1.f/(1 << shift))); }
+};
+
 template<typename T1, typename T2, int cn> int PyrDownVecH(const T1*, T2*, int)
 {
     //   row[x       ] = src[x * 2 + 2*cn  ] * 6 + (src[x * 2 +   cn  ] + src[x * 2 + 3*cn  ]) * 4 + src[x * 2       ] + src[x * 2 + 4*cn  ];
@@ -88,6 +96,20 @@ template<typename T1, typename T2> int PyrDownVecV(T1**, T2*, int) { return 0; }
 template<typename T1, typename T2> int PyrUpVecV(T1**, T2**, int) { return 0; }
 
 template<typename T1, typename T2> int PyrUpVecVOneRow(T1**, T2*, int) { return 0; }
+
+static inline void pyrHalfToFloat(const hfloat* src, float* dst, int len) { hal::cvt16f32f(src, dst, len); }
+static inline void pyrHalfToFloat(const bfloat* src, float* dst, int len)
+{
+    int x = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    for( ; x <= len - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes() )
+        v_store(dst + x, vx_load_expand(src + x));
+#endif
+    for( ; x < len; x++ )
+        dst[x] = (float)src[x];
+}
+static inline void pyrFloatToHalf(const float* src, hfloat* dst, int len) { hal::cvt32f16f(src, dst, len); }
+static inline void pyrFloatToHalf(const float* src, bfloat* dst, int len) { hal::cvt32f16bf(src, dst, len); }
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
 // Dispatched AVX-512 VBMI implementations
@@ -934,6 +956,95 @@ template <> int PyrUpVecVOneRow<float, float>(float** src, float* dst, int width
     return x;
 }
 
+template<typename T, int cn> static int pyrDownVecH_half(const T* src, float* row, int width)
+{
+    const int B = 64*cn, pad = 4*VTraits<v_float32>::max_nlanes;
+    float buf[2*B + 3*cn + pad];
+    int x = 0;
+    while( x < width )
+    {
+        int w = std::min(B, width - x), len = 2*w + 3*cn;
+        pyrHalfToFloat(src + 2*x, buf, len);
+        std::fill(buf + len, buf + len + pad, 0.f);
+        int n = PyrDownVecH<float, float, cn>(buf, row + x, w);
+        if( n == 0 )
+            break;
+        x += n;
+    }
+    return x;
+}
+
+template<> int PyrDownVecH<hfloat, float, 1>(const hfloat* src, float* row, int width) { return pyrDownVecH_half<hfloat, 1>(src, row, width); }
+template<> int PyrDownVecH<hfloat, float, 2>(const hfloat* src, float* row, int width) { return pyrDownVecH_half<hfloat, 2>(src, row, width); }
+template<> int PyrDownVecH<hfloat, float, 3>(const hfloat* src, float* row, int width) { return pyrDownVecH_half<hfloat, 3>(src, row, width); }
+template<> int PyrDownVecH<hfloat, float, 4>(const hfloat* src, float* row, int width) { return pyrDownVecH_half<hfloat, 4>(src, row, width); }
+template<> int PyrDownVecH<bfloat, float, 1>(const bfloat* src, float* row, int width) { return pyrDownVecH_half<bfloat, 1>(src, row, width); }
+template<> int PyrDownVecH<bfloat, float, 2>(const bfloat* src, float* row, int width) { return pyrDownVecH_half<bfloat, 2>(src, row, width); }
+template<> int PyrDownVecH<bfloat, float, 3>(const bfloat* src, float* row, int width) { return pyrDownVecH_half<bfloat, 3>(src, row, width); }
+template<> int PyrDownVecH<bfloat, float, 4>(const bfloat* src, float* row, int width) { return pyrDownVecH_half<bfloat, 4>(src, row, width); }
+
+template<typename T> static int pyrDownVecV_half(float** src, T* dst, int width)
+{
+    const int B = 256;
+    float buf[B];
+    int x = 0;
+    while( x < width )
+    {
+        float* rows[5] = { src[0] + x, src[1] + x, src[2] + x, src[3] + x, src[4] + x };
+        int n = PyrDownVecV<float, float>(rows, buf, std::min(B, width - x));
+        if( n == 0 )
+            break;
+        pyrFloatToHalf(buf, dst + x, n);
+        x += n;
+    }
+    return x;
+}
+
+template<> int PyrDownVecV<float, hfloat>(float** src, hfloat* dst, int width) { return pyrDownVecV_half(src, dst, width); }
+template<> int PyrDownVecV<float, bfloat>(float** src, bfloat* dst, int width) { return pyrDownVecV_half(src, dst, width); }
+
+template<typename T> static int pyrUpVecV_half(float** src, T** dst, int width)
+{
+    const int B = 256;
+    float buf0[B], buf1[B];
+    float* bufs[2] = { buf0, buf1 };
+    int x = 0;
+    while( x < width )
+    {
+        float* rows[3] = { src[0] + x, src[1] + x, src[2] + x };
+        int n = PyrUpVecV<float, float>(rows, bufs, std::min(B, width - x));
+        if( n == 0 )
+            break;
+        pyrFloatToHalf(buf0, dst[0] + x, n);
+        pyrFloatToHalf(buf1, dst[1] + x, n);
+        x += n;
+    }
+    return x;
+}
+
+template<> int PyrUpVecV<float, hfloat>(float** src, hfloat** dst, int width) { return pyrUpVecV_half(src, dst, width); }
+template<> int PyrUpVecV<float, bfloat>(float** src, bfloat** dst, int width) { return pyrUpVecV_half(src, dst, width); }
+
+template<typename T> static int pyrUpVecVOneRow_half(float** src, T* dst, int width)
+{
+    const int B = 256;
+    float buf[B];
+    int x = 0;
+    while( x < width )
+    {
+        float* rows[3] = { src[0] + x, src[1] + x, src[2] + x };
+        int n = PyrUpVecVOneRow<float, float>(rows, buf, std::min(B, width - x));
+        if( n == 0 )
+            break;
+        pyrFloatToHalf(buf, dst + x, n);
+        x += n;
+    }
+    return x;
+}
+
+template<> int PyrUpVecVOneRow<float, hfloat>(float** src, hfloat* dst, int width) { return pyrUpVecVOneRow_half(src, dst, width); }
+template<> int PyrUpVecVOneRow<float, bfloat>(float** src, bfloat* dst, int width) { return pyrUpVecVOneRow_half(src, dst, width); }
+
 #endif
 
 #if CV_SIMD128
@@ -1071,6 +1182,36 @@ template<> int PyrUpVecH<float, float, 4>(const float* src, float* row, int widt
 }
 
 #endif // CV_SIMD128
+
+template<typename T, int cn> static int pyrUpVecH_half(const T* src, float* row, int width)
+{
+    const int B = 64*cn;
+    float _buf[B + 2*cn];
+    float* buf = _buf + cn;
+    for( int x0 = 0; x0 < width; x0 += B )
+    {
+        int w = std::min(B, width - x0);
+        float* r = row + 2*x0;
+        pyrHalfToFloat(src + x0 - cn, buf - cn, w + 2*cn);
+        int x = PyrUpVecH<float, float, cn>(buf, r, w);
+        for( ; x < w; x++ )
+        {
+            int dx = (x/cn)*2*cn + x % cn;
+            r[dx] = buf[x-cn] + buf[x]*6 + buf[x+cn];
+            r[dx+cn] = (buf[x] + buf[x+cn])*4;
+        }
+    }
+    return width;
+}
+
+template<> int PyrUpVecH<hfloat, float, 1>(const hfloat* src, float* row, int width) { return pyrUpVecH_half<hfloat, 1>(src, row, width); }
+template<> int PyrUpVecH<hfloat, float, 2>(const hfloat* src, float* row, int width) { return pyrUpVecH_half<hfloat, 2>(src, row, width); }
+template<> int PyrUpVecH<hfloat, float, 3>(const hfloat* src, float* row, int width) { return pyrUpVecH_half<hfloat, 3>(src, row, width); }
+template<> int PyrUpVecH<hfloat, float, 4>(const hfloat* src, float* row, int width) { return pyrUpVecH_half<hfloat, 4>(src, row, width); }
+template<> int PyrUpVecH<bfloat, float, 1>(const bfloat* src, float* row, int width) { return pyrUpVecH_half<bfloat, 1>(src, row, width); }
+template<> int PyrUpVecH<bfloat, float, 2>(const bfloat* src, float* row, int width) { return pyrUpVecH_half<bfloat, 2>(src, row, width); }
+template<> int PyrUpVecH<bfloat, float, 3>(const bfloat* src, float* row, int width) { return pyrUpVecH_half<bfloat, 3>(src, row, width); }
+template<> int PyrUpVecH<bfloat, float, 4>(const bfloat* src, float* row, int width) { return pyrUpVecH_half<bfloat, 4>(src, row, width); }
 
 template<class CastOp>
 struct PyrDownInvoker : ParallelLoopBody
@@ -1326,6 +1467,12 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
             case 1:
                 x += PyrUpVecH<T, WT, 1>(src + cn, row + 2*cn, ssize.width - 2*cn);
                 break;
+            case 2:
+                x += PyrUpVecH<T, WT, 2>(src + cn, row + 2*cn, ssize.width - 2*cn);
+                break;
+            case 3:
+                x += PyrUpVecH<T, WT, 3>(src + cn, row + 2*cn, ssize.width - 2*cn);
+                break;
             case 4:
                 x += PyrUpVecH<T, WT, 4>(src + cn, row + 2*cn, ssize.width - 2*cn);
                 break;
@@ -1391,7 +1538,7 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
-    if (cn > 4 || (depth == CV_64F && !doubleSupport))
+    if (cn > 4 || (depth == CV_64F && !doubleSupport) || depth == CV_16F || depth == CV_16BF)
         return false;
 
     Size ssize = _src.size();
@@ -1443,7 +1590,7 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
         return false;
 
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
-    if (depth == CV_64F && !doubleSupport)
+    if ((depth == CV_64F && !doubleSupport) || depth == CV_16F || depth == CV_16BF)
         return false;
 
     Size ssize = _src.size();
@@ -1547,6 +1694,10 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
         func = pyrDown_< FltCast<float, 8> >;
     else if( depth == CV_64F )
         func = pyrDown_< FltCast<double, 8> >;
+    else if( depth == CV_16F )
+        func = pyrDown_< HalfCast<hfloat, 8> >;
+    else if( depth == CV_16BF )
+        func = pyrDown_< HalfCast<bfloat, 8> >;
     else
         CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
@@ -1652,6 +1803,10 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
         func = pyrUp_< FltCast<float, 6> >;
     else if( depth == CV_64F )
         func = pyrUp_< FltCast<double, 6> >;
+    else if( depth == CV_16F )
+        func = pyrUp_< HalfCast<hfloat, 6> >;
+    else if( depth == CV_16BF )
+        func = pyrUp_< HalfCast<bfloat, 6> >;
     else
         CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
