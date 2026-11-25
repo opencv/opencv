@@ -1407,6 +1407,30 @@ void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor
 
     Mat blob_ = blob.getMat();  // can't use InputArray directly due MatExpr stuff
     MatShape blobShape = shape(blob_);
+    // Honor the shape declared for this input (if any) when the blob holds
+    // the same elements under a different shape: a tensor declared as [5]
+    // in a model arrives as a (5, 1) Mat, and that shape would otherwise
+    // propagate through the whole net (an Identity layer returns (5, 1)).
+    int declaredDims = 0;
+    if (!netInputLayer->shapes.empty() && pin.oid < (int)netInputLayer->shapes.size())
+    {
+        const MatShape& declaredShape = netInputLayer->shapes[pin.oid];
+        bool isStaticShape = !declaredShape.empty() && declaredShape != blobShape;
+        size_t declaredTotal = 1;
+        for (size_t i = 0; isStaticShape && i < declaredShape.size(); ++i)
+        {
+            if (declaredShape[i] <= 0)
+                isStaticShape = false;
+            else
+                declaredTotal *= static_cast<size_t>(declaredShape[i]);
+        }
+        if (isStaticShape && declaredTotal == blob_.total())
+        {
+            blob_ = blob_.reshape(1, declaredShape);
+            blobShape = declaredShape;
+            declaredDims = static_cast<int>(declaredShape.size());
+        }
+    }
 
 #if 0  // TODO: DNNTestNetwork.MobileNet_SSD_Caffe_Different_Width_Height/0
     if (pin.lid == 0)
@@ -1444,6 +1468,8 @@ void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor
     bool oldShape = prevShape == blobShape;
 
     blob_.copyTo(netInputLayer->inputsData[pin.oid]);
+    if (declaredDims == 1)
+        netInputLayer->inputsData[pin.oid].dims = 1;  // copyTo normalizes a 1D shape back to (N, 1); restore the declared rank on the stored blob
     if (!oldShape)
         ld.outputBlobs[pin.oid] = netInputLayer->inputsData[pin.oid];
 

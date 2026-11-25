@@ -3513,6 +3513,37 @@ TEST(Test_ONNX_Importer, ConcatPaddingRankBounds)
     EXPECT_NO_THROW(readNetFromONNX(concatAxisModel("padding-control-same-rank.onnx")));
     expectConcatImportRejected("padding-crafted-mixed-rank.onnx", "curShape.size() == outputs[0].size()");
 }
+
+TEST(Test_ONNX_Importer, Identity1DInputShape)
+{
+    // Regression test for https://github.com/opencv/opencv/issues/28339
+    // One Identity node; the graph input "inp" is declared with shape [5].
+    // The serialized model is embedded to keep the test self-contained.
+    static const unsigned char modelData[] = {
+        0x08, 0x07, 0x3a, 0x4b, 0x0a, 0x14, 0x0a, 0x03, 0x69, 0x6e, 0x70, 0x12,
+        0x03, 0x6f, 0x75, 0x74, 0x22, 0x08, 0x49, 0x64, 0x65, 0x6e, 0x74, 0x69,
+        0x74, 0x79, 0x12, 0x0d, 0x69, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x74, 0x79,
+        0x5f, 0x74, 0x65, 0x73, 0x74, 0x5a, 0x11, 0x0a, 0x03, 0x69, 0x6e, 0x70,
+        0x12, 0x0a, 0x0a, 0x08, 0x08, 0x01, 0x12, 0x04, 0x0a, 0x02, 0x08, 0x05,
+        0x62, 0x11, 0x0a, 0x03, 0x6f, 0x75, 0x74, 0x12, 0x0a, 0x0a, 0x08, 0x08,
+        0x01, 0x12, 0x04, 0x0a, 0x02, 0x08, 0x05, 0x42, 0x04, 0x0a, 0x00, 0x10,
+        0x0d,
+    };
+    Net net = readNetFromONNX(reinterpret_cast<const char*>(modelData), sizeof(modelData));
+    ASSERT_FALSE(net.empty());
+
+    float values[5] = {1.f, 2.f, 3.f, 4.f, 5.f};
+    Mat input(5, 1, CV_32F, values);
+    net.setInput(input, "inp");
+    Mat out = net.forward();
+
+    EXPECT_EQ(out.dims, 1);
+    EXPECT_EQ(out.size[0], 5);
+    ASSERT_EQ(out.total(), 5u);
+    const float* outData = out.ptr<float>();
+    for (int i = 0; i < 5; ++i)
+        EXPECT_FLOAT_EQ(outData[i], values[i]);
+}
 #endif
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
