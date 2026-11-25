@@ -225,7 +225,7 @@ public:
         void* p = 0;
         CV_GPU(Error_t) r;
         if (d.shared)
-            r = CV_GPU_HOST_ALLOC(&p, size, CV_GPU_HOST_ALLOC_MAPPED | CV_GPU_HOST_ALLOC_PORTABLE);  // one address for CPU and GPU
+            r = CV_GPU_HOST_ALLOC(&p, size, CV_GPU_HOST_ALLOC_SHARED);  // one address for CPU and GPU
 #ifdef CV_ACCEL_GPU_HAVE_POOLS
         else if (usesPool(device))
             r = allocateFromPool(d, size, &p);

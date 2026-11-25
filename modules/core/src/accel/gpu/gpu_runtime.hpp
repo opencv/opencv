@@ -20,8 +20,8 @@
 #  define CV_GPU_ATTR_MEMORY_POOLS hipDeviceAttributeMemoryPoolsSupported
 #  define CV_GPU_HOST_ALLOC hipHostMalloc
 #  define CV_GPU_HOST_FREE hipHostFree
-#  define CV_GPU_HOST_ALLOC_PORTABLE hipHostMallocPortable
-#  define CV_GPU_HOST_ALLOC_MAPPED hipHostMallocMapped
+// coarse-grained: on fine-grained memory every GPU access snoops the CPU caches
+#  define CV_GPU_HOST_ALLOC_SHARED (hipHostMallocMapped | hipHostMallocPortable | hipHostMallocNonCoherent)
 typedef hipDeviceProp_t cvGpuDeviceProp;
 typedef hipDeviceAttribute_t cvGpuDeviceAttr;
 #else
@@ -34,8 +34,7 @@ typedef hipDeviceAttribute_t cvGpuDeviceAttr;
 #  define CV_GPU_ATTR_MEMORY_POOLS cudaDevAttrMemoryPoolsSupported
 #  define CV_GPU_HOST_ALLOC cudaHostAlloc
 #  define CV_GPU_HOST_FREE cudaFreeHost
-#  define CV_GPU_HOST_ALLOC_PORTABLE cudaHostAllocPortable
-#  define CV_GPU_HOST_ALLOC_MAPPED cudaHostAllocMapped
+#  define CV_GPU_HOST_ALLOC_SHARED (cudaHostAllocMapped | cudaHostAllocPortable)
 typedef cudaDeviceProp cvGpuDeviceProp;
 typedef cudaDeviceAttr cvGpuDeviceAttr;
 #endif

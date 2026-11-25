@@ -169,7 +169,10 @@ A built-in backend registers itself in `registry.cpp`; tests register theirs wit
   `CV_ACCEL_GPU_KERNELS` for the kernels, and from its GPU backend for the operations.
 * HIP (`src/accel/backend_hip.cpp`), built in when OpenCV is configured with `WITH_HIP=ON`, which
   needs CMake 3.21 or newer. `opencv_core` then links `libamdhip64`, so ROCm must be installed
-  wherever that build runs. It has the operations of the CUDA backend, from the same sources. By
+  wherever that build runs. It has the operations of the CUDA backend, from the same sources.
+  Integrated GPUs use pinned host memory as on CUDA, allocated coarse-grained: on fine-grained
+  memory every GPU access looks into the CPU caches, up to ten times slower, while the CPU and the
+  GPU need to agree only when a stream is synchronized, which is when the CPU may use the data. By
   default the kernels are built for the generic target of each GPU family (`gfx11-generic` and
   the like); `CMAKE_HIP_ARCHITECTURES=native` builds them only for the GPUs of the build machine.
   On a GPU the build has no code for, operations run on the CPU.
