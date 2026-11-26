@@ -426,6 +426,8 @@ static inline void fast_gemm_thin_strip(int M, int K, float alpha,
 #endif
 }
 
+static constexpr int FAST_GEMM_THIN_TB_MAX_M = 4;
+
 bool fastGemmThinEligible(int M, int N, int K) {
     if (M <= 0 || N <= 0 || K <= 0) return false;
     if (M > FAST_GEMM_THIN_MAX_M) return false;
@@ -727,6 +729,11 @@ void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offset
         }
     }
 #endif
+
+    if (M <= FAST_GEMM_THIN_TB_MAX_M && lda1 == 1 && ldb0 == 1 && ldb1 != 1) {
+        fastGemmThinTB(batch, A_offsets, B_offsets, C_offsets, M, N, K, alpha, A, lda0, B, ldb1, beta, C, ldc, opt.multi_thread);
+        return;
+    }
 
 #if CV_TRY_RVV && CV_RVV
     if (opt.use_rvv) {

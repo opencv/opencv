@@ -166,6 +166,20 @@ TEST_P(Layer_SDPA_Kernels, Accuracy)
 INSTANTIATE_TEST_CASE_P(/**/, Layer_SDPA_Kernels, testing::Combine(
     testing::Values(1, 5), testing::Values(1, 7, 259), testing::Values(1, 17, 65)));
 
+// An empty query gives an empty output instead of an exception.
+TEST(Layer_SDPA, empty_query)
+{
+    const int qShape[] = {1, 2, 0, 8}, ktShape[] = {1, 2, 8, 5}, vShape[] = {1, 2, 5, 4};
+    Mat q(4, qShape, CV_32F), kt(4, ktShape, CV_32F), v(4, vShape, CV_32F);
+    randu(kt, -1.f, 1.f);
+    randu(v, -1.f, 1.f);
+    Ptr<Layer> layer = SDPALayer::create(LayerParams());
+    std::vector<Mat> inputs{q, kt, v}, outputs;
+    ASSERT_NO_THROW(runLayer(layer, inputs, outputs));
+    ASSERT_EQ(1u, outputs.size());
+    EXPECT_EQ(MatShape({1, 0, 8}), shape(outputs[0]));
+}
+
 // QuantizeLinear requires exactly one output, which the shared runLayer() does not request.
 static Mat runQuantizeLinear(LayerParams& lp, std::vector<Mat>& inputs)
 {
@@ -1376,6 +1390,112 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Attention_v_hidden, Combine(
     Values(16, 32, 48),  // Hv < C, Hv == C, Hv > C
     Values(3, 2)         // output_ndims
 ));
+
+// 600 tokens give three blocks of 256 keys, the last one partial
+TEST(Layer_Attention, flash_across_kv_blocks)
+{
+    ScopedNoMlas noMlas;
+    const int B = 2, S = 600, C = 32, NH = 2, d = C / NH;
+    std::vector<int> qkv_hidden_sizes = { C, C, C };
+    Mat W(C, 3 * C, CV_32F), bias(std::vector<int>{3 * C}, CV_32F), x(std::vector<int>{B, S, C}, CV_32F);
+    randu(W, -0.3f, 0.3f); randu(bias, -0.3f, 0.3f); randu(x, -1.f, 1.f);
+    LayerParams lp;
+    lp.blobs.push_back(W);
+    lp.blobs.push_back(bias);
+    lp.set("num_heads", NH);
+    lp.set("qkv_hidden_sizes", DictValue::arrayInt(&qkv_hidden_sizes[0], qkv_hidden_sizes.size()));
+    Ptr<AttentionLayer> layer = AttentionLayer::create(lp);
+
+    std::vector<MatShape> outShapes, internals;
+    layer->getMemoryShapes({shape(x)}, 1, outShapes, internals);
+    EXPECT_EQ((size_t)1, internals[1].total()) << "no S x S score matrix without a mask";
+
+    std::vector<Mat> in(1, x), out;
+    runLayer(layer, in, out);
+
+    Mat P = x.reshape(1, B * S) * W + repeat(Mat(1, 3 * C, CV_32F, bias.ptr<float>()), B * S, 1);
+    Mat ref(B * S, C, CV_32F);
+    for (int b = 0; b < B; b++)
+        for (int h = 0; h < NH; h++) {
+            Mat rows = P.rowRange(b * S, (b + 1) * S);
+            Mat q = rows.colRange(h * d, (h + 1) * d);
+            Mat k = rows.colRange(C + h * d, C + (h + 1) * d);
+            Mat v = rows.colRange(2 * C + h * d, 2 * C + (h + 1) * d);
+            Mat s = q * k.t() * (1.0 / std::sqrt((double)d));
+            for (int r = 0; r < S; r++) {
+                double mx; minMaxLoc(s.row(r), nullptr, &mx);
+                Mat e; exp(s.row(r) - mx, e);
+                Mat(e / sum(e)[0]).copyTo(s.row(r));
+            }
+            Mat(s * v).copyTo(ref(Range(b * S, (b + 1) * S), Range(h * d, (h + 1) * d)));
+        }
+    normAssert(ref.reshape(1, std::vector<int>{B, S, C}), out[0]);
+}
+
+// The additive mask is applied per score tile; shapes broadcast right-aligned to [B, NH, S, S].
+TEST(Layer_Attention, flash_with_mask)
+{
+    const int B = 2, S = 600, C = 32, NH = 2, d = C / NH;
+    std::vector<int> qkv_hidden_sizes = { C, C, C };
+    Mat W(C, 3 * C, CV_32F), bias(std::vector<int>{3 * C}, CV_32F), x(std::vector<int>{B, S, C}, CV_32F);
+    randu(W, -0.3f, 0.3f); randu(bias, -0.3f, 0.3f); randu(x, -1.f, 1.f);
+    LayerParams lp;
+    lp.blobs.push_back(W);
+    lp.blobs.push_back(bias);
+    lp.set("num_heads", NH);
+    lp.set("qkv_hidden_sizes", DictValue::arrayInt(&qkv_hidden_sizes[0], qkv_hidden_sizes.size()));
+    Mat P = x.reshape(1, B * S) * W + repeat(Mat(1, 3 * C, CV_32F, bias.ptr<float>()), B * S, 1);
+
+    const std::vector<std::vector<int> > maskShapes = { {S, S}, {B, 1, 1, S}, {B, NH, S, S}, {NH, S, 1} };
+    for (const std::vector<int>& ms : maskShapes)
+    {
+        SCOPED_TRACE(cv::format("mask %s", MatShape(ms).str().c_str()));
+        Mat mask(ms, CV_32F);
+        randu(mask, -2.f, 2.f);
+        if (ms.back() == S)
+        {
+            // every 7th key is masked out completely
+            Mat rows = mask.reshape(1, (int)(mask.total() / S));
+            for (int j = 3; j < S; j += 7)
+                rows.col(j).setTo(-INFINITY);
+        }
+        auto maskAt = [&](int b, int h, int q, int k) {
+            const int idx[4] = {b, h, q, k}, nd = (int)ms.size();
+            size_t ofs = 0;
+            for (int t = 0; t < nd; t++)
+                ofs = ofs * ms[t] + (ms[t] == 1 ? 0 : idx[4 - nd + t]);
+            return mask.ptr<float>()[ofs];
+        };
+
+        Ptr<AttentionLayer> layer = AttentionLayer::create(lp);
+        std::vector<MatShape> outShapes, internals;
+        layer->getMemoryShapes({shape(x), shape(mask)}, 1, outShapes, internals);
+        EXPECT_EQ((size_t)1, internals[1].total()) << "no S x S score matrix with a mask";
+
+        std::vector<Mat> in{x, mask}, out;
+        runLayer(layer, in, out);
+
+        Mat ref(B * S, C, CV_32F);
+        for (int b = 0; b < B; b++)
+            for (int h = 0; h < NH; h++) {
+                Mat rows = P.rowRange(b * S, (b + 1) * S);
+                Mat q = rows.colRange(h * d, (h + 1) * d);
+                Mat k = rows.colRange(C + h * d, C + (h + 1) * d);
+                Mat v = rows.colRange(2 * C + h * d, 2 * C + (h + 1) * d);
+                Mat s = q * k.t() * (1.0 / std::sqrt((double)d));
+                for (int r = 0; r < S; r++) {
+                    float* sr = s.ptr<float>(r);
+                    for (int j = 0; j < S; j++)
+                        sr[j] += maskAt(b, h, r, j);
+                    double mx; minMaxLoc(s.row(r), nullptr, &mx);
+                    Mat e; exp(s.row(r) - mx, e);
+                    Mat(e / sum(e)[0]).copyTo(s.row(r));
+                }
+                Mat(s * v).copyTo(ref(Range(b * S, (b + 1) * S), Range(h * d, (h + 1) * d)));
+            }
+        normAssert(ref.reshape(1, std::vector<int>{B, S, C}), out[0]);
+    }
+}
 
 typedef testing::TestWithParam<tuple<Vec4i, Vec2i, bool> > Scale_untrainable;
 TEST_P(Scale_untrainable, Accuracy)
