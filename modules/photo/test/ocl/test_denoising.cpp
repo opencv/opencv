@@ -128,7 +128,17 @@ OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoising_hsep,
 OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoisingColored,
                             Combine(Values(3, 4), Values((int)NORM_L2), Bool(), Values(false)));
 
-OCL_TEST(Photo_FastNlMeansDenoising, SubMatrixIsolation)
+PARAM_TEST_CASE(FastNlMeansDenoisingSubMatrixIsolation, MatType)
+{
+    int type;
+
+    virtual void SetUp() CV_OVERRIDE
+    {
+        type = GET_PARAM(0);
+    }
+};
+
+OCL_TEST_P(FastNlMeansDenoisingSubMatrixIsolation, UMat)
 {
     const Size roi_size(29, 35);
     const int pad_left = 11;
@@ -141,58 +151,45 @@ OCL_TEST(Photo_FastNlMeansDenoising, SubMatrixIsolation)
     const Size parent_size(roi_size.width + pad_left + pad_right,
                            roi_size.height + pad_top + pad_bottom);
 
-    struct OclCase
-    {
-        int type;
-        int norm_type;
-        float h_val;
-    };
-    const OclCase cases[] = {
-        { CV_8UC1, NORM_L2, 50.0f },
-        { CV_8UC2, NORM_L2, 50.0f },
-        { CV_8UC3, NORM_L2, 50.0f },
-        { CV_8UC4, NORM_L2, 50.0f },
-        { CV_16UC1, NORM_L1, 4000.0f }
-    };
+    const bool is_16u = (CV_MAT_DEPTH(type) == CV_16U);
+    const int norm_type = is_16u ? NORM_L1 : NORM_L2;
+    const float h_val = is_16u ? 4000.0f : 50.0f;
+    const double min_val = is_16u ? 10000.0 : 40.0;
+    const double max_val = is_16u ? 50000.0 : 200.0;
+    const double high_border_val = is_16u ? 65000.0 : 255.0;
 
-    for (size_t c = 0; c < sizeof(cases) / sizeof(cases[0]); ++c)
-    {
-        const int type = cases[c].type;
-        const bool is_16u = (CV_MAT_DEPTH(type) == CV_16U);
-        const double min_val = is_16u ? 10000.0 : 40.0;
-        const double max_val = is_16u ? 50000.0 : 200.0;
-        const double high_border_val = is_16u ? 65000.0 : 255.0;
+    Mat isolated(roi_size, type);
+    theRNG().fill(isolated, RNG::UNIFORM, Scalar::all(min_val), Scalar::all(max_val));
 
-        Mat isolated(roi_size, type);
-        theRNG().fill(isolated, RNG::UNIFORM, Scalar::all(min_val), Scalar::all(max_val));
+    Mat parent_low(parent_size, type, Scalar::all(0));
+    Mat parent_high(parent_size, type, Scalar::all(high_border_val));
+    isolated.copyTo(parent_low(roi_rect));
+    isolated.copyTo(parent_high(roi_rect));
 
-        Mat parent_low(parent_size, type, Scalar::all(0));
-        Mat parent_high(parent_size, type, Scalar::all(high_border_val));
-        isolated.copyTo(parent_low(roi_rect));
-        isolated.copyTo(parent_high(roi_rect));
+    UMat u_isolated, u_parent_low, u_parent_high;
+    isolated.copyTo(u_isolated);
+    parent_low.copyTo(u_parent_low);
+    parent_high.copyTo(u_parent_high);
 
-        UMat u_isolated, u_parent_low, u_parent_high;
-        isolated.copyTo(u_isolated);
-        parent_low.copyTo(u_parent_low);
-        parent_high.copyTo(u_parent_high);
+    const std::vector<float> h(1, h_val);
+    UMat u_dst_isolated, u_dst_low, u_dst_high;
+    OCL_ON(cv::fastNlMeansDenoising(u_isolated, u_dst_isolated, h, template_window_size, search_window_size, norm_type));
+    OCL_ON(cv::fastNlMeansDenoising(u_parent_low(roi_rect), u_dst_low, h, template_window_size, search_window_size, norm_type));
+    OCL_ON(cv::fastNlMeansDenoising(u_parent_high(roi_rect), u_dst_high, h, template_window_size, search_window_size, norm_type));
 
-        const std::vector<float> h(1, cases[c].h_val);
-        UMat u_dst_isolated, u_dst_low, u_dst_high;
-        OCL_ON(cv::fastNlMeansDenoising(u_isolated, u_dst_isolated, h, template_window_size, search_window_size, cases[c].norm_type));
-        OCL_ON(cv::fastNlMeansDenoising(u_parent_low(roi_rect), u_dst_low, h, template_window_size, search_window_size, cases[c].norm_type));
-        OCL_ON(cv::fastNlMeansDenoising(u_parent_high(roi_rect), u_dst_high, h, template_window_size, search_window_size, cases[c].norm_type));
+    Mat dst_isolated = u_dst_isolated.getMat(ACCESS_READ);
+    Mat dst_low = u_dst_low.getMat(ACCESS_READ);
+    Mat dst_high = u_dst_high.getMat(ACCESS_READ);
 
-        Mat dst_isolated = u_dst_isolated.getMat(ACCESS_READ);
-        Mat dst_low = u_dst_low.getMat(ACCESS_READ);
-        Mat dst_high = u_dst_high.getMat(ACCESS_READ);
-
-        ASSERT_EQ(isolated.size(), dst_isolated.size());
-        ASSERT_EQ(isolated.type(), dst_isolated.type());
-        ASSERT_GT(cvtest::norm(dst_isolated, isolated, NORM_L1), 0.0);
-        EXPECT_EQ(0.0, cvtest::norm(dst_low, dst_isolated, NORM_INF));
-        EXPECT_EQ(0.0, cvtest::norm(dst_high, dst_isolated, NORM_INF));
-    }
+    ASSERT_EQ(isolated.size(), dst_isolated.size());
+    ASSERT_EQ(isolated.type(), dst_isolated.type());
+    ASSERT_GT(cvtest::norm(dst_isolated, isolated, NORM_L1), 0.0);
+    EXPECT_EQ(0.0, cvtest::norm(dst_low, dst_isolated, NORM_INF));
+    EXPECT_EQ(0.0, cvtest::norm(dst_high, dst_isolated, NORM_INF));
 }
+
+OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoisingSubMatrixIsolation,
+                            Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4, CV_16UC1));
 
 } } // namespace opencv_test::ocl
 
