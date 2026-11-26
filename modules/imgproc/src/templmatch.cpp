@@ -885,6 +885,7 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
             Scalar mask2_sum = sum(mask2);
             Mat img_mask2_corr(corrSize, img.type());
             crossCorr(img2, mask2, norm_imgx, Point(0,0), 0, 0);
+            Mat img_energy = norm_imgx.clone();
             crossCorr(img, mask2, img_mask2_corr, Point(0,0), 0, 0);
             Mat temp_res1;
             multiply(img_mask_corr, Scalar(1.0, 1.0, 1.0, 1.0).div(mask_sum), temp_res1);
@@ -905,8 +906,38 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
                 // transform back, but now with only one channel
                 norm_imgx += temp_res.reshape(1, result.rows);
             }
-            sqrt(norm_imgx, norm_imgx);
-            result /= norm_imgx * norm_templx;
+            const float templ_norm = static_cast<float>(norm_templx);
+            for (int i = 0; i < result.rows; i++)
+            {
+                float* res_row = result.ptr<float>(i);
+                const float* norm_row = norm_imgx.ptr<float>(i);
+                const float* energy_row = img_energy.ptr<float>(i);
+                for (int j = 0; j < result.cols; j++)
+                {
+                    const float var = norm_row[j];
+                    const float energy = energy_row[j];
+                    if (cvIsNaN(var) || var <= std::min(0.5f, 10.0f * FLT_EPSILON * energy))
+                    {
+                        res_row[j] = 0.0f;
+                        continue;
+                    }
+
+                    const float num = res_row[j];
+                    const float den = std::sqrt(var) * templ_norm;
+                    if (std::abs(num) < den)
+                    {
+                        res_row[j] = num / den;
+                    }
+                    else if (std::abs(num) < 1.125f * den)
+                    {
+                        res_row[j] = num > 0 ? 1.0f : -1.0f;
+                    }
+                    else
+                    {
+                        res_row[j] = 0.0f;
+                    }
+                }
+            }
         }
     }
 }
