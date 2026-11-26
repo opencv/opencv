@@ -3235,10 +3235,8 @@ public:
 
     void operator()( const cv::Range& rowRange ) const CV_OVERRIDE
     {
-        int localHistogram[HIST_SZ] = {0, };
-
+        int subHist[4][HIST_SZ];
         const size_t sstep = src_.step;
-
         int width = src_.cols;
         int height = rowRange.end - rowRange.start;
 
@@ -3247,26 +3245,58 @@ public:
             width *= height;
             height = 1;
         }
+        const bool single = (size_t)width * height < (size_t)(1 << 14);
+        memset(subHist, 0, (single ? 1 : 4) * sizeof(subHist[0]));
 
         for (const uchar* ptr = src_.ptr<uchar>(rowRange.start); height--; ptr += sstep)
         {
             int x = 0;
-            for (; x <= width - 4; x += 4)
+            if (single)
             {
-                int t0 = ptr[x], t1 = ptr[x+1];
-                localHistogram[t0]++; localHistogram[t1]++;
-                t0 = ptr[x+2]; t1 = ptr[x+3];
-                localHistogram[t0]++; localHistogram[t1]++;
+                for (; x <= width - 4; x += 4)
+                {
+                    int t0 = ptr[x], t1 = ptr[x+1];
+                    subHist[0][t0]++; subHist[0][t1]++;
+                    t0 = ptr[x+2]; t1 = ptr[x+3];
+                    subHist[0][t0]++; subHist[0][t1]++;
+                }
             }
-
+            else
+            {
+                for (; x <= width - 16; x += 16)
+                {
+                    uint64 lo, hi;
+                    memcpy(&lo, ptr + x, sizeof(lo));
+                    memcpy(&hi, ptr + x + 8, sizeof(hi));
+                    for (int k = 0; k < 2; k++, lo >>= 32, hi >>= 32)
+                    {
+                        subHist[0][lo & 0xFF]++;
+                        subHist[1][(lo >> 8) & 0xFF]++;
+                        subHist[2][(lo >> 16) & 0xFF]++;
+                        subHist[3][(lo >> 24) & 0xFF]++;
+                        subHist[0][hi & 0xFF]++;
+                        subHist[1][(hi >> 8) & 0xFF]++;
+                        subHist[2][(hi >> 16) & 0xFF]++;
+                        subHist[3][(hi >> 24) & 0xFF]++;
+                    }
+                }
+            }
             for (; x < width; ++x)
-                localHistogram[ptr[x]]++;
+                subHist[0][ptr[x]]++;
         }
 
         cv::AutoLock lock(*histogramLock_);
 
-        for( int i = 0; i < HIST_SZ; i++ )
-            globalHistogram_[i] += localHistogram[i];
+        if (single)
+        {
+            for( int i = 0; i < HIST_SZ; i++ )
+                globalHistogram_[i] += subHist[0][i];
+        }
+        else
+        {
+            for( int i = 0; i < HIST_SZ; i++ )
+                globalHistogram_[i] += subHist[0][i] + subHist[1][i] + subHist[2][i] + subHist[3][i];
+        }
     }
 
     static bool isWorthParallel( const cv::Mat& src )
@@ -3280,56 +3310,6 @@ private:
     cv::Mat& src_;
     int* globalHistogram_;
     cv::Mutex* histogramLock_;
-};
-
-namespace cv {
-    void equalizeHistLut_dispatch( const uchar* src, uchar* dst, int len, const uchar* lut );
-}
-
-class EqualizeHistLut_Invoker : public cv::ParallelLoopBody
-{
-public:
-    EqualizeHistLut_Invoker( cv::Mat& src, cv::Mat& dst, uchar* lut )
-        : src_(src),
-          dst_(dst),
-          lut_(lut)
-    { }
-
-    void operator()( const cv::Range& rowRange ) const CV_OVERRIDE
-    {
-        const size_t sstep = src_.step;
-        const size_t dstep = dst_.step;
-
-        int width = src_.cols;
-        int height = rowRange.end - rowRange.start;
-        const uchar* lut = lut_;
-
-        if (src_.isContinuous() && dst_.isContinuous())
-        {
-            width *= height;
-            height = 1;
-        }
-
-        const uchar* sptr = src_.ptr<uchar>(rowRange.start);
-        uchar* dptr = dst_.ptr<uchar>(rowRange.start);
-
-        for (; height--; sptr += sstep, dptr += dstep)
-        {
-            cv::equalizeHistLut_dispatch(sptr, dptr, width, lut);
-        }
-    }
-
-    static bool isWorthParallel( const cv::Mat& src )
-    {
-        return ( src.total() >= 640*480 );
-    }
-
-private:
-    EqualizeHistLut_Invoker& operator=(const EqualizeHistLut_Invoker&);
-
-    cv::Mat& src_;
-    cv::Mat& dst_;
-    uchar* lut_;
 };
 
 CV_IMPL void cvEqualizeHist( const CvArr* srcarr, CvArr* dstarr )
@@ -3410,13 +3390,13 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
 
     const int hist_sz = EqualizeHistCalcHist_Invoker::HIST_SZ;
     int hist[hist_sz] = {0,};
-    int lut[hist_sz] = {0,};
+    uchar lut_u8[hist_sz] = {0,};
 
     EqualizeHistCalcHist_Invoker calcBody(src, hist, &histogramLockInstance);
     cv::Range heightRange(0, src.rows);
 
     if(EqualizeHistCalcHist_Invoker::isWorthParallel(src))
-        parallel_for_(heightRange, calcBody);
+        parallel_for_(heightRange, calcBody, src.total()/(double)(1<<16));
     else
         calcBody(heightRange);
 
@@ -3433,22 +3413,13 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
     float scale = (hist_sz - 1.f)/(total - hist[i]);
     int sum = 0;
 
-    for (lut[i++] = 0; i < hist_sz; ++i)
+    for (lut_u8[i++] = 0; i < hist_sz; ++i)
     {
         sum += hist[i];
-        lut[i] = saturate_cast<uchar>(sum * scale);
+        lut_u8[i] = saturate_cast<uchar>(sum * scale);
     }
 
-    uchar lut_u8[hist_sz];
-    for (int j = 0; j < hist_sz; ++j)
-        lut_u8[j] = (uchar)lut[j];
-
-    EqualizeHistLut_Invoker lutBody(src, dst, lut_u8);
-
-    if(EqualizeHistLut_Invoker::isWorthParallel(src))
-        parallel_for_(heightRange, lutBody);
-    else
-        lutBody(heightRange);
+    LUT(src, Mat(1, hist_sz, CV_8U, lut_u8), dst);
 }
 
 #if 0
