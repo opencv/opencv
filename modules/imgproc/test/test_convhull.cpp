@@ -631,6 +631,64 @@ TEST(Imgproc_minEnclosingTriangle, regression_mat_with_diff_channels)
     EXPECT_NO_THROW(minEnclosingTriangle(pointsNx1, triangle));
 }
 
+// Nearly collinear float points used to send the algorithm into an endless loop. The convex hull of
+// each set has a small but non-zero area, so a minimum enclosing triangle exists and has to be returned.
+TEST(Imgproc_minEnclosingTriangle, nearly_collinear_points)
+{
+    const vector<Point2f> sets[] = {
+        vector<Point2f>{Point2f(45.4611397f, 127.84198f), Point2f(90.790451f, 263.829926f), Point2f(22.3418026f, 58.4839745f), Point2f(75.3010254f, 217.361633f)},
+        vector<Point2f>{Point2f(45.1573868f, 130.187454f), Point2f(76.6496582f, 224.664261f), Point2f(26.0454617f, 72.8516769f), Point2f(16.5287418f, 44.3015137f), Point2f(29.6532612f, 83.6750717f)},
+        vector<Point2f>{Point2f(83.5745926f, 53.0253334f), Point2f(77.1588211f, 49.8174477f), Point2f(48.8217621f, 35.6489182f), Point2f(33.4582901f, 27.9671803f), Point2f(65.8952713f, 44.1856728f), Point2f(20.3496151f, 21.4128437f)}
+    };
+
+    for (size_t i = 0; i < sizeof(sets) / sizeof(sets[0]); i++)
+    {
+        vector<Point2f> triangle;
+        double area = -1;
+
+        ASSERT_NO_THROW(area = minEnclosingTriangle(sets[i], triangle)) << "set " << i;
+        ASSERT_EQ(3u, triangle.size()) << "set " << i;
+        // the area of the minimum enclosing triangle of a convex polygon is between one and two times its area
+        vector<Point2f> hull;
+        convexHull(sets[i], hull);
+        const double hullArea = contourArea(hull);
+        ASSERT_GT(hullArea, 0.0) << "set " << i;
+        EXPECT_GE(area, hullArea) << "set " << i;
+        EXPECT_LE(area, 2 * hullArea) << "set " << i;
+        for (size_t j = 0; j < sets[i].size(); j++)
+            EXPECT_GE(pointPolygonTest(triangle, sets[i][j], true), -1e-3) << "set " << i << " point " << j;
+    }
+}
+
+TEST(Imgproc_minEnclosingTriangle, unit_square)
+{
+    const vector<Point2f> points = {Point2f(0, 0), Point2f(1, 0), Point2f(1, 1), Point2f(0, 1)};
+    vector<Point2f> triangle;
+
+    const double area = minEnclosingTriangle(points, triangle);
+
+    EXPECT_NEAR(2.0, area, 1e-5);
+    EXPECT_EQ(3u, triangle.size());
+}
+
+// The tolerances of the algorithm are absolute. For a small polygon the first pass finds no triangle
+// (side 1e-3) or the vertices of the triangle never settle (side 1e-6), but the area is 2 * side^2 for any size.
+TEST(Imgproc_minEnclosingTriangle, tiny_squares)
+{
+    const float sides[] = {3e-3f, 1e-3f, 1e-4f, 1e-6f};
+    for (size_t i = 0; i < sizeof(sides) / sizeof(sides[0]); i++)
+    {
+        const double side = sides[i];
+        const vector<Point2f> square = {Point2f(0, 0), Point2f(sides[i], 0), Point2f(sides[i], sides[i]), Point2f(0, sides[i])};
+        vector<Point2f> triangle;
+        double area = -1;
+
+        ASSERT_NO_THROW(area = minEnclosingTriangle(square, triangle)) << "side " << side;
+        ASSERT_EQ(3u, triangle.size()) << "side " << side;
+        EXPECT_NEAR(2 * side * side, area, 2 * side * side * 1e-3) << "side " << side;
+    }
+}
+
 //==============================================================================
 
 typedef testing::TestWithParam<tuple<int, int>> fitLine_Modes;
