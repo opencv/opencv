@@ -1382,4 +1382,36 @@ TEST(Objdetect_HOGDescriptor, issue_23580_tall_block_no_overflow)
     EXPECT_FALSE(descriptors.empty());
 }
 
+TEST(Objdetect_HOGDescriptor, issue_23989_small_image)
+{
+    HOGDescriptor hog;
+    hog.setSVMDetector(HOGDescriptor::getDefaultPeopleDetector());
+
+    std::vector<float> descriptors;
+    std::vector<Point> hits;
+    std::vector<double> weights;
+
+    Mat small_h = Mat::zeros(16, 193, CV_8UC1);
+    EXPECT_THROW(hog.compute(small_h, descriptors), cv::Exception);
+    ASSERT_NO_THROW(hog.detect(small_h, hits, weights));
+    EXPECT_TRUE(hits.empty());
+    EXPECT_TRUE(weights.empty());
+
+    Mat small_both = Mat::zeros(10, 10, CV_8UC1);
+    EXPECT_THROW(hog.compute(small_both, descriptors), cv::Exception);
+    ASSERT_NO_THROW(hog.detect(small_both, hits, weights));
+    EXPECT_TRUE(hits.empty());
+    EXPECT_TRUE(weights.empty());
+
+    Mat off_by_one = Mat::zeros(hog.winSize.height - 1, hog.winSize.width, CV_8UC1);
+    EXPECT_THROW(hog.compute(off_by_one, descriptors), cv::Exception);
+    ASSERT_NO_THROW(hog.detect(off_by_one, hits, weights));
+    EXPECT_TRUE(hits.empty());
+    EXPECT_TRUE(weights.empty());
+
+    Mat padded_small = Mat::zeros(hog.winSize.height - 16, hog.winSize.width - 16, CV_8UC1);
+    ASSERT_NO_THROW(hog.compute(padded_small, descriptors, Size(), Size(8, 8)));
+    EXPECT_EQ(hog.getDescriptorSize(), descriptors.size());
+}
+
 }} // namespace
