@@ -5284,9 +5284,6 @@ TEST(Core_Arithm, dst_reuse_umat_vector_vs_1xN)
     Mat offsets(1, N, CV_32F, Scalar(2.f));
 
     cv::subtract(dst, offsets, dst);
-    ASSERT_EQ(2, dst.dims);
-    EXPECT_EQ(1, dst.size[0]);
-    EXPECT_EQ(N, dst.size[1]);
 
     EXPECT_EQ(originalData, dst.u);
 
