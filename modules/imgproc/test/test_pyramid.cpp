@@ -68,7 +68,7 @@ static Mat pyrDownReference(const Mat& src, Size dsize, int borderType)
     const int borderTypeNI = borderType & ~BORDER_ISOLATED;
 
     Mat padded, padded64;
-    copyMakeBorder(src, padded, 2, 4, 2, 4, borderTypeNI);
+    cv::copyMakeBorder(src, padded, 2, 4, 2, 4, borderTypeNI);
     padded.convertTo(padded64, CV_64F);
 
     Mat horiz(padded64.rows, dsize.width, CV_64FC(cn), Scalar::all(0));
