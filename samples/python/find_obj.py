@@ -171,13 +171,10 @@ def main():
     kp1, desc1 = detector.detectAndCompute(img1, None)
     kp2, desc2 = detector.detectAndCompute(img2, None)
     print('img1 - %d features, img2 - %d features' % (len(kp1), len(kp2)))
-    if desc1 is None or desc2 is None:
-        print('Not enough features for matching')
-        sys.exit(0)
 
     def match_and_draw(win):
         print('matching...')
-        raw_matches = matcher.knnMatch(desc1, trainDescriptors = desc2, k = 2) #2
+        raw_matches = matcher.knnMatch(desc1, trainDescriptors=desc2, k=2) if desc2 is not None else []
         p1, p2, kp_pairs = filter_matches(kp1, kp2, raw_matches)
         if len(p1) >= 4:
             H, status = cv.findHomography(p1, p2, cv.RANSAC, 5.0)

@@ -143,7 +143,7 @@ def main():
 
     def match_and_draw(win):
         with Timer('matching'):
-            raw_matches = matcher.knnMatch(desc1, trainDescriptors = desc2, k = 2) #2
+            raw_matches = matcher.knnMatch(desc1, trainDescriptors=desc2, k=2) if desc2.size else []
         p1, p2, kp_pairs = filter_matches(kp1, kp2, raw_matches)
         if len(p1) >= 4:
             H, status = cv.findHomography(p1, p2, cv.RANSAC, 5.0)
