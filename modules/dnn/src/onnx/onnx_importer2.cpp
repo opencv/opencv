@@ -1382,9 +1382,11 @@ void ONNXImporter2::parseMaxUnpool(LayerParams& layerParams, const opencv_onnx::
     if (layerParams.has("pad"))
     {
         DictValue pads = layerParams.get("pad");
-        CV_CheckEQ(pads.size(), 2, "");
-        pool_pad_w = pads.get<int>(0);
-        pool_pad_h = pads.get<int>(1);
+        CV_CheckEQ(pads.size(), 4, "DNN/ONNX: MaxUnpool expects 4 pads values for 2D input");
+        pool_pad_h = pads.get<int>(0);
+        pool_pad_w = pads.get<int>(1);
+        CV_CheckEQ(pads.get<int>(2), pool_pad_h, "DNN/ONNX: MaxUnpool supports only symmetric pads");
+        CV_CheckEQ(pads.get<int>(3), pool_pad_w, "DNN/ONNX: MaxUnpool supports only symmetric pads");
     }
     layerParams.set("pool_pad_w", pool_pad_w);
     layerParams.set("pool_pad_h", pool_pad_h);
