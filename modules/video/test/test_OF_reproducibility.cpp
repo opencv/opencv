@@ -47,6 +47,9 @@ typedef tuple<Size> OFParams;
 typedef TestWithParam<OFParams> DenseOpticalFlow_DIS;
 typedef TestWithParam<OFParams> DenseOpticalFlow_VariationalRefinement;
 
+typedef tuple<Size, int, int> FarnebackOFParams;  // size, polyN, flags
+typedef TestWithParam<FarnebackOFParams> DenseOpticalFlow_Farneback;
+
 TEST_P(DenseOpticalFlow_DIS, MultithreadReproducibility)
 {
     double MAX_DIF = 0.01;
@@ -156,5 +159,72 @@ TEST_P(DenseOpticalFlow_VariationalRefinement, MultithreadReproducibility)
 }
 
 INSTANTIATE_TEST_CASE_P(FullSet, DenseOpticalFlow_VariationalRefinement, Values(szODD, szQVGA));
+
+namespace {
+
+void makeFarnebackFramePair(Size size, Mat& frame1, Mat& frame2)
+{
+    RNG rng(0);
+
+    Mat texture(Size(size.width >> 3, size.height >> 3), CV_8U);
+    rng.fill(texture, RNG::UNIFORM, Scalar::all(0), Scalar::all(256));
+    resize(texture, frame1, size, 0, 0, INTER_LINEAR);
+
+    Mat disp(Size(size.width >> 4, size.height >> 4), CV_32FC2);
+    rng.fill(disp, RNG::NORMAL, Scalar::all(0), Scalar::all(3));
+    resize(disp, disp, size, 0, 0, INTER_CUBIC);
+    for (int y = 0; y < disp.rows; y++)
+        for (int x = 0; x < disp.cols; x++)
+            disp.at<Vec2f>(y, x) += Vec2f((float)x, (float)y);
+
+    remap(frame1, frame2, disp, Mat(), INTER_LINEAR, BORDER_REPLICATE);
+}
+
+struct NumThreadsScope
+{
+    explicit NumThreadsScope(int n) : nprev(cv::getNumThreads()) {
+        cv::setNumThreads(n);
+    }
+    ~NumThreadsScope() {
+        cv::setNumThreads(nprev);
+    }
+private:
+    int nprev;
+};
+
+} // namespace
+
+TEST_P(DenseOpticalFlow_Farneback, MultithreadReproducibility)
+{
+    FarnebackOFParams params = GetParam();
+    Size size = get<0>(params);
+    int polyN = get<1>(params);
+    int flags = get<2>(params);
+    double polySigma = polyN == 5 ? 1.1 : 1.5;
+
+    Mat frame1, frame2;
+    makeFarnebackFramePair(size, frame1, frame2);
+
+    Mat resSingleThread, resMultiThread;
+    {
+        NumThreadsScope threads(1);
+        calcOpticalFlowFarneback(frame1, frame2, resSingleThread, 0.5, 3, 15, 3, polyN, polySigma, flags);
+    }
+    {
+        NumThreadsScope threads(std::max(2, cv::getNumThreads()));
+        calcOpticalFlowFarneback(frame1, frame2, resMultiThread, 0.5, 3, 15, 3, polyN, polySigma, flags);
+    }
+
+    ASSERT_EQ(CV_32FC2, resSingleThread.type());
+    ASSERT_EQ(size, resSingleThread.size());
+    EXPECT_EQ(0, cv::norm(resSingleThread, resMultiThread, NORM_INF));
+
+    EXPECT_GT(cv::norm(resSingleThread, NORM_INF), 0.0);
+}
+
+static const Size szOddLarge(417, 333);
+
+INSTANTIATE_TEST_CASE_P(FullSet, DenseOpticalFlow_Farneback,
+    Combine(Values(szODD, szOddLarge, szVGA), Values(5, 7), Values(0, (int)OPTFLOW_FARNEBACK_GAUSSIAN)));
 
 }} // namespace
