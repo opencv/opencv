@@ -59,7 +59,7 @@ public:
 
     /// Feature Detection Methods
     void Compute_KContrast(const cv::Mat& img, const float& kper);
-    void Compute_Multiscale_Derivatives(void);
+    void Compute_Multiscale_Derivatives(bool second_order = true);
     void Compute_Detector_Response(void);
     void Determinant_Hessian(std::vector<cv::KeyPoint>& kpts);
     void Do_Subpixel_Refinement(std::vector<cv::KeyPoint>& kpts);

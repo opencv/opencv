@@ -135,6 +135,45 @@ TEST(Features2d_KAZE, ocl_accuracy)
     EXPECT_LT(avg_diff, 0.01f) << "Average descriptor difference should be < 0.01, got " << avg_diff;
 }
 
+TEST(Features2d_KAZE, ocl_compute_after_detect)
+{
+    // KAZE takes the OpenCL path only for upright descriptors on a device without host unified memory
+    if (!cv::ocl::useOpenCL() || cv::ocl::Device::getDefault().hostUnifiedMemory())
+        throw SkipTestException("KAZE does not use OpenCL on this device");
+
+    Mat img(240, 320, CV_8UC1);
+    theRNG().fill(img, RNG::UNIFORM, 0, 256);
+    GaussianBlur(img, img, Size(9, 9), 2.0);
+    rectangle(img, Point(40, 40), Point(160, 140), Scalar(245), FILLED);
+    rectangle(img, Point(120, 90), Point(260, 200), Scalar(15), FILLED);
+    GaussianBlur(img, img, Size(5, 5), 1.0);
+    UMat uimg;
+    img.copyTo(uimg);
+
+    for (int extended = 0; extended < 2; ++extended)
+    {
+        Ptr<KAZE> kaze = KAZE::create(extended != 0, true);
+
+        // compute() on the detected keypoints, in reverse order, gives the detectAndCompute() rows in reverse order
+        vector<KeyPoint> kp;
+        UMat desc_dc, desc;
+        kaze->detectAndCompute(uimg, noArray(), kp, desc_dc);
+        ASSERT_FALSE(kp.empty());
+        vector<KeyPoint> kp_rev(kp.rbegin(), kp.rend());
+        kaze->compute(uimg, kp_rev, desc);
+        Mat desc_flipped;
+        flip(desc.getMat(ACCESS_READ), desc_flipped, 0);
+        EXPECT_EQ(0.0, cvtest::norm(desc_dc.getMat(ACCESS_READ), desc_flipped, NORM_INF)) << "extended=" << extended;
+
+        // no keypoints, and a keypoint level outside the pyramid
+        vector<KeyPoint> none;
+        EXPECT_NO_THROW(kaze->compute(uimg, none, desc));
+        vector<KeyPoint> bad(1, kp[0]);
+        bad[0].class_id = -1;
+        EXPECT_THROW(kaze->compute(uimg, bad, desc), cv::Exception) << "extended=" << extended;
+    }
+}
+
 }} // namespace
 
 #endif
