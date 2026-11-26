@@ -3264,6 +3264,18 @@ void checkResizeParams(const ResizeParams& params)
                  "(the _EXACT flags included)");
 }
 
+// Whether classic cv::resize gives the same result. It takes no coordinate mode, Keys coefficient
+// or exclude_outside, so it can only stand in when those make no difference.
+bool isClassicResize(const ResizeParams& params)
+{
+    if (params.coordMode != ResizeCoord::PIXEL_CENTER)
+        return false;
+    const int interp = params.interpolation;
+    if (params.excludeOutside && (interp == INTER_CUBIC || interp == INTER_LANCZOS4))
+        return false;
+    return interp != INTER_CUBIC || params.cubicCoeffA == -0.75f;
+}
+
 // Follows classic cv::resize's rule for deriving the output size from fx/fy.
 Size resolveDstSize(Size ssize, const ResizeParams& params)
 {
@@ -4271,10 +4283,10 @@ void cv::resize( InputArray _src, OutputArray _dst, const ResizeParams& params )
         return;
     }
 
-    if (params.coordMode == ResizeCoord::PIXEL_CENTER)
+    if (isClassicResize(params))
     {
-        // A single 2D image with the classic convention: go through classic cv::resize, which
-        // owns the OpenCL, IPP and custom-HAL fast paths.
+        // A single 2D image that classic cv::resize can serve: go through it, since it owns the
+        // OpenCL, IPP and custom-HAL fast paths.
         cv::resize(_src, _dst, params.dsize, params.fx, params.fy,
                    resolveInterpolation(params, _src.depth()));
         return;
