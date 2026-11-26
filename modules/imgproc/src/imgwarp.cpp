@@ -73,9 +73,8 @@ ImgWarpFunc getImgWarpFunc(int type, int interpolation)
     if (interpolation == INTER_CUBIC) {
         CV_CPU_DISPATCH(getBicubicWarpFunc_, (type), CV_CPU_DISPATCH_MODES_ALL);
     }
-    if (interpolation == INTER_LINEAR && CV_MAT_DEPTH(type) == CV_16F &&
-        (CV_MAT_CN(type) == 1 || CV_MAT_CN(type) == 3 || CV_MAT_CN(type) == 4)) {
-        CV_CPU_DISPATCH(getBilinearHalfWarpFunc_, (CV_MAT_CN(type) == 3), CV_CPU_DISPATCH_MODES_ALL);
+    if (interpolation == INTER_LINEAR && type == CV_16FC3) {
+        CV_CPU_DISPATCH(getBilinearHalfWarpFunc_, (), CV_CPU_DISPATCH_MODES_ALL);
     }
     return (ImgWarpFunc)nullptr;
 }
@@ -1792,12 +1791,20 @@ void cv::remap( InputArray _src, OutputArray _dst,
                     CV_CPU_DISPATCH(remapLinearInvoker_32FC1, ((const float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
                     break;
                 }
+                case CV_16FC1: {
+                    CV_CPU_DISPATCH(remapLinearInvoker_16FC1, ((const hfloat*)src_data, src_step, src_rows, src_cols, (hfloat*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
+                }
                 case CV_32FC3: {
                     CV_CPU_DISPATCH(remapLinearInvoker_32FC3, ((const float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
                     break;
                 }
                 case CV_32FC4: {
                     CV_CPU_DISPATCH(remapLinearInvoker_32FC4, ((const float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
+                }
+                case CV_16FC4: {
+                    CV_CPU_DISPATCH(remapLinearInvoker_16FC4, ((const hfloat*)src_data, src_step, src_rows, src_cols, (hfloat*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
                     break;
                 }
                 // no default
@@ -2574,12 +2581,20 @@ static void warpAffine(int src_type,
                 CV_CPU_DISPATCH(warpAffineLinearInvoker_32FC1, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
+            case CV_16FC1: {
+                CV_CPU_DISPATCH(warpAffineLinearInvoker_16FC1, ((const hfloat*)src_data, src_step, src_height, src_width, (hfloat*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
             case CV_32FC3: {
                 CV_CPU_DISPATCH(warpAffineLinearInvoker_32FC3, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_32FC4: {
                 CV_CPU_DISPATCH(warpAffineLinearInvoker_32FC4, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_16FC4: {
+                CV_CPU_DISPATCH(warpAffineLinearInvoker_16FC4, ((const hfloat*)src_data, src_step, src_height, src_width, (hfloat*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             // no default
@@ -3168,12 +3183,20 @@ static void warpPerspective(int src_type,
                 CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_32FC1, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
+            case CV_16FC1: {
+                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_16FC1, ((const hfloat*)src_data, src_step, src_height, src_width, (hfloat*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
             case CV_32FC3: {
                 CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_32FC3, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_32FC4: {
                 CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_32FC4, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_16FC4: {
+                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_16FC4, ((const hfloat*)src_data, src_step, src_height, src_width, (hfloat*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             // no default

@@ -1820,8 +1820,8 @@ TEST(Imgproc_Warp, float16_linear_transparent)
         for (int channel = 0; channel < channels; ++channel)
             EXPECT_EQ(float(dst.ptr<hfloat>(0, column)[channel]),
                       expected[column] + inside[column]*channel/8.f);
-        Mat uninitialized, center(1, 1, CV_32F, Scalar(0.5));
-        remap(src, uninitialized, center, center, INTER_LINEAR, BORDER_TRANSPARENT);
+        Mat uninitialized, center(1, 1, CV_32F, Scalar(0.5)), centerY = center.clone();
+        remap(src, uninitialized, center, centerY, INTER_LINEAR, BORDER_TRANSPARENT);
         for (int channel = 0; channel < channels; ++channel)
             EXPECT_EQ(float(uninitialized.ptr<hfloat>()[channel]), 2.5f + channel/8.f);
     }
@@ -2196,6 +2196,61 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_WarpHalfCubic, testing::Combine(
     testing::Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101,
                     BORDER_WRAP, BORDER_TRANSPARENT),
     testing::Values(1, 3, 19)));
+
+
+typedef testing::TestWithParam<tuple<int, int, int>> Imgproc_WarpHalfLinear;
+
+TEST_P(Imgproc_WarpHalfLinear, matches_float32)
+{
+    const int channels = get<0>(GetParam());
+    const int border = get<1>(GetParam());
+    const int operation = get<2>(GetParam());
+    RNG rng(channels*131 + border*17 + operation);
+    Mat wide(23, 29, CV_32FC(channels)), src, reference;
+    rng.fill(wide, RNG::UNIFORM, 0., 1.);
+    wide.convertTo(src, CV_16F);
+    src.convertTo(reference, CV_32F);
+    const Size size(67, 11);
+    Mat actual(size, src.type()), expected(size, reference.type());
+    rng.fill(expected, RNG::UNIFORM, 0., 1.);
+    expected.convertTo(actual, CV_16F);
+    actual.convertTo(expected, CV_32F);
+    const Scalar fill(0.25, 0.5, 0.75, 1.);
+    if (operation == 0)
+    {
+        // Maps reach beyond the image so that inlier, mixed and outlier batches all occur.
+        Mat mapx(size, CV_32F), mapy(size, CV_32F);
+        rng.fill(mapx, RNG::UNIFORM, -6., 35.);
+        rng.fill(mapy, RNG::UNIFORM, -6., 29.);
+        remap(src, actual, mapx, mapy, INTER_LINEAR, border, fill);
+        remap(reference, expected, mapx, mapy, INTER_LINEAR, border, fill);
+    }
+    else
+    {
+        Mat transform = operation == 1 ? Mat(Mat_<double>({2, 3}, {0.4, 0.1, -3.5, -0.05, 0.9, -1.5})) :
+                        Mat(Mat_<double>({3, 3}, {0.4, 0.1, -3.5, -0.05, 0.9, -1.5, 0.001, 0.002, 1.}));
+        const int flags = INTER_LINEAR | WARP_INVERSE_MAP;
+        if (operation == 1)
+        {
+            warpAffine(src, actual, transform, size, flags, border, fill);
+            warpAffine(reference, expected, transform, size, flags, border, fill);
+        }
+        else
+        {
+            warpPerspective(src, actual, transform, size, flags, border, fill);
+            warpPerspective(reference, expected, transform, size, flags, border, fill);
+        }
+    }
+    Mat actual32f;
+    actual.convertTo(actual32f, CV_32F);
+    EXPECT_LE(cvtest::norm(actual32f, expected, NORM_INF), 1e-3);
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_WarpHalfLinear, testing::Combine(
+    testing::Values(1, 4),
+    testing::Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101,
+                    BORDER_WRAP, BORDER_TRANSPARENT),
+    testing::Values(0, 1, 2)));
 
 
 }} // namespace

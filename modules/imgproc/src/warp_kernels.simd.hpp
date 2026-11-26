@@ -51,7 +51,36 @@
     v_int32 src_ix0 = v_round(src_x0), src_iy0 = v_round(src_y0); \
     v_int32 src_ix1 = v_round(src_x1), src_iy1 = v_round(src_y1); \
 
+// Half-precision warps sanitize coordinates that cannot be floored safely (NaN, infinity, beyond int range)
+#define CV_WARP_VECTOR_SANITIZE_COORDS() \
+    if constexpr (sanitize_coords) { \
+        const v_float32 coord_limit = vx_setall_f32(2147483648.f); \
+        v_float32 coord_ok = v_and(v_and(v_lt(v_abs(src_x0), coord_limit), v_lt(v_abs(src_y0), coord_limit)), \
+                                  v_and(v_lt(v_abs(src_x1), coord_limit), v_lt(v_abs(src_y1), coord_limit))); \
+        if (!v_check_all(coord_ok)) { \
+            float coord_x[max_uf], coord_y[max_uf]; \
+            vx_store(coord_x, src_x0); \
+            vx_store(coord_x + vlanes_32, src_x1); \
+            vx_store(coord_y, src_y0); \
+            vx_store(coord_y + vlanes_32, src_y1); \
+            for (int k = 0; k < uf; k++) { \
+                coord_x[k] = warpSanitizeCoordinate(coord_x[k], srccols, border_type); \
+                coord_y[k] = warpSanitizeCoordinate(coord_y[k], srcrows, border_type); \
+            } \
+            src_x0 = vx_load(coord_x); \
+            src_x1 = vx_load(coord_x + vlanes_32); \
+            src_y0 = vx_load(coord_y); \
+            src_y1 = vx_load(coord_y + vlanes_32); \
+        } \
+    }
+#define CV_WARP_SCALAR_SANITIZE_COORDS() \
+    if constexpr (sanitize_coords) { \
+        sx = warpSanitizeCoordinate(sx, srccols, border_type); \
+        sy = warpSanitizeCoordinate(sy, srcrows, border_type); \
+    }
+
 #define CV_WARP_VECTOR_COMPUTE_MAPPED_COORD(INTER, CN) \
+    CV_WARP_VECTOR_SANITIZE_COORDS() \
     CV_WARP_VECTOR_##INTER##_COMPUTE_COORD() \
     v_uint32 mask_0 = v_lt(v_reinterpret_as_u32(src_ix0), inner_scols), \
              mask_1 = v_lt(v_reinterpret_as_u32(src_ix1), inner_scols); \
@@ -109,8 +138,34 @@
 namespace cv{
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
+// Only the half-precision invokers override this
+static constexpr bool sanitize_coords = false;
+
+#ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+// Maps a coordinate that cannot be floored safely to one with the same border behavior.
+// Coordinates beyond the image are outside for constant borders; otherwise the value is
+// reduced modulo the period of the border mode, which keeps floats beyond 2^24 exact.
+static inline float warpSanitizeCoordinate(float v, int size, int border_type)
+{
+    if (std::fabs(v) < 2147483648.f)
+        return v;
+    if (border_type == BORDER_CONSTANT || border_type == BORDER_TRANSPARENT)
+        return -2.f;
+    if (std::isnan(v))
+        return 0.f;
+    if (border_type == BORDER_REPLICATE)
+        return v > 0 ? float(size) : 0.f;
+    if (std::isinf(v))
+        return 0.f;
+    double period = 2.*size*std::max(size - 1, 1);
+    if (period > 16777216.)
+        period = 2.*size;
+    return float(std::fmod(double(v), period));
+}
+#endif
+
 ImgWarpFunc getBicubicWarpFunc_(int type);
-ImgWarpFunc getBilinearHalfWarpFunc_(bool rgb);
+ImgWarpFunc getBilinearHalfWarpFunc_();
 RemapBilinearHalfRGBFunc getRemapBilinearHalfRGB_(bool relative);
 RemapLanczosHalfRGBFunc getRemapLanczosHalfRGB_();
 
@@ -226,11 +281,17 @@ void warpAffineLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, in
 void warpAffineLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_rows, int src_cols,
                                   float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                                   const double M[6], int border_type, const double border_value[4]);
+void warpAffineLinearInvoker_16FC1(const hfloat *src_data, size_t src_step, int src_rows, int src_cols,
+                                  hfloat *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                                  const double M[6], int border_type, const double border_value[4]);
 void warpAffineLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_rows, int src_cols,
                                   float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                                   const double M[6], int border_type, const double border_value[4]);
 void warpAffineLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_rows, int src_cols,
                                   float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                                  const double M[6], int border_type, const double border_value[4]);
+void warpAffineLinearInvoker_16FC4(const hfloat *src_data, size_t src_step, int src_rows, int src_cols,
+                                  hfloat *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                                   const double M[6], int border_type, const double border_value[4]);
 // Approximate branch that uses FP16 intrinsics if possible
 void warpAffineLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
@@ -264,11 +325,17 @@ void warpPerspectiveLinearInvoker_16UC4(const uint16_t *src_data, size_t src_ste
 void warpPerspectiveLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_rows, int src_cols,
                                         float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                                         const double M[9], int border_type, const double border_value[4]);
+void warpPerspectiveLinearInvoker_16FC1(const hfloat *src_data, size_t src_step, int src_rows, int src_cols,
+                                        hfloat *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                                        const double M[9], int border_type, const double border_value[4]);
 void warpPerspectiveLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_rows, int src_cols,
                                         float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                                         const double M[9], int border_type, const double border_value[4]);
 void warpPerspectiveLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_rows, int src_cols,
                                         float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                                        const double M[9], int border_type, const double border_value[4]);
+void warpPerspectiveLinearInvoker_16FC4(const hfloat *src_data, size_t src_step, int src_rows, int src_cols,
+                                        hfloat *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                                         const double M[9], int border_type, const double border_value[4]);
 // Approximate branch that uses FP16 intrinsics if possible
 void warpPerspectiveLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
@@ -309,12 +376,20 @@ void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_ro
                               float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                               int border_type, const double border_value[4],
                               const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
+void remapLinearInvoker_16FC1(const hfloat *src_data, size_t src_step, int src_rows, int src_cols,
+                              hfloat *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                              int border_type, const double border_value[4],
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
 void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_rows, int src_cols,
                               float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                               int border_type, const double border_value[4],
                               const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
 void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_rows, int src_cols,
                               float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                              int border_type, const double border_value[4],
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
+void remapLinearInvoker_16FC4(const hfloat *src_data, size_t src_step, int src_rows, int src_cols,
+                              hfloat *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                               int border_type, const double border_value[4],
                               const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
 // Approximate branch that uses FP16 intrinsics if possible
@@ -3699,26 +3774,28 @@ void warpAffineLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, in
     parallel_for_(Range(0, dst_rows), worker);
 }
 
-void warpAffineLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                  float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+template<typename T>
+static void warpAffineLinearInvokerFT_C1(const T *src_data, size_t src_step, int src_rows, int src_cols,
+                                  T *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                                   const double dM[6], int border_type, const double border_value[4]) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
+        constexpr bool sanitize_coords = std::is_same_v<T, hfloat>;
 
         const auto *src = src_data;
         auto *dst = dst_data;
-        size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float);
+        size_t srcstep = src_step/sizeof(T), dststep = dst_step/sizeof(T);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         float M[6];
         for (int i = 0; i < 6; i++) {
             M[i] = static_cast<float>(dM[i]);
         }
-        float bval[] = {
-            saturate_cast<float>(border_value[0]),
-            saturate_cast<float>(border_value[1]),
-            saturate_cast<float>(border_value[2]),
-            saturate_cast<float>(border_value[3]),
+        T bval[] = {
+            saturate_cast<T>(border_value[0]),
+            saturate_cast<T>(border_value[1]),
+            saturate_cast<T>(border_value[2]),
+            saturate_cast<T>(border_value[3]),
         };
         int border_type_x = border_type != BORDER_CONSTANT &&
                             border_type != BORDER_TRANSPARENT &&
@@ -3758,7 +3835,7 @@ void warpAffineLinearInvoker_32FC1(const float *src_data, size_t src_step, int s
 #endif
 
         for (int y = r.start; y < r.end; y++) {
-            float* dstptr = dst + y*dststep;
+            T* dstptr = dst + y*dststep;
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -3767,13 +3844,13 @@ void warpAffineLinearInvoker_32FC1(const float *src_data, size_t src_step, int s
                 // [TODO] apply halide trick
                 CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C1);
                 if (v_reduce_min(inner_mask) != 0) {
-                    CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(LINEAR, C1, 32F);
+                    CV_WARP_VECTOR_SHUFFLE_ALLWITHIN_FT(LINEAR, C1);
                 } else {
-                    CV_WARP_VECTOR_SHUFFLE_NOTALLWITHIN(LINEAR, C1, 32F);
+                    CV_WARP_VECTOR_SHUFFLE_NOTALLWITHIN(LINEAR, C1, FT);
                 }
                 CV_WARP_VECTOR_INTER_LOAD(LINEAR, C1, 32F, 32F);
                 CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C1);
-                CV_WARP_LINEAR_VECTOR_INTER_STORE_F32F32(C1);
+                CV_WARP_LINEAR_VECTOR_INTER_STORE_F32FT(C1);
             }
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
@@ -3781,13 +3858,26 @@ void warpAffineLinearInvoker_32FC1(const float *src_data, size_t src_step, int s
                 float sx = x*M[0] + y*M[1] + M[2];
                 float sy = x*M[3] + y*M[4] + M[5];
 
-                CV_WARP_SCALAR_SHUFFLE(LINEAR, C1, 32F);
+                CV_WARP_SCALAR_SANITIZE_COORDS();
+                CV_WARP_SCALAR_SHUFFLE(LINEAR, C1, FT);
                 CV_WARP_SCALAR_LINEAR_INTER_CALC_F32(C1);
-                CV_WARP_SCALAR_STORE(LINEAR, C1, 32F);
+                CV_WARP_SCALAR_STORE(LINEAR, C1, FT);
             }
         }
     };
     parallel_for_(Range(0, dst_rows), worker);
+}
+
+void warpAffineLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_rows, int src_cols,
+                                  float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                                  const double dM[6], int border_type, const double border_value[4]) {
+    warpAffineLinearInvokerFT_C1<float>(src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, dM, border_type, border_value);
+}
+
+void warpAffineLinearInvoker_16FC1(const hfloat *src_data, size_t src_step, int src_rows, int src_cols,
+                                  hfloat *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                                  const double dM[6], int border_type, const double border_value[4]) {
+    warpAffineLinearInvokerFT_C1<hfloat>(src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, dM, border_type, border_value);
 }
 
 void warpAffineLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_rows, int src_cols,
@@ -3887,26 +3977,28 @@ void warpAffineLinearInvoker_32FC3(const float *src_data, size_t src_step, int s
     parallel_for_(Range(0, dst_rows), worker);
 }
 
-void warpAffineLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                  float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+template<typename T>
+static void warpAffineLinearInvokerFT_C4(const T *src_data, size_t src_step, int src_rows, int src_cols,
+                                  T *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                                   const double dM[6], int border_type, const double border_value[4]) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
+        constexpr bool sanitize_coords = std::is_same_v<T, hfloat>;
 
         const auto *src = src_data;
         auto *dst = dst_data;
-        size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float);
+        size_t srcstep = src_step/sizeof(T), dststep = dst_step/sizeof(T);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         float M[6];
         for (int i = 0; i < 6; i++) {
             M[i] = static_cast<float>(dM[i]);
         }
-        float bval[] = {
-            saturate_cast<float>(border_value[0]),
-            saturate_cast<float>(border_value[1]),
-            saturate_cast<float>(border_value[2]),
-            saturate_cast<float>(border_value[3]),
+        T bval[] = {
+            saturate_cast<T>(border_value[0]),
+            saturate_cast<T>(border_value[1]),
+            saturate_cast<T>(border_value[2]),
+            saturate_cast<T>(border_value[3]),
         };
         int border_type_x = border_type != BORDER_CONSTANT &&
                             border_type != BORDER_TRANSPARENT &&
@@ -3954,7 +4046,7 @@ void warpAffineLinearInvoker_32FC4(const float *src_data, size_t src_step, int s
 #endif
 
         for (int y = r.start; y < r.end; y++) {
-            float* dstptr = dst + y*dststep;
+            T* dstptr = dst + y*dststep;
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -3963,25 +4055,33 @@ void warpAffineLinearInvoker_32FC4(const float *src_data, size_t src_step, int s
                 // [TODO] apply halide trick
                 CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C4);
                 if (v_reduce_min(inner_mask) != 0) {
-                    float valpha[max_uf], vbeta[max_uf];
-                    vx_store(valpha, src_x0);
-                    vx_store(valpha+vlanes_32, src_x1);
-                    vx_store(vbeta, src_y0);
-                    vx_store(vbeta+vlanes_32, src_y1);
+                    if constexpr (std::is_same_v<T, hfloat>) {
+                        float pixbuf[max_uf*4*4];
+                        CV_WARP_VECTOR_SHUFFLE_ALLWITHIN_FT(LINEAR, C4);
+                        CV_WARP_VECTOR_INTER_LOAD(LINEAR, C4, 32F, 32F);
+                        CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
+                        CV_WARP_LINEAR_VECTOR_INTER_STORE_F32FT(C4);
+                    } else {
+                        float valpha[max_uf], vbeta[max_uf];
+                        vx_store(valpha, src_x0);
+                        vx_store(valpha+vlanes_32, src_x1);
+                        vx_store(vbeta, src_y0);
+                        vx_store(vbeta+vlanes_32, src_y1);
     #if CV_SIMD256
-                    CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMD256, LINEAR, 32F);
+                        CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMD256, LINEAR, 32F);
     #elif CV_SIMD128
-                    CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMD128, LINEAR, 32F);
+                        CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMD128, LINEAR, 32F);
     #elif CV_SIMD_SCALABLE
-                    CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMDX, LINEAR, 32F);
+                        CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMDX, LINEAR, 32F);
     #endif
+                    }
                 } else {
                     float pixbuf[max_uf*4*4];
-                    CV_WARP_VECTOR_SHUFFLE_NOTALLWITHIN(LINEAR, C4, 32F);
+                    CV_WARP_VECTOR_SHUFFLE_NOTALLWITHIN(LINEAR, C4, FT);
                     // CV_WARP_LINEAR_VECTOR_INTER_LOAD_F32(C4);
                     CV_WARP_VECTOR_INTER_LOAD(LINEAR, C4, 32F, 32F);
                     CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
-                    CV_WARP_LINEAR_VECTOR_INTER_STORE_F32F32(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_STORE_F32FT(C4);
                 }
             }
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
@@ -3990,13 +4090,26 @@ void warpAffineLinearInvoker_32FC4(const float *src_data, size_t src_step, int s
                 float sx = x*M[0] + y*M[1] + M[2];
                 float sy = x*M[3] + y*M[4] + M[5];
 
-                CV_WARP_SCALAR_SHUFFLE(LINEAR, C4, 32F);
+                CV_WARP_SCALAR_SANITIZE_COORDS();
+                CV_WARP_SCALAR_SHUFFLE(LINEAR, C4, FT);
                 CV_WARP_SCALAR_LINEAR_INTER_CALC_F32(C4);
-                CV_WARP_SCALAR_STORE(LINEAR, C4, 32F);
+                CV_WARP_SCALAR_STORE(LINEAR, C4, FT);
             }
         }
     };
     parallel_for_(Range(0, dst_rows), worker);
+}
+
+void warpAffineLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_rows, int src_cols,
+                                  float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                                  const double dM[6], int border_type, const double border_value[4]) {
+    warpAffineLinearInvokerFT_C4<float>(src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, dM, border_type, border_value);
+}
+
+void warpAffineLinearInvoker_16FC4(const hfloat *src_data, size_t src_step, int src_rows, int src_cols,
+                                  hfloat *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                                  const double dM[6], int border_type, const double border_value[4]) {
+    warpAffineLinearInvokerFT_C4<hfloat>(src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, dM, border_type, border_value);
 }
 
 void warpAffineLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
@@ -4951,26 +5064,28 @@ void warpPerspectiveLinearInvoker_16UC4(const uint16_t *src_data, size_t src_ste
     parallel_for_(Range(0, dst_rows), worker);
 }
 
-void warpPerspectiveLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                        float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+template<typename T>
+static void warpPerspectiveLinearInvokerFT_C1(const T *src_data, size_t src_step, int src_rows, int src_cols,
+                                        T *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                                         const double dM[9], int border_type, const double border_value[4]) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
+        constexpr bool sanitize_coords = std::is_same_v<T, hfloat>;
 
         const auto *src = src_data;
         auto *dst = dst_data;
-        size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float);
+        size_t srcstep = src_step/sizeof(T), dststep = dst_step/sizeof(T);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         float M[9];
         for (int i = 0; i < 9; i++) {
             M[i] = static_cast<float>(dM[i]);
         }
-        float bval[] = {
-            saturate_cast<float>(border_value[0]),
-            saturate_cast<float>(border_value[1]),
-            saturate_cast<float>(border_value[2]),
-            saturate_cast<float>(border_value[3]),
+        T bval[] = {
+            saturate_cast<T>(border_value[0]),
+            saturate_cast<T>(border_value[1]),
+            saturate_cast<T>(border_value[2]),
+            saturate_cast<T>(border_value[3]),
         };
         int border_type_x = border_type != BORDER_CONSTANT &&
                             border_type != BORDER_TRANSPARENT &&
@@ -5010,7 +5125,7 @@ void warpPerspectiveLinearInvoker_32FC1(const float *src_data, size_t src_step, 
 #endif
 
         for (int y = r.start; y < r.end; y++) {
-            float* dstptr = dst + y*dststep;
+            T* dstptr = dst + y*dststep;
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -5019,13 +5134,13 @@ void warpPerspectiveLinearInvoker_32FC1(const float *src_data, size_t src_step, 
                 // [TODO] apply halide trick
                 CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C1);
                 if (v_reduce_min(inner_mask) != 0) {
-                    CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(LINEAR, C1, 32F);
+                    CV_WARP_VECTOR_SHUFFLE_ALLWITHIN_FT(LINEAR, C1);
                 } else {
-                    CV_WARP_VECTOR_SHUFFLE_NOTALLWITHIN(LINEAR, C1, 32F);
+                    CV_WARP_VECTOR_SHUFFLE_NOTALLWITHIN(LINEAR, C1, FT);
                 }
                 CV_WARP_VECTOR_INTER_LOAD(LINEAR, C1, 32F, 32F);
                 CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C1);
-                CV_WARP_LINEAR_VECTOR_INTER_STORE_F32F32(C1);
+                CV_WARP_LINEAR_VECTOR_INTER_STORE_F32FT(C1);
             }
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
@@ -5034,13 +5149,26 @@ void warpPerspectiveLinearInvoker_32FC1(const float *src_data, size_t src_step, 
                 float sx = (x*M[0] + y*M[1] + M[2]) / w;
                 float sy = (x*M[3] + y*M[4] + M[5]) / w;
 
-                CV_WARP_SCALAR_SHUFFLE(LINEAR, C1, 32F);
+                CV_WARP_SCALAR_SANITIZE_COORDS();
+                CV_WARP_SCALAR_SHUFFLE(LINEAR, C1, FT);
                 CV_WARP_SCALAR_LINEAR_INTER_CALC_F32(C1);
-                CV_WARP_SCALAR_STORE(LINEAR, C1, 32F);
+                CV_WARP_SCALAR_STORE(LINEAR, C1, FT);
             }
         }
     };
     parallel_for_(Range(0, dst_rows), worker);
+}
+
+void warpPerspectiveLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_rows, int src_cols,
+                                        float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                                        const double dM[9], int border_type, const double border_value[4]) {
+    warpPerspectiveLinearInvokerFT_C1<float>(src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, dM, border_type, border_value);
+}
+
+void warpPerspectiveLinearInvoker_16FC1(const hfloat *src_data, size_t src_step, int src_rows, int src_cols,
+                                        hfloat *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                                        const double dM[9], int border_type, const double border_value[4]) {
+    warpPerspectiveLinearInvokerFT_C1<hfloat>(src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, dM, border_type, border_value);
 }
 
 void warpPerspectiveLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_rows, int src_cols,
@@ -5143,26 +5271,28 @@ void warpPerspectiveLinearInvoker_32FC3(const float *src_data, size_t src_step, 
     parallel_for_(Range(0, dst_rows), worker);
 }
 
-void warpPerspectiveLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                        float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+template<typename T>
+static void warpPerspectiveLinearInvokerFT_C4(const T *src_data, size_t src_step, int src_rows, int src_cols,
+                                        T *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                                         const double dM[9], int border_type, const double border_value[4]) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
+        constexpr bool sanitize_coords = std::is_same_v<T, hfloat>;
 
         const auto *src = src_data;
         auto *dst = dst_data;
-        size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float);
+        size_t srcstep = src_step/sizeof(T), dststep = dst_step/sizeof(T);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         float M[9];
         for (int i = 0; i < 9; i++) {
             M[i] = static_cast<float>(dM[i]);
         }
-        float bval[] = {
-            saturate_cast<float>(border_value[0]),
-            saturate_cast<float>(border_value[1]),
-            saturate_cast<float>(border_value[2]),
-            saturate_cast<float>(border_value[3]),
+        T bval[] = {
+            saturate_cast<T>(border_value[0]),
+            saturate_cast<T>(border_value[1]),
+            saturate_cast<T>(border_value[2]),
+            saturate_cast<T>(border_value[3]),
         };
         int border_type_x = border_type != BORDER_CONSTANT &&
                             border_type != BORDER_TRANSPARENT &&
@@ -5210,7 +5340,7 @@ void warpPerspectiveLinearInvoker_32FC4(const float *src_data, size_t src_step, 
 #endif
 
         for (int y = r.start; y < r.end; y++) {
-            float* dstptr = dst + y*dststep;
+            T* dstptr = dst + y*dststep;
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -5219,24 +5349,32 @@ void warpPerspectiveLinearInvoker_32FC4(const float *src_data, size_t src_step, 
                 // [TODO] apply halide trick
                 CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C4);
                 if (v_reduce_min(inner_mask) != 0) {
-                    float valpha[max_uf], vbeta[max_uf];
-                    vx_store(valpha, src_x0);
-                    vx_store(valpha+vlanes_32, src_x1);
-                    vx_store(vbeta, src_y0);
-                    vx_store(vbeta+vlanes_32, src_y1);
+                    if constexpr (std::is_same_v<T, hfloat>) {
+                        float pixbuf[max_uf*4*4];
+                        CV_WARP_VECTOR_SHUFFLE_ALLWITHIN_FT(LINEAR, C4);
+                        CV_WARP_VECTOR_INTER_LOAD(LINEAR, C4, 32F, 32F);
+                        CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
+                        CV_WARP_LINEAR_VECTOR_INTER_STORE_F32FT(C4);
+                    } else {
+                        float valpha[max_uf], vbeta[max_uf];
+                        vx_store(valpha, src_x0);
+                        vx_store(valpha+vlanes_32, src_x1);
+                        vx_store(vbeta, src_y0);
+                        vx_store(vbeta+vlanes_32, src_y1);
     #if CV_SIMD256
-                    CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMD256, LINEAR, 32F);
+                        CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMD256, LINEAR, 32F);
     #elif CV_SIMD128
-                    CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMD128, LINEAR, 32F);
+                        CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMD128, LINEAR, 32F);
     #elif CV_SIMD_SCALABLE
-                    CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMDX, LINEAR, 32F);
+                        CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMDX, LINEAR, 32F);
     #endif
+                    }
                 } else {
                     float pixbuf[max_uf*4*4];
-                    CV_WARP_VECTOR_SHUFFLE_NOTALLWITHIN(LINEAR, C4, 32F);
+                    CV_WARP_VECTOR_SHUFFLE_NOTALLWITHIN(LINEAR, C4, FT);
                     CV_WARP_VECTOR_INTER_LOAD(LINEAR, C4, 32F, 32F);
                     CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
-                    CV_WARP_LINEAR_VECTOR_INTER_STORE_F32F32(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_STORE_F32FT(C4);
                 }
             }
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
@@ -5246,13 +5384,26 @@ void warpPerspectiveLinearInvoker_32FC4(const float *src_data, size_t src_step, 
                 float sx = (x*M[0] + y*M[1] + M[2]) / w;
                 float sy = (x*M[3] + y*M[4] + M[5]) / w;
 
-                CV_WARP_SCALAR_SHUFFLE(LINEAR, C4, 32F);
+                CV_WARP_SCALAR_SANITIZE_COORDS();
+                CV_WARP_SCALAR_SHUFFLE(LINEAR, C4, FT);
                 CV_WARP_SCALAR_LINEAR_INTER_CALC_F32(C4);
-                CV_WARP_SCALAR_STORE(LINEAR, C4, 32F);
+                CV_WARP_SCALAR_STORE(LINEAR, C4, FT);
             }
         }
     };
     parallel_for_(Range(0, dst_rows), worker);
+}
+
+void warpPerspectiveLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_rows, int src_cols,
+                                        float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                                        const double dM[9], int border_type, const double border_value[4]) {
+    warpPerspectiveLinearInvokerFT_C4<float>(src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, dM, border_type, border_value);
+}
+
+void warpPerspectiveLinearInvoker_16FC4(const hfloat *src_data, size_t src_step, int src_rows, int src_cols,
+                                        hfloat *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                                        const double dM[9], int border_type, const double border_value[4]) {
+    warpPerspectiveLinearInvokerFT_C4<hfloat>(src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, dM, border_type, border_value);
 }
 
 void warpPerspectiveLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
@@ -6303,17 +6454,19 @@ void remapLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src
     parallel_for_(Range(0, dst_rows), worker);
 }
 
-void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                              float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+template<typename T>
+static void remapLinearInvokerFT_C1(const T *src_data, size_t src_step, int src_rows, int src_cols,
+                              T *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                               int border_type, const double border_value[4],
                               const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
+        constexpr bool sanitize_coords = std::is_same_v<T, hfloat>;
 
         const auto *src = src_data;
         auto *dst = dst_data;
         auto *map1 = map1_data, *map2 = map2_data;
-        size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float),
+        size_t srcstep = src_step/sizeof(T), dststep = dst_step/sizeof(T),
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         if (map2 == nullptr) {
             map2 = map1;
@@ -6323,11 +6476,11 @@ void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_ro
         int dstcols = dst_cols;
         bool relative = is_relative;
 
-        float bval[] = {
-            saturate_cast<float>(border_value[0]),
-            saturate_cast<float>(border_value[1]),
-            saturate_cast<float>(border_value[2]),
-            saturate_cast<float>(border_value[3]),
+        T bval[] = {
+            saturate_cast<T>(border_value[0]),
+            saturate_cast<T>(border_value[1]),
+            saturate_cast<T>(border_value[2]),
+            saturate_cast<T>(border_value[3]),
         };
         int border_type_x = border_type != BORDER_CONSTANT &&
                             border_type != BORDER_TRANSPARENT &&
@@ -6367,7 +6520,7 @@ void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_ro
 #endif
 
         for (int y = r.start; y < r.end; y++) {
-            float* dstptr = dst + y*dststep;
+            T* dstptr = dst + y*dststep;
             const float *sx_data = map1 + y*map1step;
             const float *sy_data = map2 + y*map2step;
             int x = 0;
@@ -6378,13 +6531,13 @@ void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_ro
                 // [TODO] apply halide trick
                 CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C1);
                 if (v_reduce_min(inner_mask) != 0) {
-                    CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(LINEAR, C1, 32F);
+                    CV_WARP_VECTOR_SHUFFLE_ALLWITHIN_FT(LINEAR, C1);
                 } else {
-                    CV_WARP_VECTOR_SHUFFLE_NOTALLWITHIN(LINEAR, C1, 32F);
+                    CV_WARP_VECTOR_SHUFFLE_NOTALLWITHIN(LINEAR, C1, FT);
                 }
                 CV_WARP_VECTOR_INTER_LOAD(LINEAR, C1, 32F, 32F);
                 CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C1);
-                CV_WARP_LINEAR_VECTOR_INTER_STORE_F32F32(C1);
+                CV_WARP_LINEAR_VECTOR_INTER_STORE_F32FT(C1);
             }
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
@@ -6403,13 +6556,28 @@ void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_ro
                     sy += y;
                 }
 
-                CV_WARP_SCALAR_SHUFFLE(LINEAR, C1, 32F);
+                CV_WARP_SCALAR_SANITIZE_COORDS();
+                CV_WARP_SCALAR_SHUFFLE(LINEAR, C1, FT);
                 CV_WARP_SCALAR_LINEAR_INTER_CALC_F32(C1);
-                CV_WARP_SCALAR_STORE(LINEAR, C1, 32F);
+                CV_WARP_SCALAR_STORE(LINEAR, C1, FT);
             }
         }
     };
     parallel_for_(Range(0, dst_rows), worker);
+}
+
+void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_rows, int src_cols,
+                              float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                              int border_type, const double border_value[4],
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative) {
+    remapLinearInvokerFT_C1<float>(src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, border_type, border_value, map1_data, map1_step, map2_data, map2_step, is_relative);
+}
+
+void remapLinearInvoker_16FC1(const hfloat *src_data, size_t src_step, int src_rows, int src_cols,
+                              hfloat *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                              int border_type, const double border_value[4],
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative) {
+    remapLinearInvokerFT_C1<hfloat>(src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, border_type, border_value, map1_data, map1_step, map2_data, map2_step, is_relative);
 }
 
 void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_rows, int src_cols,
@@ -6527,17 +6695,19 @@ void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_ro
     parallel_for_(Range(0, dst_rows), worker);
 }
 
-void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                              float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+template<typename T>
+static void remapLinearInvokerFT_C4(const T *src_data, size_t src_step, int src_rows, int src_cols,
+                              T *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                               int border_type, const double border_value[4],
                               const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
+        constexpr bool sanitize_coords = std::is_same_v<T, hfloat>;
 
         const auto *src = src_data;
         auto *dst = dst_data;
         auto *map1 = map1_data, *map2 = map2_data;
-        size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float),
+        size_t srcstep = src_step/sizeof(T), dststep = dst_step/sizeof(T),
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         if (map2 == nullptr) {
             map2 = map1;
@@ -6547,11 +6717,11 @@ void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_ro
         int dstcols = dst_cols;
         bool relative = is_relative;
 
-        float bval[] = {
-            saturate_cast<float>(border_value[0]),
-            saturate_cast<float>(border_value[1]),
-            saturate_cast<float>(border_value[2]),
-            saturate_cast<float>(border_value[3]),
+        T bval[] = {
+            saturate_cast<T>(border_value[0]),
+            saturate_cast<T>(border_value[1]),
+            saturate_cast<T>(border_value[2]),
+            saturate_cast<T>(border_value[3]),
         };
         int border_type_x = border_type != BORDER_CONSTANT &&
                             border_type != BORDER_TRANSPARENT &&
@@ -6599,7 +6769,7 @@ void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_ro
 #endif
 
         for (int y = r.start; y < r.end; y++) {
-            float* dstptr = dst + y*dststep;
+            T* dstptr = dst + y*dststep;
             const float *sx_data = map1 + y*map1step;
             const float *sy_data = map2 + y*map2step;
             int x = 0;
@@ -6610,24 +6780,32 @@ void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_ro
                 // [TODO] apply halide trick
                 CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C4);
                 if (v_reduce_min(inner_mask) != 0) {
-                    float valpha[max_uf], vbeta[max_uf];
-                    vx_store(valpha, src_x0);
-                    vx_store(valpha+vlanes_32, src_x1);
-                    vx_store(vbeta, src_y0);
-                    vx_store(vbeta+vlanes_32, src_y1);
+                    if constexpr (std::is_same_v<T, hfloat>) {
+                        float pixbuf[max_uf*4*4];
+                        CV_WARP_VECTOR_SHUFFLE_ALLWITHIN_FT(LINEAR, C4);
+                        CV_WARP_VECTOR_INTER_LOAD(LINEAR, C4, 32F, 32F);
+                        CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
+                        CV_WARP_LINEAR_VECTOR_INTER_STORE_F32FT(C4);
+                    } else {
+                        float valpha[max_uf], vbeta[max_uf];
+                        vx_store(valpha, src_x0);
+                        vx_store(valpha+vlanes_32, src_x1);
+                        vx_store(vbeta, src_y0);
+                        vx_store(vbeta+vlanes_32, src_y1);
     #if CV_SIMD256
-                    CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMD256, LINEAR, 32F);
+                        CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMD256, LINEAR, 32F);
     #elif CV_SIMD128
-                    CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMD128, LINEAR, 32F);
+                        CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMD128, LINEAR, 32F);
     #elif CV_SIMD_SCALABLE
-                    CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMDX, LINEAR, 32F);
+                        CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMDX, LINEAR, 32F);
     #endif
+                    }
                 } else {
                     float pixbuf[max_uf*4*4];
-                    CV_WARP_VECTOR_SHUFFLE_NOTALLWITHIN(LINEAR, C4, 32F);
+                    CV_WARP_VECTOR_SHUFFLE_NOTALLWITHIN(LINEAR, C4, FT);
                     CV_WARP_VECTOR_INTER_LOAD(LINEAR, C4, 32F, 32F);
                     CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
-                    CV_WARP_LINEAR_VECTOR_INTER_STORE_F32F32(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_STORE_F32FT(C4);
                 }
             }
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
@@ -6647,13 +6825,28 @@ void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_ro
                     sy += y;
                 }
 
-                CV_WARP_SCALAR_SHUFFLE(LINEAR, C4, 32F);
+                CV_WARP_SCALAR_SANITIZE_COORDS();
+                CV_WARP_SCALAR_SHUFFLE(LINEAR, C4, FT);
                 CV_WARP_SCALAR_LINEAR_INTER_CALC_F32(C4);
-                CV_WARP_SCALAR_STORE(LINEAR, C4, 32F);
+                CV_WARP_SCALAR_STORE(LINEAR, C4, FT);
             }
         }
     };
     parallel_for_(Range(0, dst_rows), worker);
+}
+
+void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_rows, int src_cols,
+                              float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                              int border_type, const double border_value[4],
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative) {
+    remapLinearInvokerFT_C4<float>(src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, border_type, border_value, map1_data, map1_step, map2_data, map2_step, is_relative);
+}
+
+void remapLinearInvoker_16FC4(const hfloat *src_data, size_t src_step, int src_rows, int src_cols,
+                              hfloat *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                              int border_type, const double border_value[4],
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative) {
+    remapLinearInvokerFT_C4<hfloat>(src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, border_type, border_value, map1_data, map1_step, map2_data, map2_step, is_relative);
 }
 
 void remapLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
@@ -8886,7 +9079,6 @@ static inline BilinearHalfAxis bilinearHalfAxis(float value, int length, int bor
     return {borderIndex(phase), borderIndex(phase + 1), fraction};
 }
 
-template<bool rgb>
 static void bilinearWarpHalf(const float* x, const float* y, int len,
                               const void* source, size_t step, Size size, void* destination,
                               const float*, int borderType, const void* borderValue, int channels)
@@ -8896,20 +9088,17 @@ static void bilinearWarpHalf(const float* x, const float* y, int len,
     for (int i = 0; i < len; ++i, dst += channels)
     {
         const float sx = x[i], sy = y[i];
-        if constexpr (rgb)
+        if (sx >= 0.f && sx < size.width - 1 && sy >= 0.f && sy < size.height - 1)
         {
-            if (sx >= 0.f && sx < size.width - 1 && sy >= 0.f && sy < size.height - 1)
-            {
-                const int col = static_cast<int>(sx), row = static_cast<int>(sy);
-                const float alpha = sx - col, beta = sy - row;
-                const float w0 = (1.f - alpha)*(1.f - beta), w1 = alpha*(1.f - beta);
-                const float w2 = (1.f - alpha)*beta, w3 = alpha*beta;
-                const hfloat* top = reinterpret_cast<const hfloat*>(
-                    static_cast<const uchar*>(source) + size_t(row)*step) + 3*size_t(col);
-                const hfloat* bottom = reinterpret_cast<const hfloat*>(reinterpret_cast<const uchar*>(top) + step);
-                bilinearHalfRGB(top, bottom, w0, w1, w2, w3, dst);
-                continue;
-            }
+            const int col = static_cast<int>(sx), row = static_cast<int>(sy);
+            const float alpha = sx - col, beta = sy - row;
+            const float w0 = (1.f - alpha)*(1.f - beta), w1 = alpha*(1.f - beta);
+            const float w2 = (1.f - alpha)*beta, w3 = alpha*beta;
+            const hfloat* top = reinterpret_cast<const hfloat*>(
+                static_cast<const uchar*>(source) + size_t(row)*step) + 3*size_t(col);
+            const hfloat* bottom = reinterpret_cast<const hfloat*>(reinterpret_cast<const uchar*>(top) + step);
+            bilinearHalfRGB(top, bottom, w0, w1, w2, w3, dst);
+            continue;
         }
         if (borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT)
         {
@@ -9033,7 +9222,7 @@ static void bilinearWarpHalfRGBBlocks(const float* x, const float* y, int len,
         const __m256 sx = _mm256_loadu_ps(x + i), sy = _mm256_loadu_ps(y + i);
         if (!fullWarpFootprints8(sx, sy, zero, maxX, maxY))
         {
-            bilinearWarpHalf<true>(x + i, y + i, block, source, step, size, dst, params,
+            bilinearWarpHalf(x + i, y + i, block, source, step, size, dst, params,
                                    borderType, borderValue, channels);
             continue;
         }
@@ -9056,18 +9245,18 @@ static void bilinearWarpHalfRGBBlocks(const float* x, const float* y, int len,
     }
 
     if (i < len)
-        bilinearWarpHalf<true>(x + i, y + i, len - i, source, step, size, dst, params,
+        bilinearWarpHalf(x + i, y + i, len - i, source, step, size, dst, params,
                                borderType, borderValue, channels);
 }
 #endif
 
-ImgWarpFunc getBilinearHalfWarpFunc_(bool rgb)
+ImgWarpFunc getBilinearHalfWarpFunc_()
 {
 #if CV_AVX2 && CV_FP16 && CV_SIMD_WIDTH == 32
-    if (rgb)
-        return bilinearWarpHalfRGBBlocks;
+    return bilinearWarpHalfRGBBlocks;
+#else
+    return bilinearWarpHalf;
 #endif
-    return rgb ? bilinearWarpHalf<true> : bilinearWarpHalf<false>;
 }
 
 #if CV_AVX2 && CV_FP16
