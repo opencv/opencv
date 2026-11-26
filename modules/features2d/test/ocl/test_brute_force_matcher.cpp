@@ -204,153 +204,25 @@ OCL_TEST_P(BruteForceMatcher, RadiusMatch_Single)
     ASSERT_EQ(0, badCount);
 }
 
-OCL_TEST(BruteForceMatcher, HammingFloatKnnMatch4)
+OCL_TEST(BruteForceMatcher, HammingFloat_SameAsMat)
 {
-    struct OpenCLState
-    {
-        bool previous;
-        OpenCLState() : previous(cv::ocl::useOpenCL())
-        {
-            cv::ocl::setUseOpenCL(true);
-        }
-        ~OpenCLState()
-        {
-            cv::ocl::setUseOpenCL(previous);
-        }
-    } openclState;
-
-    if (!cv::ocl::useOpenCL())
-        throw cvtest::SkipTestException("OpenCL is not available");
-
-    cv::ocl::Device device = cv::ocl::Device::getDefault();
-    if (!device.isIntel())
-        throw cvtest::SkipTestException("Intel OpenCL device is required for kercn=4");
-
     Mat query = (Mat_<float>(1, 4) << 1.9f, -2.9f, 3.9f, 4.9f);
     Mat train = (Mat_<float>(2, 4) <<
         1.1f, -2.1f, 3.1f, 4.1f,
         0.0f, -1.0f, 7.0f, 4.0f);
-
     UMat uquery, utrain;
     query.copyTo(uquery);
     train.copyTo(utrain);
 
-    // These are the Intel kercn=4 alignment conditions in knnMatch's OCL helper.
-    ASSERT_EQ(0u, uquery.step % 4);
-    ASSERT_EQ(0, uquery.cols % 4);
-    ASSERT_EQ(0u, uquery.offset % 4);
-    ASSERT_EQ(0u, utrain.step % 4);
-    ASSERT_EQ(0, utrain.cols % 4);
-    ASSERT_EQ(0u, utrain.offset % 4);
-
-    BFMatcher matcher(NORM_HAMMING, false);
-    std::vector<std::vector<DMatch> > matches;
-    ASSERT_NO_THROW(matcher.knnMatch(uquery, utrain, matches, 2));
-
-    ASSERT_EQ(1u, matches.size());
-    ASSERT_EQ(2u, matches[0].size());
-    EXPECT_EQ(0, matches[0][0].queryIdx);
-    EXPECT_EQ(0, matches[0][0].trainIdx);
-    EXPECT_FLOAT_EQ(0.0f, matches[0][0].distance);
-    EXPECT_EQ(0, matches[0][1].queryIdx);
-    EXPECT_EQ(1, matches[0][1].trainIdx);
-    EXPECT_FLOAT_EQ(3.0f, matches[0][1].distance);
-}
-
-OCL_TEST(BruteForceMatcher, HammingFloatMatch4)
-{
-    struct OpenCLState
-    {
-        bool previous;
-        OpenCLState() : previous(cv::ocl::useOpenCL())
-        {
-            cv::ocl::setUseOpenCL(true);
-        }
-        ~OpenCLState()
-        {
-            cv::ocl::setUseOpenCL(previous);
-        }
-    } openclState;
-
-    if (!cv::ocl::useOpenCL())
-        throw cvtest::SkipTestException("OpenCL is not available");
-
-    cv::ocl::Device device = cv::ocl::Device::getDefault();
-    if (!device.isIntel())
-        throw cvtest::SkipTestException("Intel OpenCL device is required for kercn=4");
-
-    Mat query = (Mat_<float>(1, 4) << 1.9f, -2.9f, 3.9f, 4.9f);
-    Mat train = (Mat_<float>(2, 4) <<
-        1.1f, -2.1f, 3.1f, 4.1f,
-        0.0f, -1.0f, 7.0f, 4.0f);
-
-    UMat uquery, utrain;
-    query.copyTo(uquery);
-    train.copyTo(utrain);
-
-    ASSERT_EQ(0u, uquery.step % 4);
-    ASSERT_EQ(0, uquery.cols % 4);
-    ASSERT_EQ(0u, uquery.offset % 4);
-    ASSERT_EQ(0u, utrain.step % 4);
-    ASSERT_EQ(0, utrain.cols % 4);
-    ASSERT_EQ(0u, utrain.offset % 4);
-
-    BFMatcher matcher(NORM_HAMMING, false);
+    BFMatcher matcher(NORM_HAMMING, false), ccMatcher(NORM_HAMMING, true);
     std::vector<DMatch> matches;
-    ASSERT_NO_THROW(matcher.match(uquery, utrain, matches));
+    std::vector<std::vector<DMatch> > knnMatches;
 
-    ASSERT_EQ(1u, matches.size());
-    EXPECT_EQ(0, matches[0].queryIdx);
-    EXPECT_EQ(0, matches[0].trainIdx);
-    EXPECT_FLOAT_EQ(0.0f, matches[0].distance);
-}
-
-OCL_TEST(BruteForceMatcher, HammingFloatCrossCheckMatch4)
-{
-    struct OpenCLState
-    {
-        bool previous;
-        OpenCLState() : previous(cv::ocl::useOpenCL())
-        {
-            cv::ocl::setUseOpenCL(true);
-        }
-        ~OpenCLState()
-        {
-            cv::ocl::setUseOpenCL(previous);
-        }
-    } openclState;
-
-    if (!cv::ocl::useOpenCL())
-        throw cvtest::SkipTestException("OpenCL is not available");
-
-    cv::ocl::Device device = cv::ocl::Device::getDefault();
-    if (!device.isIntel())
-        throw cvtest::SkipTestException("Intel OpenCL device is required for kercn=4");
-
-    Mat query = (Mat_<float>(1, 4) << 1.9f, -2.9f, 3.9f, 4.9f);
-    Mat train = (Mat_<float>(2, 4) <<
-        1.1f, -2.1f, 3.1f, 4.1f,
-        0.0f, -1.0f, 7.0f, 4.0f);
-
-    UMat uquery, utrain;
-    query.copyTo(uquery);
-    train.copyTo(utrain);
-
-    ASSERT_EQ(0u, uquery.step % 4);
-    ASSERT_EQ(0, uquery.cols % 4);
-    ASSERT_EQ(0u, uquery.offset % 4);
-    ASSERT_EQ(0u, utrain.step % 4);
-    ASSERT_EQ(0, utrain.cols % 4);
-    ASSERT_EQ(0u, utrain.offset % 4);
-
-    BFMatcher matcher(NORM_HAMMING, true);
-    std::vector<DMatch> matches;
-    ASSERT_NO_THROW(matcher.match(uquery, utrain, matches));
-
-    ASSERT_EQ(1u, matches.size());
-    EXPECT_EQ(0, matches[0].queryIdx);
-    EXPECT_EQ(0, matches[0].trainIdx);
-    EXPECT_FLOAT_EQ(0.0f, matches[0].distance);
+    EXPECT_THROW(matcher.match(query, train, matches), cv::Exception);
+    EXPECT_THROW(matcher.match(uquery, utrain, matches), cv::Exception);
+    EXPECT_THROW(matcher.knnMatch(uquery, utrain, knnMatches, 2), cv::Exception);
+    EXPECT_THROW(matcher.radiusMatch(uquery, utrain, knnMatches, 10.f), cv::Exception);
+    EXPECT_THROW(ccMatcher.match(uquery, utrain, matches), cv::Exception);
 }
 
 OCL_INSTANTIATE_TEST_CASE_P(Matcher, BruteForceMatcher, Combine( Values((int)NORM_L1, (int)NORM_L2),
