@@ -42,6 +42,7 @@
 #include "test_precomp.hpp"
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/core/fast_math.hpp>
+#include <opencv2/core/parallel/parallel_backend.hpp>
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/all_layers.hpp>
@@ -61,6 +62,69 @@ static String _tf(TString filename)
     if(len > 0 && basetestdir[len-1] != '/' && basetestdir[len-1] != '\\')
         return (basetestdir + "/dnn/layers") + filename;
     return (basetestdir + "dnn/layers/") + filename;
+}
+
+#if GTEST_HAS_DEATH_TEST
+class NonZeroGroupingBackend CV_FINAL : public cv::parallel::ParallelForAPI
+{
+public:
+    NonZeroGroupingBackend() : calls(0) {}
+
+    void parallel_for(int tasks, FN_parallel_for_body_cb_t callback, void* data) CV_OVERRIDE
+    {
+        const int firstEnd = calls++ == 0 ? std::min(2, tasks) : 1;
+        callback(0, firstEnd, data);
+        for (int stripe = firstEnd; stripe < tasks; ++stripe)
+            callback(stripe, stripe + 1, data);
+    }
+
+    int getThreadNum() const CV_OVERRIDE { return 0; }
+    int getNumThreads() const CV_OVERRIDE { return 4; }
+    int setNumThreads(int) CV_OVERRIDE { return 4; }
+    const char* getName() const CV_OVERRIDE { return "NonZeroGrouping"; }
+
+    int calls;
+};
+#endif
+
+TEST(Layer_NonZeroDeathTest, partition_independence)
+{
+#if GTEST_HAS_DEATH_TEST
+    // Re-execution needs GTest's saved working directory; otherwise use fork on POSIX.
+    const bool canReexec = ::testing::UnitTest::GetInstance()->original_working_dir()[0] != '\0';
+#if defined(_WIN32)
+    if (!canReexec)
+        throw SkipTestException("NonZero partition test requires GTest subprocess support");
+#endif
+    ::testing::GTEST_FLAG(death_test_style) = canReexec ? "threadsafe" : "fast";
+    // Keep the process-global backend override in the child, including on assertion failure.
+    EXPECT_EXIT(([] {
+        Mat input(4, 8, CV_32F, Scalar(1));
+        LayerParams params;
+        Ptr<Layer> layer = NonZeroLayer::create(params);
+        std::vector<Mat> inputs{input}, internals;
+        std::vector<Mat> outputs{Mat(2, (int)input.total(), CV_64S, Scalar(-999))};
+        auto backend = std::make_shared<NonZeroGroupingBackend>();
+        cv::parallel::setParallelForBackend(backend, false);
+        cv::setNumThreads(4);
+        layer->forward(inputs, outputs, internals);
+
+        ASSERT_EQ(2, backend->calls);
+        ASSERT_EQ((size_t)1, outputs.size());
+        ASSERT_EQ(2, outputs[0].dims);
+        ASSERT_EQ(input.dims, outputs[0].rows);
+        ASSERT_EQ((int)input.total(), outputs[0].cols);
+        ASSERT_EQ(CV_64SC1, outputs[0].type());
+        for (int i = 0; i < (int)input.total(); ++i)
+        {
+            EXPECT_EQ(i / input.cols, outputs[0].ptr<int64>(0)[i]) << "column " << i;
+            EXPECT_EQ(i % input.cols, outputs[0].ptr<int64>(1)[i]) << "column " << i;
+        }
+        std::exit(::testing::Test::HasFailure() ? EXIT_FAILURE : EXIT_SUCCESS);
+    }()), ::testing::ExitedWithCode(EXIT_SUCCESS), "");
+#else
+    throw SkipTestException("NonZero partition test requires Google Test process isolation");
+#endif
 }
 
 void testReshape(const MatShape& inputShape, const MatShape& targetShape,
