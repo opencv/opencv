@@ -14,11 +14,11 @@ namespace cv { namespace accel { namespace CV_GPU_NS { namespace kernels {
 enum { INTER_NEAREST = 0, INTER_LINEAR = 1 };
 
 /** @brief warpAffine with the inverse map @p M (2x3), INTER_NEAREST or INTER_LINEAR, @p bval the
-BORDER_CONSTANT pixel already in the range of @p depth. */
+BORDER_CONSTANT pixel already in the range of @p depth, launched as @p l. */
 CV_GPU(Error_t) warpAffine(const unsigned char* src, size_t sstep, int srows, int scols,
                            unsigned char* dst, size_t dstep, int drows, int dcols, int depth, int cn,
                            const float* M, int interpolation, int border, const float* bval,
-                           CV_GPU(Stream_t) s);
+                           const Launch& l, CV_GPU(Stream_t) s);
 
 }}}} // namespace cv::accel::CV_GPU_NS::kernels
 
@@ -78,37 +78,57 @@ __device__ inline void sampleLinear(const unsigned char* src, size_t step, int r
     }
 }
 
-template<typename T, int CN>
+// a thread computes PX x PY output pixels
+template<typename T, int CN, int PX, int PY>
 __global__ void warpAffineKernel(const unsigned char* src, size_t sstep, int srows, int scols,
                                  unsigned char* dst, size_t dstep, int drows, int dcols, WarpParams p)
 {
-    const int x = blockIdx.x * blockDim.x + threadIdx.x;
-    if (x >= dcols)
+    const int x0 = (int)(blockIdx.x * blockDim.x + threadIdx.x) * PX;
+    if (x0 >= dcols)
         return;
-    for (unsigned y = blockIdx.y * blockDim.y + threadIdx.y; y < (unsigned)drows; y += gridDim.y * blockDim.y)
+    for (unsigned y0 = (blockIdx.y * blockDim.y + threadIdx.y) * PY; y0 < (unsigned)drows; y0 += gridDim.y * blockDim.y * PY)
     {
-        // the CPU's fma(M0, x, y*M1 + M2) (warp_kernels.simd.hpp)
-        const float sx = fmaf(p.M[0], (float)x, mulThenAdd(p.M[1], (float)y, p.M[2]));
-        const float sy = fmaf(p.M[3], (float)x, mulThenAdd(p.M[4], (float)y, p.M[5]));
-        float v[CN];
-        if (p.interpolation == INTER_NEAREST)
-            readPixel<T, CN>(src, sstep, srows, scols, __float2int_rn(sx), __float2int_rn(sy), p, v);
-        else
-            sampleLinear<T, CN>(src, sstep, srows, scols, sx, sy, p, v);
-        T* out = (T*)(dst + (size_t)y * dstep) + x * CN;
-        for (int c = 0; c < CN; c++)
-            out[c] = saturate<T>(v[c]);
+#pragma unroll
+        for (int m = 0; m < PY; m++)
+        {
+            const unsigned y = y0 + m;
+            if (y >= (unsigned)drows)
+                break;
+            T* out = (T*)(dst + (size_t)y * dstep) + x0 * CN;
+#pragma unroll
+            for (int i = 0; i < PX; i++)
+            {
+                const int x = x0 + i;
+                if (x >= dcols)
+                    break;
+                // the CPU's fma(M0, x, y*M1 + M2) (warp_kernels.simd.hpp)
+                const float sx = fmaf(p.M[0], (float)x, mulThenAdd(p.M[1], (float)y, p.M[2]));
+                const float sy = fmaf(p.M[3], (float)x, mulThenAdd(p.M[4], (float)y, p.M[5]));
+                float v[CN];
+                if (p.interpolation == INTER_NEAREST)
+                    readPixel<T, CN>(src, sstep, srows, scols, __float2int_rn(sx), __float2int_rn(sy), p, v);
+                else
+                    sampleLinear<T, CN>(src, sstep, srows, scols, sx, sy, p, v);
+                for (int c = 0; c < CN; c++)
+                    out[i * CN + c] = saturate<T>(v[c]);
+            }
+        }
     }
 }
+
+template<typename T, int CN> struct WarpAffineKernel
+{ template<int PX, int PY> static const void* get() { return (const void*)warpAffineKernel<T, CN, PX, PY>; } };
 
 template<typename T, int CN>
 CV_GPU(Error_t) warpAffineN(const unsigned char* src, size_t sstep, int srows, int scols,
                             unsigned char* dst, size_t dstep, int drows, int dcols, WarpParams p,
-                            CV_GPU(Stream_t) s)
+                            const Launch& l, CV_GPU(Stream_t) s)
 {
+    const void* k = patchKernel<WarpAffineKernel<T, CN> >(l);
+    if (!k)
+        return CV_GPU(ErrorInvalidValue);
     void* args[] = { &src, &sstep, &srows, &scols, &dst, &dstep, &drows, &dcols, &p };
-    return CV_GPU(LaunchKernel)((const void*)warpAffineKernel<T, CN>, grid(drows, dcols, BLOCK_X, BLOCK_Y),
-                                dim3(BLOCK_X, BLOCK_Y), args, 0, s);
+    return CV_GPU(LaunchKernel)(k, grid(drows, dcols, l), dim3(l.blockX, l.blockY), args, 0, s);
 }
 
 } // namespace
@@ -116,7 +136,7 @@ CV_GPU(Error_t) warpAffineN(const unsigned char* src, size_t sstep, int srows, i
 CV_GPU(Error_t) warpAffine(const unsigned char* src, size_t sstep, int srows, int scols,
                            unsigned char* dst, size_t dstep, int drows, int dcols, int depth, int cn,
                            const float* M, int interpolation, int border, const float* bval,
-                           CV_GPU(Stream_t) s)
+                           const Launch& l, CV_GPU(Stream_t) s)
 {
     if (drows <= 0 || dcols <= 0)
         return CV_GPU(Success);
@@ -127,9 +147,9 @@ CV_GPU(Error_t) warpAffine(const unsigned char* src, size_t sstep, int srows, in
     p.border = border;
     switch (depth)
     {
-    case CV_8U: CV_ACCEL_GPU_BY_CN(warpAffineN, unsigned char, src, sstep, srows, scols, dst, dstep, drows, dcols, p, s)
-    case CV_16U: CV_ACCEL_GPU_BY_CN(warpAffineN, unsigned short, src, sstep, srows, scols, dst, dstep, drows, dcols, p, s)
-    case CV_32F: CV_ACCEL_GPU_BY_CN(warpAffineN, float, src, sstep, srows, scols, dst, dstep, drows, dcols, p, s)
+    case CV_8U: CV_ACCEL_GPU_BY_CN(warpAffineN, unsigned char, src, sstep, srows, scols, dst, dstep, drows, dcols, p, l, s)
+    case CV_16U: CV_ACCEL_GPU_BY_CN(warpAffineN, unsigned short, src, sstep, srows, scols, dst, dstep, drows, dcols, p, l, s)
+    case CV_32F: CV_ACCEL_GPU_BY_CN(warpAffineN, float, src, sstep, srows, scols, dst, dstep, drows, dcols, p, l, s)
     default: return CV_GPU(ErrorInvalidValue);
     }
 }
@@ -195,7 +215,8 @@ bool GpuWarpOps<Base>::warpAffine(const UMat& src, UMat& dst, InputArray M0, int
     const unsigned char* sp = (const unsigned char*)in.handle(ACCESS_READ) + in.offset;
     unsigned char* dp = (unsigned char*)dst.handle(ACCESS_WRITE) + dst.offset;
     if (!launched(kernels::warpAffine(sp, in.step[0], in.rows, in.cols, dp, dst.step[0], dst.rows, dst.cols,
-                                      depth, cn, m, interpolation, borderType, bval, s.s_), "warpAffine"))
+                                      depth, cn, m, interpolation, borderType, bval,
+                                      tunedLaunch("warpAffine", src.type()), s.s_), "warpAffine"))
         return false;
     stream.retain({ in, dst });
     return true;

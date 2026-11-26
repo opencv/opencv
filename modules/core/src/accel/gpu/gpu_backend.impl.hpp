@@ -182,6 +182,9 @@ GpuStream& gpuStreamOf(Stream& s)
     return *gs;
 }
 
+//! sets the launches of the tunable kernels (non_cpu_hal/gpu/precomp.hpp)
+void setKernelTuning(const String& spec);
+
 /** @brief Bytes of freed shared memory a device keeps for reuse: OPENCV_ACCEL_SHARED_BUFFERPOOL_LIMIT,
 1 GiB by default, 0 to free every block at once. */
 size_t sharedPoolLimit()
@@ -335,6 +338,11 @@ public:
         if (strcmp(module, "core") == 0)
             return core_.get();
         return strcmp(module, "imgproc") == 0 ? imgproc_.get() : 0;
+    }
+
+    void setTuning(const String& spec) CV_OVERRIDE
+    {
+        setKernelTuning(spec);
     }
 
 protected:

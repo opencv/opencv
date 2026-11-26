@@ -11,11 +11,12 @@ namespace cv { namespace accel { namespace CV_GPU_NS { namespace kernels {
 
 //! the longest GaussianBlur kernel, in taps
 const int GAUSSIAN_MAX_TAPS = 63;
-/** @brief GaussianBlur, a row pass into @p buf, then a column pass. @p kx, @p ky and @p buf are
-CV_16U for CV_8U images, CV_32U for CV_16U (fixed point, as the CPU's), CV_32F otherwise. */
+/** @brief GaussianBlur, a row pass into @p buf launched as @p rowPass, then a column pass as @p colPass.
+@p kx, @p ky and @p buf are CV_16U for CV_8U images, CV_32U for CV_16U (fixed point, as the CPU's), CV_32F otherwise. */
 CV_GPU(Error_t) gaussianBlur(const unsigned char* src, size_t sstep, unsigned char* buf, size_t bstep,
                              unsigned char* dst, size_t dstep, int rows, int cols, int depth, int cn,
-                             const void* kx, int kxn, const void* ky, int kyn, int border, CV_GPU(Stream_t) s);
+                             const void* kx, int kxn, const void* ky, int kyn, int border,
+                             const Launch& rowPass, const Launch& colPass, CV_GPU(Stream_t) s);
 
 }}}} // namespace cv::accel::CV_GPU_NS::kernels
 
@@ -46,86 +47,142 @@ template<> __device__ inline unsigned short blurResult<unsigned short>(unsigned 
     return (unsigned short)(v < 65535ull ? v : 65535ull);
 }
 
-/* The taps @p k centred at position @p i of a line of @p len pixels, @p CN channels of S each,
-   which are @p stride bytes apart (along a row or down a column); BORDER_CONSTANT adds zeros. */
-template<typename A, int CN, typename K, typename S>
-__device__ inline void convolve(const Taps<K>& k, int i, int len, int border, const S* line, size_t stride, A* acc)
+/* The taps @p k along @p lines of M lines @p lineStep bytes apart: N outputs each from @p i0 of @p len pixels @p stride
+   bytes apart. Input t feeds output i through tap t - i, so each is read once; BORDER_CONSTANT adds zeros. */
+template<typename A, int M, int N, int CN, typename K, typename S>
+__device__ inline void convolve(const Taps<K>& k, int i0, int len, int border, const S* base, size_t stride,
+                                size_t lineStep, int lines, A (&acc)[M][N][CN])
 {
-    for (int c = 0; c < CN; c++)
-        acc[c] = 0;
-    for (int j = 0; j < k.n; j++)
+#pragma unroll
+    for (int m = 0; m < M; m++)
     {
-        const int p = borderIndex(i + j - k.n / 2, len, border);
+#pragma unroll
+        for (int i = 0; i < N; i++)
+            for (int c = 0; c < CN; c++)
+                acc[m][i][c] = 0;
+    }
+    for (int t = 0; t < k.n + N - 1; t++)
+    {
+        const int p = borderIndex(i0 + t - k.n / 2, len, border);
         if (p < 0)
             continue;
-        const S* q = (const S*)((const unsigned char*)line + (size_t)p * stride);
-        for (int c = 0; c < CN; c++)
-            acc[c] += (A)k.v[j] * q[c];
+#pragma unroll
+        for (int m = 0; m < M; m++)
+        {
+            if (m >= lines)
+                break;
+            const S* q = (const S*)((const unsigned char*)base + (size_t)p * stride + m * lineStep);
+            S v[CN];
+            for (int c = 0; c < CN; c++)
+                v[c] = q[c];
+#pragma unroll
+            for (int i = 0; i < N; i++)
+            {
+                const int j = t - i;
+                if (j >= 0 && j < k.n)
+                    for (int c = 0; c < CN; c++)
+                        acc[m][i][c] += (A)k.v[j] * v[c];
+            }
+        }
     }
 }
 
-template<typename T, int CN>
+// a thread filters PX pixels along each of PY rows
+template<typename T, int CN, int PX, int PY>
 __global__ void blurRows(const unsigned char* src, size_t sstep, unsigned char* buf, size_t bstep,
                          int rows, int cols, Taps<typename Blur<T>::K> k, int border)
 {
     typedef typename Blur<T>::W W;
-    const int x = blockIdx.x * blockDim.x + threadIdx.x;
-    if (x >= cols)
+    const int x0 = (int)(blockIdx.x * blockDim.x + threadIdx.x) * PX;
+    if (x0 >= cols)
         return;
-    for (unsigned y = blockIdx.y * blockDim.y + threadIdx.y; y < (unsigned)rows; y += gridDim.y * blockDim.y)
+    for (unsigned y0 = (blockIdx.y * blockDim.y + threadIdx.y) * PY; y0 < (unsigned)rows; y0 += gridDim.y * blockDim.y * PY)
     {
-        W acc[CN];
-        convolve<W, CN>(k, x, cols, border, (const T*)(src + (size_t)y * sstep), CN * sizeof(T), acc);
-        W* out = (W*)(buf + (size_t)y * bstep) + x * CN;
-        for (int c = 0; c < CN; c++)
-            out[c] = acc[c];
+        const int lines = min(PY, rows - (int)y0);
+        W acc[PY][PX][CN];
+        convolve(k, x0, cols, border, (const T*)(src + (size_t)y0 * sstep), CN * sizeof(T), sstep, lines, acc);
+#pragma unroll
+        for (int m = 0; m < PY; m++)
+        {
+            if (m >= lines)
+                break;
+            W* out = (W*)(buf + (size_t)(y0 + m) * bstep) + x0 * CN;
+#pragma unroll
+            for (int i = 0; i < PX; i++)
+                if (x0 + i < cols)
+                    for (int c = 0; c < CN; c++)
+                        out[i * CN + c] = acc[m][i][c];
+        }
     }
 }
 
-template<typename T, int CN>
+// a thread filters PY pixels down each of PX columns
+template<typename T, int CN, int PX, int PY>
 __global__ void blurCols(const unsigned char* buf, size_t bstep, unsigned char* dst, size_t dstep,
                          int rows, int cols, Taps<typename Blur<T>::K> k, int border)
 {
+    typedef typename Blur<T>::W W;
     typedef typename Blur<T>::A A;
-    const int x = blockIdx.x * blockDim.x + threadIdx.x;
-    if (x >= cols)
+    const int x0 = (int)(blockIdx.x * blockDim.x + threadIdx.x) * PX;
+    if (x0 >= cols)
         return;
-    const typename Blur<T>::W* column = (const typename Blur<T>::W*)buf + x * CN;
-    for (unsigned y = blockIdx.y * blockDim.y + threadIdx.y; y < (unsigned)rows; y += gridDim.y * blockDim.y)
+    const int lines = min(PX, cols - x0);
+    for (unsigned y0 = (blockIdx.y * blockDim.y + threadIdx.y) * PY; y0 < (unsigned)rows; y0 += gridDim.y * blockDim.y * PY)
     {
-        A acc[CN];
-        convolve<A, CN>(k, (int)y, rows, border, column, bstep, acc);
-        T* out = (T*)(dst + (size_t)y * dstep) + x * CN;
-        for (int c = 0; c < CN; c++)
-            out[c] = blurResult<T>(acc[c]);
+        A acc[PX][PY][CN];
+        convolve(k, (int)y0, rows, border, (const W*)buf + x0 * CN, bstep, CN * sizeof(W), lines, acc);
+#pragma unroll
+        for (int i = 0; i < PY; i++)
+        {
+            if (y0 + i >= (unsigned)rows)
+                break;
+            T* out = (T*)(dst + (size_t)(y0 + i) * dstep) + x0 * CN;
+#pragma unroll
+            for (int m = 0; m < PX; m++)
+                if (m < lines)
+                    for (int c = 0; c < CN; c++)
+                        out[m * CN + c] = blurResult<T>(acc[m][i][c]);
+        }
     }
 }
+
+template<typename T, int CN> struct BlurRowsKernel
+{ template<int PX, int PY> static const void* get() { return (const void*)blurRows<T, CN, PX, PY>; } };
+template<typename T, int CN> struct BlurColsKernel
+{ template<int PX, int PY> static const void* get() { return (const void*)blurCols<T, CN, PX, PY>; } };
 
 template<typename T, int CN>
 CV_GPU(Error_t) gaussianBlurN(const unsigned char* src, size_t sstep, unsigned char* buf, size_t bstep,
                               unsigned char* dst, size_t dstep, int rows, int cols,
-                              const void* kx, int kxn, const void* ky, int kyn, int border, CV_GPU(Stream_t) s)
+                              const void* kx, int kxn, const void* ky, int kyn, int border,
+                              const Launch& rowPass, const Launch& colPass, CV_GPU(Stream_t) s)
 {
     typedef typename Blur<T>::K K;
+    const void* rowKernel = patchKernel<BlurRowsKernel<T, CN> >(rowPass);
+    const void* colKernel = patchKernel<BlurColsKernel<T, CN> >(colPass);
+    if (!rowKernel || !colKernel)
+        return CV_GPU(ErrorInvalidValue);
     Taps<K> tx, ty;
     tx.n = kxn;
     ty.n = kyn;
     memcpy(tx.v, kx, kxn * sizeof(K));
     memcpy(ty.v, ky, kyn * sizeof(K));
-    const dim3 g = grid(rows, cols, BLOCK_X, BLOCK_Y), b(BLOCK_X, BLOCK_Y);
     void* rowArgs[] = { &src, &sstep, &buf, &bstep, &rows, &cols, &tx, &border };
-    const CV_GPU(Error_t) r = CV_GPU(LaunchKernel)((const void*)blurRows<T, CN>, g, b, rowArgs, 0, s);
+    const CV_GPU(Error_t) r = CV_GPU(LaunchKernel)(rowKernel, grid(rows, cols, rowPass),
+                                                   dim3(rowPass.blockX, rowPass.blockY), rowArgs, 0, s);
     if (r != CV_GPU(Success))
         return r;
     void* colArgs[] = { &buf, &bstep, &dst, &dstep, &rows, &cols, &ty, &border };
-    return CV_GPU(LaunchKernel)((const void*)blurCols<T, CN>, g, b, colArgs, 0, s);
+    return CV_GPU(LaunchKernel)(colKernel, grid(rows, cols, colPass), dim3(colPass.blockX, colPass.blockY),
+                                colArgs, 0, s);
 }
 
 } // namespace
 
 CV_GPU(Error_t) gaussianBlur(const unsigned char* src, size_t sstep, unsigned char* buf, size_t bstep,
                              unsigned char* dst, size_t dstep, int rows, int cols, int depth, int cn,
-                             const void* kx, int kxn, const void* ky, int kyn, int border, CV_GPU(Stream_t) s)
+                             const void* kx, int kxn, const void* ky, int kyn, int border,
+                             const Launch& rowPass, const Launch& colPass, CV_GPU(Stream_t) s)
 {
     if (rows <= 0 || cols <= 0)
         return CV_GPU(Success);
@@ -133,10 +190,10 @@ CV_GPU(Error_t) gaussianBlur(const unsigned char* src, size_t sstep, unsigned ch
         return CV_GPU(ErrorInvalidValue);
     switch (depth)
     {
-    case CV_8U: CV_ACCEL_GPU_BY_CN(gaussianBlurN, unsigned char, src, sstep, buf, bstep, dst, dstep, rows, cols, kx, kxn, ky, kyn, border, s)
-    case CV_16U: CV_ACCEL_GPU_BY_CN(gaussianBlurN, unsigned short, src, sstep, buf, bstep, dst, dstep, rows, cols, kx, kxn, ky, kyn, border, s)
-    case CV_16S: CV_ACCEL_GPU_BY_CN(gaussianBlurN, short, src, sstep, buf, bstep, dst, dstep, rows, cols, kx, kxn, ky, kyn, border, s)
-    case CV_32F: CV_ACCEL_GPU_BY_CN(gaussianBlurN, float, src, sstep, buf, bstep, dst, dstep, rows, cols, kx, kxn, ky, kyn, border, s)
+    case CV_8U: CV_ACCEL_GPU_BY_CN(gaussianBlurN, unsigned char, src, sstep, buf, bstep, dst, dstep, rows, cols, kx, kxn, ky, kyn, border, rowPass, colPass, s)
+    case CV_16U: CV_ACCEL_GPU_BY_CN(gaussianBlurN, unsigned short, src, sstep, buf, bstep, dst, dstep, rows, cols, kx, kxn, ky, kyn, border, rowPass, colPass, s)
+    case CV_16S: CV_ACCEL_GPU_BY_CN(gaussianBlurN, short, src, sstep, buf, bstep, dst, dstep, rows, cols, kx, kxn, ky, kyn, border, rowPass, colPass, s)
+    case CV_32F: CV_ACCEL_GPU_BY_CN(gaussianBlurN, float, src, sstep, buf, bstep, dst, dstep, rows, cols, kx, kxn, ky, kyn, border, rowPass, colPass, s)
     default: return CV_GPU(ErrorInvalidValue);
     }
 }
@@ -224,7 +281,8 @@ bool GpuSmoothOps<Base>::gaussianBlur(const UMat& src, UMat& dst, const Mat& kx6
     unsigned char* dp = (unsigned char*)dst.handle(ACCESS_WRITE) + dst.offset;
     if (!launched(kernels::gaussianBlur(sp, src.step[0], bp, buf.step[0], dp, dst.step[0], src.rows, src.cols,
                                         depth, src.channels(), kx.ptr(), (int)kx.total(), ky.ptr(), (int)ky.total(),
-                                        borderType, s.s_), "GaussianBlur"))
+                                        borderType, tunedLaunch("blurRows", src.type()),
+                                        tunedLaunch("blurCols", src.type()), s.s_), "GaussianBlur"))
         return false;
     stream.retain({ src, buf, dst });
     return true;

@@ -179,6 +179,35 @@ A built-in backend registers itself in `registry.cpp`; tests register theirs wit
   the like); `CMAKE_HIP_ARCHITECTURES=native` builds them only for the GPUs of the build machine.
   On a GPU the build has no code for, operations run on the CPU.
 
+### Tuning the GPU kernels
+
+GaussianBlur's two passes (`blurRows`, `blurCols`) and warpAffine (`warpAffine`) are launched as a tuning
+says, per backend. A thread computes a patch of `px` x `py` output pixels; along the direction a filter
+runs, it reads each input once for the whole patch.
+
+| Parameter | Set | Values | Default | What it changes |
+|---|---|---|---|---|
+| `px`, `py` | at compile time (template arguments) | 1x1, 2x1, 4x1, 1x2, 1x4, 2x2 | 1x1 | the registers of a thread and its unrolled loops |
+| `block` | at run time | WxH, up to 1024 threads | 32x8 | threads per block |
+| `loopy` | at run time | 1 and up | 1 | patches a thread covers down the image: the grid is that many times shorter |
+
+Every patch shape is an instance of its own for each depth and channel count. The build compiles the
+shapes of `CV_ACCEL_GPU_PATCHES` (`non_cpu_hal/gpu/precomp.hpp`), and a tuning picks one of them; the six
+above take the kernels from about 3 to 19 seconds of compilation per GPU architecture. The kernels read
+the launch shape at run time, so any value works without a rebuild. The arithmetic, which keeps 8U and
+16U bit-exact, and the number of taps, which the caller chooses, are not tunable.
+
+`OPENCV_ACCEL_CUDA_TUNING` and `OPENCV_ACCEL_HIP_TUNING` give a backend's tuning as `kernel[@type]:key=value,...`
+entries separated by `;`. An entry for a type overrides its kernel's:
+
+```
+OPENCV_ACCEL_HIP_TUNING="blurRows:block=64x4,px=4;blurCols:py=4;blurCols@32FC1:py=2,loopy=2;warpAffine:block=16x16"
+```
+
+Tests and tuning runs call `cv::accel::setTuning("hip", spec)` (`opencv2/core/private/accel_backend.hpp`),
+and an empty spec goes back to the variable's. A bad spec is an error, where it is set or at the first
+call that reads the variable. Another backend can take knobs of its own through `Backend::setTuning()`.
+
 Adding an operation
 -------------------
 

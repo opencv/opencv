@@ -167,11 +167,19 @@ public:
 
     //! the operations of @p module ("core", ...), or NULL (the default) when the backend has none
     virtual Ops* ops(const char* module);
+
+    /** @brief Tunes how the operations run with @p spec, in a syntax of the backend's, or goes back to the
+    backend's own settings when @p spec is empty. The default has nothing to tune and refuses other specs. */
+    virtual void setTuning(const String& spec);
 };
 
 /** @brief Adds a backend: its devices appear in Device::enumerate().
 The built-in CUDA and HIP backends register themselves. Backends stay registered for the life of the process. */
 CV_EXPORTS void registerBackend(const Ptr<Backend>& backend);
+
+/** @brief Backend::setTuning() of the backend named @p backend ("cuda", "hip"), for tests and tuning runs.
+Work already queued keeps the launches it had. */
+CV_EXPORTS void setTuning(const String& backend, const String& spec);
 
 namespace detail {
 template<typename F> struct OpsOf;

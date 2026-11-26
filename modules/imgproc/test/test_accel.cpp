@@ -8,6 +8,7 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/core/accel.hpp"
+#include "opencv2/core/private/accel_backend.hpp"
 
 namespace opencv_test { namespace {
 
@@ -164,6 +165,92 @@ TEST(Imgproc_Accel, warpAffine_matches_cpu)
                             << " inverse " << inverse;
                     }
         }
+}
+
+//! gives @p backend its own tuning back when it goes out of scope
+struct TuningReset
+{
+    explicit TuningReset(const String& backend) : backend_(backend) {}
+    ~TuningReset() { accel::setTuning(backend_, String()); }
+    String backend_;
+};
+
+TEST(Imgproc_Accel, kernels_match_cpu_in_every_tuning)
+{
+    const int blurTypes[] = { CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16SC2, CV_32FC1 };
+    const int warpTypes[] = { CV_8UC1, CV_8UC4, CV_16UC1, CV_32FC3 };
+    const char* blocks[] = { "32x8", "7x5", "64x2", "128x1", "16x16" };
+    const Size size(203, 131);
+    const Mat M = getRotationMatrix2D(Point2f(100.f, 65.f), 25., 0.9);
+    int shapes = 0, n = 0;
+    for (const accel::Device& d : devices())
+        for (int px : { 1, 2, 4 })
+            for (int py : { 1, 2, 4 })
+            {
+                const String spec = cv::format("blurRows:px=%d,py=%d,block=%s,loopy=%d;"
+                                               "blurCols:px=%d,py=%d,block=%s;"
+                                               "warpAffine:px=%d,py=%d,block=%s,loopy=3",
+                                               px, py, blocks[n % 5], 1 + n % 3, px, py, blocks[(n + 1) % 5],
+                                               px, py, blocks[(n + 2) % 5]);
+                n++;
+                TuningReset reset(d.backend());
+                try
+                {
+                    accel::setTuning(d.backend(), spec);
+                }
+                catch (const cv::Exception& e)
+                {
+                    ASSERT_EQ(Error::StsBadArg, e.code) << e.what();   // a patch the build does not compile
+                    continue;
+                }
+                shapes++;
+                for (int type : blurTypes)
+                    for (int border : { BORDER_CONSTANT, BORDER_REFLECT_101 })
+                    {
+                        const Mat src = randomImage(size, type);
+                        UMat dst;
+                        cv::GaussianBlur(src.upload(d), dst, Size(7, 5), 1.7, 1.1, border);
+                        EXPECT_TRUE(writtenByDevice(dst));
+                        Mat expected;
+                        cv::GaussianBlur(src, expected, Size(7, 5), 1.7, 1.1, border);
+                        EXPECT_LE(cvtest::norm(expected, toHost(dst), NORM_INF), blurTolerance(CV_MAT_DEPTH(type)))
+                            << d.name() << " " << spec << " " << typeToString(type) << " border " << border;
+                    }
+                for (int type : warpTypes)
+                    for (int inter : { INTER_NEAREST, INTER_LINEAR })
+                    {
+                        const Mat src = randomImage(size, type);
+                        UMat dst;
+                        cv::warpAffine(src.upload(d), dst, M, size, inter, BORDER_REFLECT);
+                        EXPECT_TRUE(writtenByDevice(dst));
+                        Mat expected;
+                        cv::warpAffine(src, expected, M, size, inter, BORDER_REFLECT);
+                        EXPECT_LE(warpMismatches(expected, toHost(dst)), 1e-3)
+                            << d.name() << " " << spec << " " << typeToString(type) << " inter " << inter;
+                    }
+            }
+    EXPECT_GE(shapes, 1);
+}
+
+TEST(Imgproc_Accel, tunings_are_checked)
+{
+    const char* bad[] = { "blurRows", "blurRows:px", "blurRows:px=0", "blurRows:px=3", "blurRows:pz=1",
+                          "blurRows:block=64", "blurRows:block=64x32", "blurRows:loopy=-1", "nosuch:px=1",
+                          "blurRows@8UC9:px=1", "blurRows@9U:px=1" };
+    for (const accel::Device& d : devices())
+    {
+        for (const char* spec : bad)
+            EXPECT_THROW(accel::setTuning(d.backend(), spec), cv::Exception) << d.name() << " " << spec;
+        TuningReset reset(d.backend());
+        accel::setTuning(d.backend(), " blurRows:block=64x4 ; blurRows@8UC1:px=4 ; blurCols@CV_32FC1:py=4,loopy=2 ;");
+        const Mat src = randomImage(Size(99, 77), CV_8UC1);
+        UMat dst;
+        cv::GaussianBlur(src.upload(d), dst, Size(5, 5), 0);
+        Mat expected;
+        cv::GaussianBlur(src, expected, Size(5, 5), 0);
+        EXPECT_EQ(0, cvtest::norm(expected, toHost(dst), NORM_INF)) << d.name();
+    }
+    EXPECT_THROW(accel::setTuning("nosuch", String()), cv::Exception);
 }
 
 TEST(Imgproc_Accel, warpAffine_in_place_region_and_fallbacks)
