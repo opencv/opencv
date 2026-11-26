@@ -11,8 +11,9 @@
 
 // com.microsoft MatMulNBits (contrib op, since com.microsoft opset 1):
 // https://github.com/microsoft/onnxruntime/blob/main/docs/ContribOperators.md#commicrosoftmatmulnbits
-// Y = A @ dequant(B).T. Weights are block-quantized to {4,8} bits (symmetric, default
-// zero-point 2^(bits-1)) and dequantized per block inside the GEMM (no fp32 copy).
+// Y = A @ dequant(B).T. Weights are block-quantized to {4,8} bits with a scale and an optional
+// packed uint8 zero point per block (2^(bits-1) when absent), and dequantized per block inside
+// the GEMM (no fp32 copy).
 
 namespace cv { namespace dnn {
 
