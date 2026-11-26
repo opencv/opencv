@@ -17,125 +17,6 @@ static Mat makeTestImage(int type, Size sz, int seed)
     return img;
 }
 
-// The ONNX coordinate_transformation_mode formulas, spelled out independently of resize.cpp.
-// For ALIGN_CORNERS the caller passes the already-rewritten scale.
-static double referenceSrcCoord(int dst, double scale, int inLen, int outLen, ResizeCoord mode)
-{
-    switch (mode)
-    {
-    case ResizeCoord::PYTORCH_HALF_PIXEL:
-        return outLen > 1 ? (dst + 0.5) * scale - 0.5 : 0.0;
-    case ResizeCoord::TF_HALF_PIXEL_FOR_NN:
-        return (dst + 0.5) * scale;
-    case ResizeCoord::ASYMMETRIC:
-    case ResizeCoord::ALIGN_CORNERS:
-        return dst * scale;
-    case ResizeCoord::HALF_PIXEL_SYMMETRIC:
-        return (inLen * 0.5 - outLen * scale * 0.5) + (dst + 0.5) * scale - 0.5;
-    case ResizeCoord::HALF_PIXEL:
-    default:
-        return (dst + 0.5) * scale - 0.5;
-    }
-}
-
-static int referenceNearestIndex(double src, int inLen, ResizeNearest mode)
-{
-    const int f = (int)std::floor(src);
-    const double frac = src - f;
-    const bool tie = std::abs(frac - 0.5) <= 1e-6;
-    int idx;
-    switch (mode)
-    {
-    case ResizeNearest::FLOOR:             idx = f; break;
-    case ResizeNearest::CEIL:              idx = (int)std::ceil(src); break;
-    case ResizeNearest::ROUND_PREFER_CEIL: idx = tie ? f + 1 : cvRound(src); break;
-    default:                               idx = tie ? f : cvRound(src); break;
-    }
-    return std::min(std::max(idx, 0), inLen - 1);
-}
-
-static void referenceCubicWeights(float x, float A, float w[4])
-{
-    w[0] = ((A * (x + 1) - 5 * A) * (x + 1) + 8 * A) * (x + 1) - 4 * A;
-    w[1] = ((A + 2) * x - (A + 3)) * x * x + 1;
-    w[2] = ((A + 2) * (1 - x) - (A + 3)) * (1 - x) * (1 - x) + 1;
-    w[3] = 1.f - w[0] - w[1] - w[2];
-}
-
-static float referenceCubic1D(const std::vector<float>& src, double dstCoordScale, int dst,
-                              int outLen, ResizeCoord mode, bool excludeOutside, float A)
-{
-    const int inLen = (int)src.size();
-    double srcCoord = referenceSrcCoord(dst, dstCoordScale, inLen, outLen, mode);
-    int i = (int)std::floor(srcCoord);
-    float w[4];
-    referenceCubicWeights((float)(srcCoord - i), A, w);
-
-    float acc = 0.f, sw = 0.f;
-    for (int k = -1; k <= 2; k++)
-    {
-        int idx = i + k;
-        const bool valid = idx >= 0 && idx < inLen;
-        float wk = w[k + 1];
-        if (excludeOutside && !valid)
-            wk = 0.f;
-        idx = std::min(std::max(idx, 0), inLen - 1);
-        sw += wk;
-        acc += wk * src[idx];
-    }
-    return sw != 0.f ? acc / sw : acc;
-}
-
-// Mirrors resize.cpp's truncated-Lanczos weights: unlike Keys cubic they do not reproduce a
-// linear ramp exactly, so the reference cannot shortcut them.
-static void referenceLanczos4Weights(float x, float w[8])
-{
-    const double s45 = 0.70710678118654752440084436210485;
-    const double cs[][2] = {{1,0},{-s45,-s45},{0,1},{s45,-s45},{-1,0},{s45,s45},{0,-1},{-s45,s45}};
-
-    const double y0 = -(x + 3)*CV_PI*0.25, s0 = std::sin(y0), c0 = std::cos(y0);
-    float sum = 0.f;
-    for (int i = 0; i < 8; i++)
-    {
-        const float yi = x + 3 - i;
-        if (std::fabs(yi) >= 1e-6f)
-        {
-            const double y = -yi*CV_PI*0.25;
-            w[i] = (float)((cs[i][0]*s0 + cs[i][1]*c0)/(y*y));
-        }
-        else
-            w[i] = 1e30f;
-        sum += w[i];
-    }
-    sum = 1.f/sum;
-    for (int i = 0; i < 8; i++)
-        w[i] *= sum;
-}
-
-static float referenceLanczos4_1D(const std::vector<float>& src, double scale, int dst, int outLen,
-                                  ResizeCoord mode, bool excludeOutside)
-{
-    const int inLen = (int)src.size();
-    const double srcCoord = referenceSrcCoord(dst, scale, inLen, outLen, mode);
-    const int i = (int)std::floor(srcCoord);
-    float w[8];
-    referenceLanczos4Weights((float)(srcCoord - i), w);
-
-    float acc = 0.f, sw = 0.f;
-    for (int k = -3; k <= 4; k++)
-    {
-        int idx = i + k;
-        const bool valid = idx >= 0 && idx < inLen;
-        float wk = w[k + 3];
-        if (excludeOutside && !valid)
-            wk = 0.f;
-        idx = std::min(std::max(idx, 0), inLen - 1);
-        sw += wk;
-        acc += wk * src[idx];
-    }
-    return excludeOutside && sw != 0.f ? acc / sw : acc;
-}
-
 TEST(Resize_Params, BackwardCompat)
 {
     const int interpolations[] = { INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_AREA, INTER_LANCZOS4 };
@@ -197,130 +78,6 @@ TEST(Resize_Params, BackwardCompat)
     }
 }
 
-// Reference is a one-element batch: only the single-image path can reach the HAL.
-TEST(Resize_Params, BatchMatchesSingleImage)
-{
-    const int interpolations[] = { INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_AREA, INTER_LANCZOS4 };
-    const int types[] = { CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC3, CV_32FC1, CV_32FC4, CV_64FC1 };
-    // Up, down, and an integer 2x down for the INTER_AREA fast path.
-    const Size sizes[][2] = { { Size(37, 29), Size(64, 51) }, { Size(64, 51), Size(37, 29) },
-                              { Size(64, 48), Size(32, 24) } };
-    const int N = 5;
-
-    for (int type : types)
-        for (int interp : interpolations)
-            for (const Size* sz : sizes)
-            {
-                const Size from = sz[0], to = sz[1];
-                int srcSizes[] = { N, from.height, from.width };
-                Mat src(3, srcSizes, type);
-                RNG(0xbeef + interp).fill(src, RNG::UNIFORM, 0, 255);
-
-                ResizeParams params(to, 0, 0, interp);
-                Mat dst;
-                resize(src, dst, params);
-                ASSERT_EQ(dst.dims, 3);
-
-                const size_t srcPlaneBytes = from.area() * src.elemSize();
-                const size_t dstPlaneBytes = to.area() * dst.elemSize();
-                std::vector<Mat> plane(1);
-                for (int p = 0; p < N; p++)
-                {
-                    plane[0] = Mat(from, type, src.data + p * srcPlaneBytes);
-                    Mat actual(to, type, dst.data + p * dstPlaneBytes);
-                    std::vector<Mat> alone;
-                    resize(plane, alone, params);
-                    EXPECT_EQ(0, cvtest::norm(alone[0], actual, NORM_INF))
-                        << "type=" << typeToString(type) << " interpolation=" << interp
-                        << " " << from << "->" << to << " plane=" << p;
-                }
-            }
-}
-
-// A ragged batch shares tables only between matching elements; row counts differ.
-TEST(Resize_Params, RaggedBatch)
-{
-    std::vector<Mat> srcs = {
-        makeTestImage(CV_8UC3, Size(100, 100), 1),
-        makeTestImage(CV_8UC3, Size(64, 200), 2),
-        makeTestImage(CV_8UC3, Size(300, 40), 3),
-        makeTestImage(CV_8UC3, Size(100, 100), 4),  // repeats the first geometry, reuses its plan
-    };
-
-    // dsize fixed for all elements...
-    std::vector<Mat> actual;
-    resize(srcs, actual, ResizeParams(Size(48, 64)));
-    ASSERT_EQ(srcs.size(), actual.size());
-    for (size_t i = 0; i < srcs.size(); i++)
-    {
-        std::vector<Mat> one(1, srcs[i]), alone;
-        resize(one, alone, ResizeParams(Size(48, 64)));
-        EXPECT_EQ(0, cvtest::norm(alone[0], actual[i], NORM_INF)) << "index=" << i;
-    }
-
-    // ...and dsize derived per element from fx/fy, which makes the outputs differently sized.
-    ResizeParams scaled;
-    scaled.fx = scaled.fy = 0.5;
-    resize(srcs, actual, scaled);
-    ASSERT_EQ(srcs.size(), actual.size());
-    for (size_t i = 0; i < srcs.size(); i++)
-    {
-        EXPECT_EQ(Size(srcs[i].cols/2, srcs[i].rows/2), actual[i].size()) << "index=" << i;
-        std::vector<Mat> one(1, srcs[i]), alone;
-        resize(one, alone, scaled);
-        EXPECT_EQ(0, cvtest::norm(alone[0], actual[i], NORM_INF)) << "index=" << i;
-    }
-}
-
-// Asking for the source size back is a copy, for a batch too.
-TEST(Resize_Params, BatchIdentitySize)
-{
-    const int N = 3;
-    const Size sz(21, 17);
-    int srcSizes[] = { N, sz.height, sz.width };
-    Mat src(3, srcSizes, CV_8UC3);
-    RNG(7).fill(src, RNG::UNIFORM, 0, 255);
-
-    const int interpolations[] = { INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_AREA, INTER_LANCZOS4 };
-    for (int interp : interpolations)
-    {
-        Mat dst;
-        resize(src, dst, ResizeParams(sz, 0, 0, interp));
-        EXPECT_EQ(0, cvtest::norm(src.reshape(1, N * sz.height), dst.reshape(1, N * sz.height), NORM_INF))
-            << "interpolation=" << interp;
-    }
-}
-
-// CV_64F accumulates in double, as in classic cv::resize, whose weights are float either way.
-TEST(Resize_Params, DoublePrecisionCoordMode)
-{
-    const int inW = 9, outW = 5;
-    Mat src(1, inW, CV_64FC1);
-    // Values whose differences are far below float resolution: a float accumulator collapses them.
-    for (int x = 0; x < inW; x++)
-        src.at<double>(0, x) = 1.0 + x * 1e-12;
-
-    const int interpolations[] = { INTER_LINEAR, INTER_CUBIC };
-    for (int interp : interpolations)
-    {
-        ResizeParams params(Size(outW, 1), 0, 0, interp);
-        params.coordMode = ResizeCoord::HALF_PIXEL;
-
-        Mat out;
-        resize(src, out, params);
-        ASSERT_EQ(out.depth(), CV_64F);
-
-        // Detail two orders below float resolution survives, which a float accumulator would
-        // flatten. The level itself is only float-weight accurate: these kernels carry double
-        // samples and a double accumulator, but float weights.
-        double lo, hi;
-        minMaxLoc(out, &lo, &hi);
-        EXPECT_GT(hi - lo, 1e-13) << "interpolation=" << interp << ": detail lost to float";
-        EXPECT_LT(std::abs(hi - 1.0), 1e-6) << "interpolation=" << interp;
-        EXPECT_LT(std::abs(lo - 1.0), 1e-6) << "interpolation=" << interp;
-    }
-}
-
 TEST(Resize_Params, RejectsInvalidInputs)
 {
     Mat src = makeTestImage(CV_8UC3, Size(64, 64), 1), dst;
@@ -379,500 +136,570 @@ TEST(Resize_Params, RejectsInvalidInputs)
     EXPECT_THROW(resize(uniform, vecDst, ResizeParams()), cv::Exception);
 }
 
-TEST(Resize_Params, CoordModeMath)
+// ---- reference: the ONNX Resize definitions, spelled out independently of resize.cpp ----
+
+// One axis of a resize.
+struct AxisGeom
 {
+    int inLen, outLen;
+    double scale;       // source units per destination unit
+    double trueOutLen;  // inLen*fx when an ONNX mode was given fx (the unfloored length), else outLen
+};
+
+// The ResizeParams rules: an empty dsize is round(size*f), and a given dsize sets the scale, except
+// that the ONNX modes keep a given fx/fy, since their dsize is usually floor(size*f).
+static void referenceGeometry(const ResizeParams& p, Size ssize, Size& dsize, AxisGeom& gx, AxisGeom& gy)
+{
+    dsize = p.dsize.empty() ? Size(saturate_cast<int>(ssize.width*p.fx), saturate_cast<int>(ssize.height*p.fy))
+                            : p.dsize;
+    const bool onnxScale = p.coordMode != ResizeCoord::PIXEL_CENTER && p.fx > 0 && p.fy > 0;
+    const bool fromScale = p.dsize.empty() || onnxScale;
+
+    gx.inLen = ssize.width;  gx.outLen = dsize.width;
+    gy.inLen = ssize.height; gy.outLen = dsize.height;
+    gx.scale = fromScale ? 1./p.fx : (double)ssize.width/dsize.width;
+    gy.scale = fromScale ? 1./p.fy : (double)ssize.height/dsize.height;
+    gx.trueOutLen = onnxScale ? ssize.width*p.fx : dsize.width;
+    gy.trueOutLen = onnxScale ? ssize.height*p.fy : dsize.height;
+}
+
+// ONNX coordinate_transformation_mode; PIXEL_CENTER is OpenCV's half-pixel formula.
+static double referenceSrcCoord(ResizeCoord mode, const AxisGeom& g, int dst)
+{
+    switch (mode)
     {
-        const ResizeCoord modes[] = {
-            ResizeCoord::HALF_PIXEL, ResizeCoord::PYTORCH_HALF_PIXEL,
-            ResizeCoord::ASYMMETRIC, ResizeCoord::ALIGN_CORNERS,
-            ResizeCoord::TF_HALF_PIXEL_FOR_NN, ResizeCoord::HALF_PIXEL_SYMMETRIC
-        };
-        const int inW = 17, outW = 6;
-
-        Mat ramp(1, inW, CV_32FC1);
-        for (int x = 0; x < inW; x++)
-            ramp.at<float>(0, x) = (float)x;
-
-        for (ResizeCoord mode : modes)
-        {
-            double scale = (mode == ResizeCoord::ALIGN_CORNERS && outW > 1)
-                             ? (double)(inW - 1) / (outW - 1)
-                             : (double)inW / outW;
-
-            ResizeParams params;
-            params.interpolation = INTER_LINEAR;
-            params.coordMode = mode;
-
-            params.dsize = Size(outW, 1);
-
-            Mat out;
-            resize(ramp, out, params);
-            ASSERT_EQ(out.size(), Size(outW, 1));
-
-            for (int x = 0; x < outW; x++)
-            {
-                double expected = std::min(std::max(referenceSrcCoord(x, scale, inW, outW, mode), 0.0), (double)(inW - 1));
-                EXPECT_NEAR(expected, out.at<float>(0, x), 1e-3)
-                    << "mode=" << (int)mode << " x=" << x;
-            }
-        }
-    }
-
-    {
-        const int inW = 67, inH = 5, outW = 41, outH = 3, cn = 3;
-        Mat src(inH, inW, CV_32FC(cn));
-        for (int y = 0; y < inH; y++)
-            for (int x = 0; x < inW; x++)
-                for (int c = 0; c < cn; c++)
-                    src.at<Vec3f>(y, x)[c] = (float)x + (float)y * 1000.f + (float)c;
-
-        ResizeParams params;
-        params.interpolation = INTER_LINEAR;
-        params.coordMode = ResizeCoord::HALF_PIXEL;
-
-        params.dsize = Size(outW, outH);
-
-        Mat out;
-        resize(src, out, params);
-        ASSERT_EQ(out.size(), Size(outW, outH));
-
-        const double scaleX = (double)inW / outW, scaleY = (double)inH / outH;
-        for (int oy = 0; oy < outH; oy++)
-            for (int ox = 0; ox < outW; ox++)
-            {
-                double sx = std::min(std::max(referenceSrcCoord(ox, scaleX, inW, outW, ResizeCoord::HALF_PIXEL), 0.0), (double)(inW - 1));
-                double sy = std::min(std::max(referenceSrcCoord(oy, scaleY, inH, outH, ResizeCoord::HALF_PIXEL), 0.0), (double)(inH - 1));
-                for (int c = 0; c < cn; c++)
-                {
-                    float expected = (float)(sx + sy * 1000.0 + c);
-                    EXPECT_NEAR(expected, out.at<Vec3f>(oy, ox)[c], 5e-2)
-                        << "oy=" << oy << " ox=" << ox << " c=" << c;
-                }
-            }
-    }
-
-    {
-        const int inW = 17, outW = 6;
-        Mat ramp(1, inW, CV_32FC1);
-        for (int x = 0; x < inW; x++)
-            ramp.at<float>(0, x) = (float)x;
-
-        ResizeParams params;
-        params.interpolation = INTER_NEAREST;
-        params.coordMode = ResizeCoord::HALF_PIXEL;
-        params.nearestMode = ResizeNearest::ROUND_PREFER_FLOOR;
-
-        params.dsize = Size(outW, 1);
-
-        Mat out;
-        resize(ramp, out, params);
-
-        double scale = (double)inW / outW;
-        for (int x = 0; x < outW; x++)
-        {
-            double src = std::min(std::max(referenceSrcCoord(x, scale, inW, outW, ResizeCoord::HALF_PIXEL), 0.0), (double)(inW - 1));
-            double frac = src - std::floor(src);
-            int expectedIdx = (std::abs(frac - 0.5) <= 1e-6) ? (int)std::floor(src) : cvRound(src);
-            EXPECT_FLOAT_EQ((float)expectedIdx, out.at<float>(0, x)) << "x=" << x;
-        }
-    }
-
-    {
-        Mat ramp(1, 8, CV_32FC1);
-        for (int x = 0; x < 8; x++)
-            ramp.at<float>(0, x) = (float)x;
-
-        struct { ResizeNearest mode; float expected; } cases[] = {
-            { ResizeNearest::FLOOR, 1.f },
-            { ResizeNearest::CEIL, 2.f },
-            { ResizeNearest::ROUND_PREFER_CEIL, 2.f },
-            { ResizeNearest::ROUND_PREFER_FLOOR, 1.f },
-        };
-
-        for (const auto& c : cases)
-        {
-            ResizeParams params;
-            params.interpolation = INTER_NEAREST;
-            params.coordMode = ResizeCoord::TF_HALF_PIXEL_FOR_NN;
-            params.nearestMode = c.mode;
-
-            params.dsize = Size(8, 1);
-
-            Mat out;
-            resize(ramp, out, params);
-            EXPECT_FLOAT_EQ(c.expected, out.at<float>(0, 1))
-                << "nearestMode=" << (int)c.mode;
-        }
-    }
-
-    {
-        Mat src = Mat_<float>({2, 4}, {1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f});
-
-        ResizeParams params;
-        params.interpolation = INTER_LINEAR;
-        params.coordMode = ResizeCoord::ALIGN_CORNERS;
-
-        params.dsize = Size(2, 1);
-        params.fx = params.fy = 0.6;
-
-        Mat out;
-        resize(src, out, params);
-        ASSERT_EQ(out.size(), Size(2, 1));
-        EXPECT_NEAR(1.f, out.at<float>(0, 0), 1e-4);
-        EXPECT_NEAR(3.142857f, out.at<float>(0, 1), 1e-4);
-    }
-
-    {
-        Mat ramp(1, 4, CV_32FC1);
-        for (int x = 0; x < 4; x++)
-            ramp.at<float>(0, x) = (float)x;
-
-        ResizeParams symmetric(Size(2, 1), 0.6, 0.6);
-        symmetric.coordMode = ResizeCoord::HALF_PIXEL_SYMMETRIC;
-
-        ResizeParams halfPixel = symmetric;
-        halfPixel.coordMode = ResizeCoord::HALF_PIXEL;
-
-        // With the true scale known, half_pixel_symmetric shifts the sampling grid...
-        Mat outSymmetric, outHalfPixel;
-        resize(ramp, outSymmetric, symmetric);
-        resize(ramp, outHalfPixel, halfPixel);
-        EXPECT_GT(cv::norm(outSymmetric, outHalfPixel, NORM_INF), 1e-3);
-
-        // ...but with the scale re-derived from dsize alone the two modes coincide.
-        symmetric.fx = symmetric.fy = 0;
-        halfPixel.fx = halfPixel.fy = 0;
-        Mat outSymmetricNoFx, outHalfPixelNoFx;
-        resize(ramp, outSymmetricNoFx, symmetric);
-        resize(ramp, outHalfPixelNoFx, halfPixel);
-        EXPECT_EQ(0, cv::norm(outSymmetricNoFx, outHalfPixelNoFx, NORM_INF));
-    }
-
-    {
-        const std::vector<float> src = { 3.f, 1.f, 4.f, 1.f, 5.f, 9.f, 2.f, 6.f };
-        const int inW = (int)src.size(), outW = 5;
-        Mat srcMat(1, inW, CV_32FC1, (void*)src.data());
-
-        struct { ResizeCoord mode; bool excludeOutside; } cases[] = {
-            { ResizeCoord::HALF_PIXEL, false },
-            { ResizeCoord::HALF_PIXEL, true },
-            { ResizeCoord::ASYMMETRIC, false },
-            { ResizeCoord::PYTORCH_HALF_PIXEL, true },
-        };
-
-        for (auto& c : cases)
-        {
-            ResizeParams params;
-            params.interpolation = INTER_CUBIC;
-            params.coordMode = c.mode;
-            params.excludeOutside = c.excludeOutside;
-
-            params.dsize = Size(outW, 1);
-
-            Mat out;
-            resize(srcMat, out, params);
-            ASSERT_EQ(out.cols, outW);
-
-            double scale = (double)inW / outW;
-            for (int x = 0; x < outW; x++)
-            {
-                float expected = referenceCubic1D(src, scale, x, outW, c.mode, c.excludeOutside, -0.75f);
-                EXPECT_NEAR(expected, out.at<float>(0, x), 1e-3)
-                    << "mode=" << (int)c.mode << " excludeOutside=" << c.excludeOutside << " x=" << x;
-            }
-        }
-    }
-
-    {
-        const std::vector<float> src = { 10.f, 0.f, 0.f, 0.f, 0.f, 10.f };
-        Mat srcMat(1, (int)src.size(), CV_32FC1, (void*)src.data());
-
-        ResizeParams clamped(Size(12, 1), 0, 0, INTER_CUBIC);
-        clamped.coordMode = ResizeCoord::ASYMMETRIC;
-        clamped.excludeOutside = false;
-
-        ResizeParams excluded = clamped;
-        excluded.excludeOutside = true;
-
-        Mat outClamped, outExcluded;
-        resize(srcMat, outClamped, clamped);
-        resize(srcMat, outExcluded, excluded);
-        EXPECT_GT(cv::norm(outClamped, outExcluded, NORM_INF), 1e-3);
+    case ResizeCoord::ASYMMETRIC:
+        return dst*g.scale;
+    case ResizeCoord::ALIGN_CORNERS:
+        return g.trueOutLen > 1 ? dst*(g.inLen - 1)/(g.trueOutLen - 1) : 0.0;
+    case ResizeCoord::TF_HALF_PIXEL_FOR_NN:
+        return (dst + 0.5)*g.scale;
+    case ResizeCoord::PYTORCH_HALF_PIXEL:
+        return g.outLen > 1 ? (dst + 0.5)*g.scale - 0.5 : 0.0;
+    case ResizeCoord::HALF_PIXEL_SYMMETRIC:
+        return g.inLen*0.5 - g.outLen*g.scale*0.5 + (dst + 0.5)*g.scale - 0.5;
+    default:
+        return (dst + 0.5)*g.scale - 0.5;
     }
 }
 
-
-// PIXEL_CENTER's formula *is* ONNX half_pixel, so with the scale taken from dsize the two must
-// agree bit for bit. If a mode ever fell back to a separate kernel, this is what catches it.
-TEST(Resize_Params, PixelCenterIsHalfPixel)
+// ONNX nearest_mode; an exact .5 (within 1e-6, as in the ONNX layer) goes the way the mode says.
+static int referenceNearestIndex(double src, int inLen, ResizeNearest mode)
 {
-    const int interpolations[] = { INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4 };
-    const int types[] = { CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC3, CV_32FC1, CV_64FC1 };
-    const Size sizes[][2] = { { Size(64, 51), Size(37, 29) }, { Size(37, 29), Size(64, 51) } };
-
-    for (int type : types)
-        for (int interp : interpolations)
-            for (const Size* sz : sizes)
-            {
-                // A one-element batch keeps both runs on OpenCV's own kernels: a single image
-                // could be taken over by a HAL for one mode and not for the other.
-                std::vector<Mat> src(1, makeTestImage(type, sz[0], 4242 + interp));
-                std::vector<Mat> classic, halfPixel;
-
-                ResizeParams params(sz[1], 0, 0, interp);
-                resize(src, classic, params);
-                params.coordMode = ResizeCoord::HALF_PIXEL;
-                resize(src, halfPixel, params);
-
-                EXPECT_EQ(0, cvtest::norm(classic[0], halfPixel[0], NORM_INF))
-                    << typeToString(type) << " interpolation=" << interp
-                    << " " << sz[0] << "->" << sz[1];
-            }
-
-    // Classic INTER_NEAREST is the asymmetric map rounded down.
-    for (int type : { CV_8UC1, CV_8UC2, CV_8UC3, CV_16UC1, CV_32FC1 })
+    const int last = inLen - 1;
+    switch (mode)
     {
-        std::vector<Mat> src(1, makeTestImage(type, Size(64, 51), 7)), classic, asymmetric;
-        ResizeParams params(Size(37, 29), 0, 0, INTER_NEAREST);
-        resize(src, classic, params);
-        params.coordMode = ResizeCoord::ASYMMETRIC;
-        params.nearestMode = ResizeNearest::FLOOR;
-        resize(src, asymmetric, params);
-        EXPECT_EQ(0, cvtest::norm(classic[0], asymmetric[0], NORM_INF)) << typeToString(type);
-    }
-}
-
-// Every coordMode x nearestMode pair against a scalar index reference. CV_16UC1 and CV_8UC4 are
-// the 2- and 4-byte pixels that take the SIMD gather path; CV_8UC3 is the byte-copy fallback.
-TEST(Resize_Params, NearestAllModes)
-{
-    const ResizeCoord coords[] = {
-        ResizeCoord::HALF_PIXEL, ResizeCoord::PYTORCH_HALF_PIXEL, ResizeCoord::ASYMMETRIC,
-        ResizeCoord::ALIGN_CORNERS, ResizeCoord::TF_HALF_PIXEL_FOR_NN,
-        ResizeCoord::HALF_PIXEL_SYMMETRIC
-    };
-    const ResizeNearest rounds[] = {
-        ResizeNearest::FLOOR, ResizeNearest::CEIL,
-        ResizeNearest::ROUND_PREFER_CEIL, ResizeNearest::ROUND_PREFER_FLOOR
-    };
-    const int inW = 23, inH = 11, outW = 41, outH = 7;
-
-    // Each sample names the source pixel it came from: value == y*256 + x.
-    Mat src(inH, inW, CV_16UC1);
-    for (int y = 0; y < inH; y++)
-        for (int x = 0; x < inW; x++)
-            src.at<ushort>(y, x) = (ushort)(y * 256 + x);
-
-    for (ResizeCoord coord : coords)
-        for (ResizeNearest round : rounds)
+    case ResizeNearest::FLOOR: return (int)std::floor(std::min(std::max(src, 0.0), (double)last));
+    case ResizeNearest::CEIL:  return (int)std::ceil(std::min(std::max(src, 0.0), (double)last));
+    default:
         {
-            ResizeParams params(Size(outW, outH), 0, 0, INTER_NEAREST);
-            params.coordMode = coord;
-            params.nearestMode = round;
-
-            Mat out;
-            resize(src, out, params);
-            ASSERT_EQ(out.size(), Size(outW, outH));
-
-            const bool corners = coord == ResizeCoord::ALIGN_CORNERS;
-            const double scaleX = corners ? (double)(inW - 1)/(outW - 1) : (double)inW/outW;
-            const double scaleY = corners ? (double)(inH - 1)/(outH - 1) : (double)inH/outH;
-
-            for (int oy = 0; oy < outH; oy++)
-                for (int ox = 0; ox < outW; ox++)
-                {
-                    const int sx = referenceNearestIndex(
-                        referenceSrcCoord(ox, scaleX, inW, outW, coord), inW, round);
-                    const int sy = referenceNearestIndex(
-                        referenceSrcCoord(oy, scaleY, inH, outH, coord), inH, round);
-                    ASSERT_EQ((ushort)(sy * 256 + sx), out.at<ushort>(oy, ox))
-                        << "coordMode=" << (int)coord << " nearestMode=" << (int)round
-                        << " oy=" << oy << " ox=" << ox;
-                }
+            const int f = (int)std::floor(src);
+            const int tieUp = mode == ResizeNearest::ROUND_PREFER_CEIL ? 1 : 0;
+            const int idx = std::abs(src - f - 0.5) <= 1e-6 ? f + tieUp : cvRound(src);
+            return std::min(std::max(idx, 0), last);
         }
-
-    // The other pixel sizes must land on the same source pixels.
-    for (int type : { CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3 })
-    {
-        Mat wide(inH, inW, type);
-        RNG(0x5eed).fill(wide, RNG::UNIFORM, 0, 255);
-
-        ResizeParams params(Size(outW, outH), 0, 0, INTER_NEAREST);
-        params.coordMode = ResizeCoord::HALF_PIXEL;
-        params.nearestMode = ResizeNearest::ROUND_PREFER_CEIL;
-
-        Mat out;
-        resize(wide, out, params);
-        ASSERT_EQ(out.size(), Size(outW, outH));
-
-        const double scaleX = (double)inW/outW, scaleY = (double)inH/outH;
-        for (int oy = 0; oy < outH; oy++)
-            for (int ox = 0; ox < outW; ox++)
-            {
-                const int sx = referenceNearestIndex(
-                    referenceSrcCoord(ox, scaleX, inW, outW, ResizeCoord::HALF_PIXEL),
-                    inW, ResizeNearest::ROUND_PREFER_CEIL);
-                const int sy = referenceNearestIndex(
-                    referenceSrcCoord(oy, scaleY, inH, outH, ResizeCoord::HALF_PIXEL),
-                    inH, ResizeNearest::ROUND_PREFER_CEIL);
-                ASSERT_EQ(0, cvtest::norm(Mat(wide, Rect(sx, sy, 1, 1)),
-                                          Mat(out, Rect(ox, oy, 1, 1)), NORM_INF))
-                    << typeToString(type) << " oy=" << oy << " ox=" << ox;
-            }
     }
 }
 
-// A coordMode reaches the wide kernels too: the 8-tap Lanczos table is built by the same loop.
-TEST(Resize_Params, Lanczos4CoordMode)
+static void referenceCubicWeights(float x, float A, float w[4])
 {
-    const std::vector<float> src = { 3.f, 1.f, 4.f, 1.f, 5.f, 9.f, 2.f, 6.f, 5.f, 3.f,
-                                     5.f, 8.f, 9.f, 7.f, 9.f, 3.f, 2.f, 3.f, 8.f, 4.f };
-    const int inW = (int)src.size(), outW = 7;
-    Mat srcMat(1, inW, CV_32FC1, (void*)src.data());
-
-    struct { ResizeCoord mode; bool excludeOutside; } cases[] = {
-        { ResizeCoord::HALF_PIXEL, false },
-        { ResizeCoord::HALF_PIXEL, true },
-        { ResizeCoord::ASYMMETRIC, false },
-        { ResizeCoord::ALIGN_CORNERS, false },
-        { ResizeCoord::PYTORCH_HALF_PIXEL, true },
-    };
-
-    for (const auto& c : cases)
-    {
-        ResizeParams params(Size(outW, 1), 0, 0, INTER_LANCZOS4);
-        params.coordMode = c.mode;
-        params.excludeOutside = c.excludeOutside;
-
-        Mat out;
-        resize(srcMat, out, params);
-        ASSERT_EQ(out.size(), Size(outW, 1));
-
-        const double scale = c.mode == ResizeCoord::ALIGN_CORNERS
-                           ? (double)(inW - 1)/(outW - 1) : (double)inW/outW;
-        for (int x = 0; x < outW; x++)
-            EXPECT_NEAR(referenceLanczos4_1D(src, scale, x, outW, c.mode, c.excludeOutside),
-                        out.at<float>(0, x), 1e-3)
-                << "coordMode=" << (int)c.mode << " excludeOutside=" << c.excludeOutside << " x=" << x;
-    }
+    w[0] = ((A * (x + 1) - 5 * A) * (x + 1) + 8 * A) * (x + 1) - 4 * A;
+    w[1] = ((A + 2) * x - (A + 3)) * x * x + 1;
+    w[2] = ((A + 2) * (1 - x) - (A + 3)) * (1 - x) * (1 - x) + 1;
+    w[3] = 1.f - w[0] - w[1] - w[2];
 }
 
-// cubicCoeffA is table input, so a non-default Keys coefficient must take effect and stay right.
-TEST(Resize_Params, CubicCoeffA)
+// Mirrors resize.cpp's truncated-Lanczos weights: unlike Keys cubic they do not reproduce a
+// linear ramp exactly, so the reference cannot shortcut them.
+static void referenceLanczos4Weights(float x, float w[8])
 {
-    const std::vector<float> src = { 3.f, 1.f, 4.f, 1.f, 5.f, 9.f, 2.f, 6.f };
-    const int inW = (int)src.size(), outW = 5;
-    Mat srcMat(1, inW, CV_32FC1, (void*)src.data());
-    const double scale = (double)inW/outW;
+    const double s45 = 0.70710678118654752440084436210485;
+    const double cs[][2] = {{1,0},{-s45,-s45},{0,1},{s45,-s45},{-1,0},{s45,s45},{0,-1},{-s45,s45}};
 
-    Mat outDefault;
-    for (float A : { -0.75f, -0.5f, -1.0f })
+    const double y0 = -(x + 3)*CV_PI*0.25, s0 = std::sin(y0), c0 = std::cos(y0);
+    float sum = 0.f;
+    for (int i = 0; i < 8; i++)
     {
-        ResizeParams params(Size(outW, 1), 0, 0, INTER_CUBIC);
-        params.coordMode = ResizeCoord::HALF_PIXEL;
-        params.cubicCoeffA = A;
-
-        Mat out;
-        resize(srcMat, out, params);
-        for (int x = 0; x < outW; x++)
-            EXPECT_NEAR(referenceCubic1D(src, scale, x, outW, ResizeCoord::HALF_PIXEL, false, A),
-                        out.at<float>(0, x), 1e-3) << "A=" << A << " x=" << x;
-
-        if (A == -0.75f)
-            out.copyTo(outDefault);
+        const float yi = x + 3 - i;
+        if (std::fabs(yi) >= 1e-6f)
+        {
+            const double y = -yi*CV_PI*0.25;
+            w[i] = (float)((cs[i][0]*s0 + cs[i][1]*c0)/(y*y));
+        }
         else
-            EXPECT_GT(cv::norm(out, outDefault, NORM_INF), 1e-3) << "A=" << A << " changed nothing";
+            w[i] = 1e30f;
+        sum += w[i];
+    }
+    sum = 1.f/sum;
+    for (int i = 0; i < 8; i++)
+        w[i] *= sum;
+}
+
+// Taps of one axis of a separable kernel: ksize source indices and weights per output sample.
+// Linear clamps the coordinate; the wider kernels replicate the edge sample, or with
+// excludeOutside drop the taps that fall outside and renormalise the rest.
+static int referenceTaps(int interp, ResizeCoord mode, const AxisGeom& g, float A, bool excludeOutside,
+                         std::vector<int>& ofs, std::vector<double>& w)
+{
+    const int ksize = interp == INTER_LINEAR ? 2 : interp == INTER_CUBIC ? 4 : 8;
+    ofs.assign((size_t)g.outLen*ksize, 0);
+    w.assign((size_t)g.outLen*ksize, 0.);
+    for (int i = 0; i < g.outLen; i++)
+    {
+        double c = referenceSrcCoord(mode, g, i);
+        int* o = &ofs[(size_t)i*ksize];
+        double* wt = &w[(size_t)i*ksize];
+        if (interp == INTER_LINEAR)
+        {
+            c = std::min(std::max(c, 0.0), g.inLen - 1.0);
+            const int i0 = (int)std::floor(c);
+            o[0] = i0;
+            o[1] = std::min(i0 + 1, g.inLen - 1);
+            wt[1] = c - i0;
+            wt[0] = 1. - wt[1];
+            continue;
+        }
+        const int i0 = (int)std::floor(c);
+        float wf[8];
+        if (interp == INTER_CUBIC)
+            referenceCubicWeights((float)(c - i0), A, wf);
+        else
+            referenceLanczos4Weights((float)(c - i0), wf);
+        double sum = 0.;
+        for (int k = 0; k < ksize; k++)
+        {
+            const int idx = i0 - ksize/2 + 1 + k;
+            const bool inside = 0 <= idx && idx < g.inLen;
+            wt[k] = excludeOutside && !inside ? 0. : (double)wf[k];
+            o[k] = std::min(std::max(idx, 0), g.inLen - 1);
+            sum += wt[k];
+        }
+        if (excludeOutside && sum != 0.)
+            for (int k = 0; k < ksize; k++)
+                wt[k] /= sum;
+    }
+    return ksize;
+}
+
+// Separable resize in double, rounded to the source depth at the end.
+static Mat referenceSeparable(const Mat& src, const ResizeParams& p, Size dsize,
+                              const AxisGeom& gx, const AxisGeom& gy)
+{
+    std::vector<int> xo, yo;
+    std::vector<double> xw, yw;
+    const int kx = referenceTaps(p.interpolation, p.coordMode, gx, p.cubicCoeffA, p.excludeOutside, xo, xw);
+    const int ky = referenceTaps(p.interpolation, p.coordMode, gy, p.cubicCoeffA, p.excludeOutside, yo, yw);
+
+    const int cn = src.channels();
+    Mat src64;
+    src.convertTo(src64, CV_64F);
+    Mat dst64(dsize, CV_64FC(cn));
+    for (int y = 0; y < dsize.height; y++)
+        for (int x = 0; x < dsize.width; x++)
+            for (int c = 0; c < cn; c++)
+            {
+                double acc = 0.;
+                for (int j = 0; j < ky; j++)
+                {
+                    const double* row = src64.ptr<double>(yo[(size_t)y*ky + j]);
+                    double hsum = 0.;
+                    for (int i = 0; i < kx; i++)
+                        hsum += xw[(size_t)x*kx + i]*row[xo[(size_t)x*kx + i]*cn + c];
+                    acc += yw[(size_t)y*ky + j]*hsum;
+                }
+                dst64.ptr<double>(y)[x*cn + c] = acc;
+            }
+    Mat dst;
+    dst64.convertTo(dst, src.type());
+    return dst;
+}
+
+// The separable kernels round their coordinates to float and, for 8U, their weights to 11-bit fixed
+// point; the 8U bound grows with the number of taps those rounded weights add up.
+static double referenceTolerance(int depth, int interp)
+{
+    if (depth == CV_32F || depth == CV_64F)
+        return 1e-2;   // samples span [-100, 100)
+    if (depth == CV_8U)
+        return interp == INTER_LANCZOS4 ? 3 : interp == INTER_CUBIC ? 2 : 1;
+    return 1;
+}
+
+// INTER_NEAREST copies samples, so it must match exactly. When a coordinate sits on a rounding
+// boundary, either neighbour is accepted: the 1e-9 window only absorbs how the two sides evaluate the
+// same formula.
+static void checkNearest(const Mat& src, const Mat& dst, const ResizeParams& p,
+                         const AxisGeom& gx, const AxisGeom& gy)
+{
+    const bool classic = p.coordMode == ResizeCoord::PIXEL_CENTER;
+    const ResizeCoord mode = classic ? ResizeCoord::ASYMMETRIC : p.coordMode;
+    const ResizeNearest rounding = classic ? ResizeNearest::FLOOR : p.nearestMode;
+
+    std::vector<int> xlo(gx.outLen), xhi(gx.outLen), ylo(gy.outLen), yhi(gy.outLen);
+    for (int x = 0; x < gx.outLen; x++)
+    {
+        const double c = referenceSrcCoord(mode, gx, x);
+        xlo[x] = referenceNearestIndex(c - 1e-9, gx.inLen, rounding);
+        xhi[x] = referenceNearestIndex(c + 1e-9, gx.inLen, rounding);
+    }
+    for (int y = 0; y < gy.outLen; y++)
+    {
+        const double c = referenceSrcCoord(mode, gy, y);
+        ylo[y] = referenceNearestIndex(c - 1e-9, gy.inLen, rounding);
+        yhi[y] = referenceNearestIndex(c + 1e-9, gy.inLen, rounding);
+    }
+
+    const size_t esz = src.elemSize();
+    for (int y = 0; y < gy.outLen; y++)
+        for (int x = 0; x < gx.outLen; x++)
+        {
+            const uchar* d = dst.ptr(y) + x*esz;
+            const bool found =
+                memcmp(d, src.ptr(ylo[y]) + xlo[x]*esz, esz) == 0 ||
+                memcmp(d, src.ptr(ylo[y]) + xhi[x]*esz, esz) == 0 ||
+                memcmp(d, src.ptr(yhi[y]) + xlo[x]*esz, esz) == 0 ||
+                memcmp(d, src.ptr(yhi[y]) + xhi[x]*esz, esz) == 0;
+            ASSERT_TRUE(found) << "dst(" << y << ", " << x << ") is not source pixel ("
+                               << ylo[y] << ", " << xlo[x] << ")";
+        }
+}
+
+static void checkAgainstReference(const Mat& src, const Mat& dst, const ResizeParams& p)
+{
+    Size dsize;
+    AxisGeom gx, gy;
+    referenceGeometry(p, src.size(), dsize, gx, gy);
+    ASSERT_EQ(dsize, dst.size());
+    ASSERT_EQ(src.type(), dst.type());
+
+    if (p.interpolation == INTER_NEAREST)
+    {
+        checkNearest(src, dst, p, gx, gy);
+        return;
+    }
+
+    Mat expected;
+    if (p.interpolation == INTER_AREA)
+        cv::resize(src, expected, p.dsize, p.fx, p.fy, INTER_AREA);   // classic resize is the reference
+    else
+        expected = referenceSeparable(src, p, dsize, gx, gy);
+    EXPECT_LE(cvtest::norm(expected, dst, NORM_INF), referenceTolerance(src.depth(), p.interpolation));
+}
+
+// Resizes one image through a one-element batch, which always runs OpenCV's own kernels.
+static Mat resizeAlone(const Mat& src, const ResizeParams& p)
+{
+    std::vector<Mat> one(1, src), out;
+    resize(one, out, p);
+    return out[0];
+}
+
+// ---- random configurations ----
+
+enum InputKind { KIND_IMAGE, KIND_TENSOR, KIND_VECTOR };
+
+struct RandomCase
+{
+    ResizeParams params;
+    int type;
+    InputKind kind;
+    std::vector<Size> sizes;        // a size per image; they differ only in a ragged vector
+    std::vector<int> leadingDims;   // KIND_TENSOR: the batch axes in front of height and width
+    bool roi;                       // KIND_IMAGE and KIND_VECTOR: images are views into padded Mats
+
+    std::string describe() const
+    {
+        std::ostringstream os;
+        os << typeToString(type) << " interpolation=" << params.interpolation
+           << " coordMode=" << (int)params.coordMode << " nearestMode=" << (int)params.nearestMode
+           << " cubicCoeffA=" << params.cubicCoeffA << " excludeOutside=" << params.excludeOutside
+           << " dsize=" << params.dsize << " fx=" << params.fx << " fy=" << params.fy
+           << " kind=" << (int)kind << " roi=" << roi << " sizes=";
+        for (const Size& sz : sizes)
+            os << sz << ' ';
+        for (int d : leadingDims)
+            os << "lead=" << d << ' ';
+        return os.str();
+    }
+};
+
+// Exact ratios half the time: the integer ones are where the kernels take shortcuts.
+static double drawScale(RNG& rng)
+{
+    static const double exact[] = { 0.25, 0.5, 1.0, 2.0, 3.0 };
+    if (rng.uniform(0, 2) == 0)
+        return exact[rng.uniform(0, 5)];
+    return std::exp(rng.uniform(std::log(0.2), std::log(4.0)));
+}
+
+static RandomCase drawCase(RNG& rng)
+{
+    static const int interps[] = { INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4, INTER_AREA };
+    static const int anyDepth[] = { CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F };
+    static const int filterDepth[] = { CV_8U, CV_16U, CV_16S, CV_32F, CV_64F };
+
+    RandomCase c;
+    ResizeParams& p = c.params;
+    p.interpolation = interps[rng.uniform(0, 5)];
+    // INTER_AREA has no coordinate mode; INTER_NEAREST copies samples, so it takes any depth.
+    p.coordMode = p.interpolation == INTER_AREA ? ResizeCoord::PIXEL_CENTER : (ResizeCoord)rng.uniform(0, 7);
+    p.nearestMode = (ResizeNearest)rng.uniform(0, 4);
+    p.cubicCoeffA = rng.uniform(0, 2) ? -0.75f : rng.uniform(-1.f, -0.5f);
+    p.excludeOutside = rng.uniform(0, 2) == 1;
+
+    const int depth = p.interpolation == INTER_NEAREST ? anyDepth[rng.uniform(0, 7)] : filterDepth[rng.uniform(0, 5)];
+    c.type = CV_MAKETYPE(depth, rng.uniform(1, 5));
+    c.kind = (InputKind)rng.uniform(0, 3);
+    c.roi = c.kind != KIND_TENSOR && rng.uniform(0, 2) == 1;
+
+    const int count = c.kind == KIND_VECTOR ? rng.uniform(1, 4) : 1;
+    const bool ragged = c.kind == KIND_VECTOR && rng.uniform(0, 2) == 1;
+    c.sizes.push_back(Size(rng.uniform(1, 41), rng.uniform(1, 41)));
+    for (int i = 1; i < count; i++)
+        c.sizes.push_back(ragged ? Size(rng.uniform(1, 41), rng.uniform(1, 41)) : c.sizes[0]);
+    if (c.kind == KIND_TENSOR)
+        for (int i = rng.uniform(1, 3); i > 0; i--)
+            c.leadingDims.push_back(rng.uniform(1, 4));
+
+    // Half the cases scale both axes alike, as most callers do.
+    double sx = drawScale(rng), sy = rng.uniform(0, 2) ? sx : drawScale(rng);
+    if (rng.uniform(0, 20) == 0)
+        sx = sy = 1.0;
+    int minW = INT_MAX, minH = INT_MAX;
+    for (const Size& sz : c.sizes)
+        minW = std::min(minW, sz.width), minH = std::min(minH, sz.height);
+
+    // The geometry comes as dsize alone, as fx/fy alone, or as both, the way the ONNX layer passes
+    // it: the true scale plus the floored size.
+    const Size first = c.sizes[0];
+    switch (rng.uniform(0, 3))
+    {
+    case 0:
+        p.dsize = Size(std::max(1, cvRound(first.width*sx)), std::max(1, cvRound(first.height*sy)));
+        break;
+    case 1:
+        p.fx = std::max(sx, 1./minW);
+        p.fy = std::max(sy, 1./minH);
+        break;
+    default:
+        p.fx = std::max(sx, 1./minW);
+        p.fy = std::max(sy, 1./minH);
+        p.dsize = Size(std::max(1, cvFloor(first.width*p.fx)), std::max(1, cvFloor(first.height*p.fy)));
+        break;
+    }
+    return c;
+}
+
+static void fillRandom(Mat& m, RNG& rng)
+{
+    switch (m.depth())
+    {
+    case CV_8U:  rng.fill(m, RNG::UNIFORM, 0, 256); break;
+    case CV_8S:  rng.fill(m, RNG::UNIFORM, -128, 128); break;
+    case CV_16U: rng.fill(m, RNG::UNIFORM, 0, 1024); break;
+    case CV_16S: rng.fill(m, RNG::UNIFORM, -512, 512); break;
+    case CV_32S: rng.fill(m, RNG::UNIFORM, -1000000, 1000000); break;
+    default:     rng.fill(m, RNG::UNIFORM, -100., 100.); break;
     }
 }
 
-TEST(Resize_Params, BatchMechanics)
+// An image of the given size, possibly a view into a larger Mat so that its step is not width*esz.
+static Mat makeImage(int type, Size sz, bool roi, RNG& rng)
+{
+    if (!roi)
+    {
+        Mat m(sz, type);
+        fillRandom(m, rng);
+        return m;
+    }
+    Mat padded(sz.height + 3, sz.width + 5, type);
+    fillRandom(padded, rng);
+    return padded(Rect(2, 1, sz.width, sz.height));
+}
+
+// Builds the case's input, resizes it, and returns every source plane with its result. A tensor's
+// planes are views that do not own their data, so the tensors go to keepAlive.
+static void runCase(const RandomCase& c, RNG& rng, std::vector<Mat>& srcPlanes, std::vector<Mat>& dstPlanes,
+                    std::vector<Mat>& keepAlive)
+{
+    if (c.kind == KIND_IMAGE)
+    {
+        Mat src = makeImage(c.type, c.sizes[0], c.roi, rng), dst;
+        resize(src, dst, c.params);
+        srcPlanes.push_back(src);
+        dstPlanes.push_back(dst);
+        return;
+    }
+    if (c.kind == KIND_VECTOR)
+    {
+        std::vector<Mat> srcs, dsts;
+        for (const Size& sz : c.sizes)
+            srcs.push_back(makeImage(c.type, sz, c.roi, rng));
+        resize(srcs, dsts, c.params);
+        ASSERT_EQ(srcs.size(), dsts.size());
+        srcPlanes = srcs;
+        dstPlanes = dsts;
+        return;
+    }
+
+    const Size sz = c.sizes[0];
+    std::vector<int> shape = c.leadingDims;
+    shape.push_back(sz.height);
+    shape.push_back(sz.width);
+    Mat src((int)shape.size(), shape.data(), c.type);
+    fillRandom(src, rng);
+
+    Mat dst;
+    resize(src, dst, c.params);
+    ASSERT_EQ(src.dims, dst.dims);
+    for (int i = 0; i < src.dims - 2; i++)
+        ASSERT_EQ(src.size[i], dst.size[i]);
+
+    keepAlive.push_back(src);
+    keepAlive.push_back(dst);
+    const Size dsize(dst.size[dst.dims - 1], dst.size[dst.dims - 2]);
+    const size_t planes = src.total()/sz.area();
+    for (size_t i = 0; i < planes; i++)
+    {
+        srcPlanes.push_back(Mat(sz, c.type, src.ptr() + i*sz.area()*src.elemSize()));
+        dstPlanes.push_back(Mat(dsize, c.type, dst.ptr() + i*dsize.area()*dst.elemSize()));
+    }
+}
+
+// A fixed number of cases, each drawing every parameter at once, against an independent reference.
+// A batch must also give each image exactly what it gets alone, and HALF_PIXEL, whose formula is
+// PIXEL_CENTER's, must match it bit for bit: the coordinate modes share every kernel.
+TEST(Resize_Params, RandomConfigs)
+{
+    RNG rng(0x7e5a1e);
+    const int ncases = 200;
+    for (int iter = 0; iter < ncases; iter++)
+    {
+        const RandomCase c = drawCase(rng);
+        SCOPED_TRACE(cv::format("case %d: ", iter) + c.describe());
+
+        std::vector<Mat> srcPlanes, dstPlanes, keepAlive;
+        ASSERT_NO_FATAL_FAILURE(runCase(c, rng, srcPlanes, dstPlanes, keepAlive));
+        ASSERT_EQ(srcPlanes.size(), dstPlanes.size());
+
+        for (size_t i = 0; i < srcPlanes.size(); i++)
+        {
+            SCOPED_TRACE(cv::format("plane %d", (int)i));
+            const Mat& src = srcPlanes[i];
+            const Mat& dst = dstPlanes[i];
+            ASSERT_NO_FATAL_FAILURE(checkAgainstReference(src, dst, c.params));
+
+            if (c.kind == KIND_IMAGE)
+                continue;
+            EXPECT_EQ(0, cvtest::norm(resizeAlone(src, c.params), dst, NORM_INF)) << "batch differs from a lone image";
+
+            const int interp = c.params.interpolation;
+            if (c.params.coordMode == ResizeCoord::HALF_PIXEL && c.params.fx == 0 && dst.size() != src.size() &&
+                (interp == INTER_LINEAR || interp == INTER_CUBIC || interp == INTER_LANCZOS4))
+            {
+                ResizeParams pixelCenter = c.params;
+                pixelCenter.coordMode = ResizeCoord::PIXEL_CENTER;
+                EXPECT_EQ(0, cvtest::norm(resizeAlone(src, pixelCenter), dst, NORM_INF)) << "HALF_PIXEL differs from PIXEL_CENTER";
+            }
+        }
+        if (HasFailure())
+            return;
+    }
+}
+
+// Values worked out by hand from the ONNX Resize reference, with the scale given as fx/fy: dsize is
+// floor(size*scale), so the scale cannot be recovered from it.
+TEST(Resize_Params, KnownValues)
 {
     {
-        const int N = 2, C = 3, inH = 20, inW = 16, outH = 8, outW = 12;
-        int srcSizes[] = { N, C, inH, inW };
-        Mat src(4, srcSizes, CV_32F);
-        RNG rng(42);
-        rng.fill(src, RNG::UNIFORM, 0, 255);
-
-        Mat dst;
-        resize(src, dst, ResizeParams(Size(outW, outH)));
-        ASSERT_EQ(dst.dims, 4);
-        EXPECT_EQ(dst.size[0], N);
-        EXPECT_EQ(dst.size[1], C);
-        EXPECT_EQ(dst.size[2], outH);
-        EXPECT_EQ(dst.size[3], outW);
-
-        Mat src2D = src.reshape(1, N * C * inH);
-        Mat dst2D = dst.reshape(1, N * C * outH);
-        for (int p = 0; p < N * C; p++)
-        {
-            // See Resize_Params.BatchMatchesSingleImage for why the reference is a batch of one.
-            std::vector<Mat> plane(1, src2D.rowRange(p * inH, (p + 1) * inH)), alone;
-            resize(plane, alone, ResizeParams(Size(outW, outH)));
-            Mat actualPlane = dst2D.rowRange(p * outH, (p + 1) * outH);
-            EXPECT_EQ(0, cvtest::norm(alone[0], actualPlane, NORM_INF)) << "plane=" << p;
-        }
-    }
-
-    {
-        const int N = 2, inH = 9, inW = 13, outH = 4, outW = 5;
-        int srcSizes[] = { N, inH, inW };
-        Mat src(3, srcSizes, CV_32F);
-        Mat srcFill = src.reshape(1, N * inH);
-        for (int n = 0; n < N; n++)
-            for (int y = 0; y < inH; y++)
-            {
-                float* row = srcFill.ptr<float>(n * inH + y);
-                for (int x = 0; x < inW; x++)
-                    row[x] = (float)x + (float)y * 1000.f;
-            }
-
-        ResizeParams params;
-        params.interpolation = INTER_LINEAR;
-        params.coordMode = ResizeCoord::HALF_PIXEL;
-
-        params.dsize = Size(outW, outH);
-
-        Mat dst;
+        // ONNX test_resize_downsample_scales_linear_align_corners
+        Mat src = Mat_<float>({2, 4}, {1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f}), dst;
+        ResizeParams params(Size(2, 1), 0.6, 0.6);
+        params.coordMode = ResizeCoord::ALIGN_CORNERS;
         resize(src, dst, params);
-        ASSERT_EQ(dst.dims, 3);
-        EXPECT_EQ(dst.size[0], N);
-        EXPECT_EQ(dst.size[1], outH);
-        EXPECT_EQ(dst.size[2], outW);
-
-        Mat dstView = dst.reshape(1, N * outH);
-        const double scaleX = (double)inW / outW, scaleY = (double)inH / outH;
-        for (int n = 0; n < N; n++)
-            for (int oy = 0; oy < outH; oy++)
-            {
-                const float* row = dstView.ptr<float>(n * outH + oy);
-                for (int ox = 0; ox < outW; ox++)
-                {
-                    double sx = std::min(std::max(referenceSrcCoord(ox, scaleX, inW, outW, ResizeCoord::HALF_PIXEL), 0.0), (double)(inW - 1));
-                    double sy = std::min(std::max(referenceSrcCoord(oy, scaleY, inH, outH, ResizeCoord::HALF_PIXEL), 0.0), (double)(inH - 1));
-                    float expected = (float)(sx + sy * 1000.0);
-                    EXPECT_NEAR(expected, row[ox], 5e-2) << "n=" << n << " oy=" << oy << " ox=" << ox;
-                }
-            }
+        ASSERT_EQ(Size(2, 1), dst.size());
+        EXPECT_NEAR(1.f, dst.at<float>(0, 0), 1e-5);
+        EXPECT_NEAR(3.142857f, dst.at<float>(0, 1), 1e-5);
     }
-
     {
-        // The UMat batch still goes image by image through the OpenCL path.
-        const Size dstSize(48, 64);
-        std::vector<UMat> srcs(2);
-        makeTestImage(CV_8UC3, Size(120, 90), 11).copyTo(srcs[0]);
-        makeTestImage(CV_8UC3, Size(90, 120), 22).copyTo(srcs[1]);
+        // ONNX test_resize_downsample_scales_linear_half_pixel_symmetric
+        Mat src = Mat_<float>({1, 4}, {1.f, 2.f, 3.f, 4.f}), dst;
+        ResizeParams params(Size(2, 1), 0.6, 1.0);
+        params.coordMode = ResizeCoord::HALF_PIXEL_SYMMETRIC;
+        resize(src, dst, params);
+        ASSERT_EQ(Size(2, 1), dst.size());
+        EXPECT_NEAR(1.6666666f, dst.at<float>(0, 0), 1e-5);
+        EXPECT_NEAR(3.3333333f, dst.at<float>(0, 1), 1e-5);
+    }
+    {
+        // An exact 2x linear downscale averages 2x2 blocks only when sampling at pixel centres;
+        // asymmetric samples land on src[2x] itself.
+        Mat src = Mat_<float>({2, 8}, {0.f, 1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f,
+                                       0.f, 1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f}), dst;
+        ResizeParams params(Size(4, 1));
+        params.coordMode = ResizeCoord::ASYMMETRIC;
+        resize(src, dst, params);
+        EXPECT_EQ(0, cvtest::norm(dst, Mat_<float>({1, 4}, {0.f, 2.f, 4.f, 6.f}), NORM_INF));
+        params.coordMode = ResizeCoord::HALF_PIXEL;
+        resize(src, dst, params);
+        EXPECT_EQ(0, cvtest::norm(dst, Mat_<float>({1, 4}, {0.5f, 2.5f, 4.5f, 6.5f}), NORM_INF));
 
-        std::vector<UMat> actual;
-        resize(srcs, actual, ResizeParams(dstSize));
-
-        ASSERT_EQ(srcs.size(), actual.size());
-        for (size_t i = 0; i < srcs.size(); i++)
+        // fx/fy pin the scale, so dsize may ask for more than the source covers. The samples past
+        // the edge repeat it, at the exact 2x too, where there are no 2x2 blocks left to average.
+        Mat ramp4 = repeat(Mat_<float>({1, 4}, {0.f, 1.f, 2.f, 3.f}), 4, 1);
+        ResizeParams pinned(Size(4, 4), 0.5, 0.5);
+        pinned.coordMode = ResizeCoord::HALF_PIXEL;
+        resize(ramp4, dst, pinned);
+        EXPECT_EQ(0, cvtest::norm(dst, repeat(Mat_<float>({1, 4}, {0.5f, 2.5f, 3.f, 3.f}), 4, 1), NORM_INF));
+    }
+    {
+        // A lone PIXEL_CENTER image keeps cubicCoeffA and excludeOutside, which classic resize,
+        // and the HAL behind it, would drop.
+        Mat src = makeTestImage(CV_8UC3, Size(37, 29), 5), single;
+        ResizeParams params(Size(23, 17), 0, 0, INTER_CUBIC);
+        params.cubicCoeffA = -0.5f;
+        params.excludeOutside = true;
+        resize(src, single, params);
+        EXPECT_EQ(0, cvtest::norm(single, resizeAlone(src, params), NORM_INF));
+    }
+    {
+        // CV_64F accumulates in double, as classic cv::resize does, though its weights are float:
+        // detail far below float resolution survives, the level is only float-weight accurate.
+        Mat src(1, 9, CV_64FC1), dst;
+        for (int x = 0; x < src.cols; x++)
+            src.at<double>(0, x) = 1.0 + x * 1e-12;
+        for (int interp : { INTER_LINEAR, INTER_CUBIC })
         {
-            UMat expected;
-            resize(srcs[i], expected, dstSize, 0, 0, INTER_LINEAR);
-            EXPECT_EQ(0, cvtest::norm(expected.getMat(ACCESS_READ), actual[i].getMat(ACCESS_READ), NORM_INF)) << "index=" << i;
+            ResizeParams params(Size(5, 1), 0, 0, interp);
+            params.coordMode = ResizeCoord::HALF_PIXEL;
+            resize(src, dst, params);
+            ASSERT_EQ(CV_64F, dst.depth());
+            double lo, hi;
+            minMaxLoc(dst, &lo, &hi);
+            EXPECT_GT(hi - lo, 1e-13) << "interpolation=" << interp << ": detail lost to float";
+            EXPECT_LT(std::abs(hi - 1.0), 1e-6) << "interpolation=" << interp;
+            EXPECT_LT(std::abs(lo - 1.0), 1e-6) << "interpolation=" << interp;
         }
+    }
+}
+
+// A vector of UMat goes image by image through the OpenCL path.
+TEST(Resize_Params, UMatVector)
+{
+    const Size dstSize(48, 64);
+    std::vector<UMat> srcs(2);
+    makeTestImage(CV_8UC3, Size(120, 90), 11).copyTo(srcs[0]);
+    makeTestImage(CV_8UC3, Size(90, 120), 22).copyTo(srcs[1]);
+
+    std::vector<UMat> actual;
+    resize(srcs, actual, ResizeParams(dstSize));
+
+    ASSERT_EQ(srcs.size(), actual.size());
+    for (size_t i = 0; i < srcs.size(); i++)
+    {
+        UMat expected;
+        resize(srcs[i], expected, dstSize, 0, 0, INTER_LINEAR);
+        EXPECT_EQ(0, cvtest::norm(expected.getMat(ACCESS_READ), actual[i].getMat(ACCESS_READ), NORM_INF)) << "index=" << i;
     }
 }
 
