@@ -450,8 +450,9 @@ void PyrDownInvoker<RVV>::operator()(const Range& range) const
                 // tabR
                 for (int x_ = 0; x < _dst_width; x++, x_++)
                 {
-                    row[x] = src[tabR[x_+cn*2]]*6 + (src[tabR[x_+cn]] + src[tabR[x_+cn*3]])*4 +
-                        src[tabR[x_]] + src[tabR[x_+cn*4]];
+                    int tx = (x_ / cn) * 2 * cn + x_ % cn;
+                    row[x] = src[tabR[tx+cn*2]]*6 + (src[tabR[tx+cn]] + src[tabR[tx+cn*3]])*4 +
+                        src[tabR[tx]] + src[tabR[tx+cn*4]];
                 }
             } while (0);
         }

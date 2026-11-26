@@ -1097,15 +1097,12 @@ void PyrDownInvoker<CastOp>::operator()(const Range& range) const
 
                 // tabR: advance by 2*cn per output pixel so each right-border column samples 2 source columns apart.
                 const int* tabR = *_tabR;
-                for (int tab_off = 0; x < dsize.width; tab_off += cn * 2)
+                for (int x_ = 0; x < dsize.width; x++, x_++)
                 {
-                    for (int k = 0; k < cn && x < dsize.width; k++, x++)
-                    {
-                        int tx = tab_off + k;
-                        row[x] = src[tabR[tx + cn * 2]] * 6 +
-                                 (src[tabR[tx + cn]] + src[tabR[tx + cn * 3]]) * 4 +
-                                 src[tabR[tx]] + src[tabR[tx + cn * 4]];
-                    }
+                    int tx = (x_ / cn) * 2 * cn + x_ % cn;
+                    row[x] = src[tabR[tx + cn * 2]] * 6 +
+                             (src[tabR[tx + cn]] + src[tabR[tx + cn * 3]]) * 4 +
+                             src[tabR[tx]] + src[tabR[tx + cn * 4]];
                 }
             } while (0);
         }

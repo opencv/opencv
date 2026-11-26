@@ -925,9 +925,9 @@ int fastcv_hal_pyrdown(
     int dstW = (src_width & 1)  == 1 ? ((src_width + 1)  >> 1) : ((src_width) >> 1);
     int dstH = (src_height & 1) == 1 ? ((src_height + 1) >> 1) : ((src_height) >> 1);
 
-    if((dstW > dst_width) || (dstH > dst_height))
+    if((dstW != dst_width) || (dstH != dst_height))
     {
-        CV_HAL_RETURN_NOT_IMPLEMENTED("dst size needs to be atleast half of the src size");
+        CV_HAL_RETURN_NOT_IMPLEMENTED("dst size needs to be (src_size + 1) / 2");
     }
 
     INITIALIZATION_CHECK;
