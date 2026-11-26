@@ -122,6 +122,36 @@ TEST(Imgproc_PhaseCorrelatorTest, accuracy_1d_odd_fft) {
     ASSERT_NEAR(phaseShift.x, (double)xShift, 1.);
 }
 
+typedef testing::TestWithParam<tuple<Size, int> > Imgproc_PhaseCorrelatorTest_Origin;
+
+TEST_P(Imgproc_PhaseCorrelatorTest_Origin, odd_fft_origin)
+{
+    const Size size = get<0>(GetParam());
+    const int type = get<1>(GetParam());
+    ASSERT_EQ(15, getOptimalDFTSize(13));
+    ASSERT_EQ(18, getOptimalDFTSize(17));
+    Mat src1 = Mat::zeros(size, type);
+    src1(Rect(7, 7, 1, 1)).setTo(1);
+
+    double response = 0;
+    Point2d shift = phaseCorrelate(src1, src1, noArray(), &response);
+    EXPECT_NEAR(0.0, shift.x, 1e-5);
+    EXPECT_NEAR(0.0, shift.y, 1e-5);
+    EXPECT_NEAR(1.0, response, 1e-5);
+
+    Mat src2 = Mat::zeros(size, type);
+    src2(Rect(9, 6, 1, 1)).setTo(1);
+    shift = phaseCorrelate(src1, src2, noArray(), &response);
+    EXPECT_NEAR(2.0, shift.x, 1e-5);
+    EXPECT_NEAR(-1.0, shift.y, 1e-5);
+    EXPECT_NEAR(1.0, response, 1e-5);
+}
+
+INSTANTIATE_TEST_CASE_P(FFTSize, Imgproc_PhaseCorrelatorTest_Origin,
+    testing::Combine(testing::Values(Size(15, 15), Size(15, 16), Size(16, 15),
+                                     Size(16, 16), Size(13, 13), Size(17, 17)),
+                     testing::Values(CV_32F, CV_64F)));
+
 typedef testing::TestWithParam<tuple<int, int, int> > Imgproc_PhaseCorrelatorTest_Inputs;
 
 TEST_P(Imgproc_PhaseCorrelatorTest_Inputs, preserves_inputs)
