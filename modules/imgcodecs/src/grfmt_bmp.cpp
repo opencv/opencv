@@ -110,6 +110,8 @@ bool  BmpDecoder::readHeader()
             m_rle_code = (BmpCompression)m_rle_code_;
             m_strm.skip(12);
             int clrused = m_strm.getDWord();
+            int redmask = 0, greenmask = 0, bluemask = 0;
+            bool has_16bit_masks = false;
 
             if( m_bpp == 32 && m_rle_code == BMP_BITFIELDS && size >= 56 )
             {
@@ -133,6 +135,15 @@ bool  BmpDecoder::readHeader()
                 }
                 m_strm.skip( size - 56 );
             }
+            else if( m_bpp == 16 && m_rle_code == BMP_BITFIELDS && size >= 52 )
+            {
+                m_strm.skip(4); //important colors
+                redmask = m_strm.getDWord();
+                greenmask = m_strm.getDWord();
+                bluemask = m_strm.getDWord();
+                has_16bit_masks = true;
+                m_strm.skip( size - 52 );
+            }
             else
                 m_strm.skip( size - 36 );
 
@@ -155,9 +166,12 @@ bool  BmpDecoder::readHeader()
                 }
                 else if( m_bpp == 16 && m_rle_code == BMP_BITFIELDS )
                 {
-                    int redmask = m_strm.getDWord();
-                    int greenmask = m_strm.getDWord();
-                    int bluemask = m_strm.getDWord();
+                    if( !has_16bit_masks )
+                    {
+                        redmask = m_strm.getDWord();
+                        greenmask = m_strm.getDWord();
+                        bluemask = m_strm.getDWord();
+                    }
 
                     if( bluemask == 0x1f && greenmask == 0x3e0 && redmask == 0x7c00 )
                         m_bpp = 15;
