@@ -707,82 +707,136 @@ private:
     resize_bitExactInvoker& operator=(const resize_bitExactInvoker&);
 };
 
-// Geometry-only half of the bit-exact resize: tables plus its horizontal kernel.
-struct BitExactTabs
+// One resize geometry, ready to run. Whoever creates a kernel picks the interpolation code and
+// builds every table up front; run() then fills any range of destination rows, from any thread.
+// runResize() owns the only parallel loop.
+class ResizeKernel
 {
-    int* xoffsets;
-    int* yoffsets;
-    void* xcoeffs;
-    void* ycoeffs;
-    int min_x, max_x, min_y, max_y;
-    void* hResize;   // type-erased: its signature depends on the run half's fixed-point type
+public:
+    ResizeKernel(int _type, Size _ssize, Size _dsize) : type(_type), ssize(_ssize), dsize(_dsize) {}
+    virtual ~ResizeKernel() {}
+
+    void run(const uchar* srcData, size_t srcStep, uchar* dstData, size_t dstStep,
+             const Range& rows) const
+    {
+        if (rows.start >= rows.end)
+            return;
+        Mat src(ssize, type, const_cast<uchar*>(srcData), srcStep);
+        Mat dst(dsize, type, dstData, dstStep);
+        apply(src, dst, rows);
+    }
+
+protected:
+    // Fills dst rows [rows.start, rows.end) serially.
+    virtual void apply(const Mat& src, Mat& dst, const Range& rows) const = 0;
+
+    int type;
+    Size ssize, dsize;
+};
+
+// Where a kernel gets built: in storage the caller provides, when it fits, or else on the heap. A
+// lone image keeps its kernel on the stack, so the classic single-image path allocates nothing for
+// it; the batch cache passes no storage and keeps heap kernels for as long as the batch runs.
+class KernelSlot
+{
+public:
+    KernelSlot() : storage(0), capacity(0), placed(0) {}
+    KernelSlot(void* _storage, size_t _capacity) : storage(_storage), capacity(_capacity), placed(0) {}
+    ~KernelSlot()
+    {
+        if (placed)
+            placed->~ResizeKernel();
+    }
+
+    template <typename K, typename... Args>
+    ResizeKernel* emplace(Args&&... args)
+    {
+        if (sizeof(K) <= capacity)
+            return placed = new (storage) K(std::forward<Args>(args)...);
+        heap = makePtr<K>(std::forward<Args>(args)...);
+        return heap.get();
+    }
+
+    Ptr<ResizeKernel> heap;
+
+private:
+    void* storage;
+    size_t capacity;
+    ResizeKernel* placed;
+
+    KernelSlot(const KernelSlot&);
+    KernelSlot& operator=(const KernelSlot&);
 };
 
 template <typename ET, typename interpolation>
-void resize_bitExact_build(int src_width, int src_height, int dst_width, int dst_height, int cn,
-                           double inv_scale_x, double inv_scale_y,
-                           AutoBuffer<uchar>& buf, BitExactTabs& tabs)
+class LinearExactKernel CV_FINAL : public ResizeKernel
 {
+public:
     typedef typename fixedtype<ET, interpolation::needsign>::type fixedpoint;
-    void(*hResize)(ET* src, int cn, int *ofst, fixedpoint* m, fixedpoint* dst, int dst_min, int dst_max, int dst_width);
-    switch (cn)
+    typedef void (*HResizeFunc)(ET* src, int cn, int *ofst, fixedpoint* m, fixedpoint* dst,
+                                int dst_min, int dst_max, int dst_width);
+
+    LinearExactKernel(int _type, Size _ssize, Size _dsize, double inv_scale_x, double inv_scale_y)
+        : ResizeKernel(_type, _ssize, _dsize)
     {
-    case  1: hResize = src_width > interpolation::len ? hlineResizeCn<ET, fixedpoint, interpolation::len, true, 1> : hlineResizeCn<ET, fixedpoint, interpolation::len, false, 1>; break;
-    case  2: hResize = src_width > interpolation::len ? hlineResizeCn<ET, fixedpoint, interpolation::len, true, 2> : hlineResizeCn<ET, fixedpoint, interpolation::len, false, 2>; break;
-    case  3: hResize = src_width > interpolation::len ? hlineResizeCn<ET, fixedpoint, interpolation::len, true, 3> : hlineResizeCn<ET, fixedpoint, interpolation::len, false, 3>; break;
-    case  4: hResize = src_width > interpolation::len ? hlineResizeCn<ET, fixedpoint, interpolation::len, true, 4> : hlineResizeCn<ET, fixedpoint, interpolation::len, false, 4>; break;
-    default: hResize = src_width > interpolation::len ? hlineResize<ET, fixedpoint, interpolation::len, true>      : hlineResize<ET, fixedpoint, interpolation::len, false>     ; break;
+        const int src_width = ssize.width, src_height = ssize.height;
+        const int dst_width = dsize.width, dst_height = dsize.height;
+        switch (CV_MAT_CN(type))
+        {
+        case  1: hResize = src_width > interpolation::len ? hlineResizeCn<ET, fixedpoint, interpolation::len, true, 1> : hlineResizeCn<ET, fixedpoint, interpolation::len, false, 1>; break;
+        case  2: hResize = src_width > interpolation::len ? hlineResizeCn<ET, fixedpoint, interpolation::len, true, 2> : hlineResizeCn<ET, fixedpoint, interpolation::len, false, 2>; break;
+        case  3: hResize = src_width > interpolation::len ? hlineResizeCn<ET, fixedpoint, interpolation::len, true, 3> : hlineResizeCn<ET, fixedpoint, interpolation::len, false, 3>; break;
+        case  4: hResize = src_width > interpolation::len ? hlineResizeCn<ET, fixedpoint, interpolation::len, true, 4> : hlineResizeCn<ET, fixedpoint, interpolation::len, false, 4>; break;
+        default: hResize = src_width > interpolation::len ? hlineResize<ET, fixedpoint, interpolation::len, true>      : hlineResize<ET, fixedpoint, interpolation::len, false>     ; break;
+        }
+
+        interpolation interp_x(inv_scale_x, src_width, dst_width);
+        interpolation interp_y(inv_scale_y, src_height, dst_height);
+
+        buf.allocate( dst_width * sizeof(int) +
+                      dst_height * sizeof(int) +
+                      dst_width * interp_x.len*sizeof(fixedpoint) +
+                      dst_height * interp_y.len * sizeof(fixedpoint) );
+        xoffsets = (int*)buf.data();
+        yoffsets = xoffsets + dst_width;
+        xcoeffs = (fixedpoint*)(yoffsets + dst_height);
+        ycoeffs = xcoeffs + dst_width * interp_x.len;
+
+        for (int dx = 0; dx < dst_width; dx++)
+            interp_x.getCoeffs(dx, xoffsets+dx, xcoeffs+dx*interp_x.len);
+        interp_x.getMinMax(min_x, max_x);
+        for (int dy = 0; dy < dst_height; dy++)
+            interp_y.getCoeffs(dy, yoffsets+dy, ycoeffs+dy*interp_y.len);
+        interp_y.getMinMax(min_y, max_y);
     }
 
-    interpolation interp_x(inv_scale_x, src_width, dst_width);
-    interpolation interp_y(inv_scale_y, src_height, dst_height);
+protected:
+    void apply(const Mat& src, Mat& dst, const Range& rows) const CV_OVERRIDE
+    {
+        resize_bitExactInvoker<ET, fixedpoint, interpolation::len> invoker(
+            src.data, src.step, ssize.width, ssize.height, dst.data, dst.step, dsize.width, dsize.height,
+            CV_MAT_CN(type), xoffsets, yoffsets, xcoeffs, ycoeffs, min_x, max_x, min_y, max_y, hResize);
+        invoker(rows);
+    }
 
-    buf.allocate( dst_width * sizeof(int) +
-                  dst_height * sizeof(int) +
-                  dst_width * interp_x.len*sizeof(fixedpoint) +
-                  dst_height * interp_y.len * sizeof(fixedpoint) );
-    int* xoffsets = (int*)buf.data();
-    int* yoffsets = xoffsets + dst_width;
-    fixedpoint* xcoeffs = (fixedpoint*)(yoffsets + dst_height);
-    fixedpoint* ycoeffs = xcoeffs + dst_width * interp_x.len;
+private:
+    AutoBuffer<uchar> buf;
+    int *xoffsets, *yoffsets;
+    fixedpoint *xcoeffs, *ycoeffs;
+    int min_x, max_x, min_y, max_y;
+    HResizeFunc hResize;
+};
 
-    for (int dx = 0; dx < dst_width; dx++)
-        interp_x.getCoeffs(dx, xoffsets+dx, xcoeffs+dx*interp_x.len);
-    interp_x.getMinMax(tabs.min_x, tabs.max_x);
-    for (int dy = 0; dy < dst_height; dy++)
-        interp_y.getCoeffs(dy, yoffsets+dy, ycoeffs+dy*interp_y.len);
-    interp_y.getMinMax(tabs.min_y, tabs.max_y);
-
-    tabs.xoffsets = xoffsets;
-    tabs.yoffsets = yoffsets;
-    tabs.xcoeffs = xcoeffs;
-    tabs.ycoeffs = ycoeffs;
-    tabs.hResize = (void*)hResize;
-}
-
-template <typename ET, typename interpolation>
-void resize_bitExact_run(const uchar* src, size_t src_step, int src_width, int src_height,
-                         uchar* dst, size_t dst_step, int dst_width, int dst_height, int cn,
-                         const BitExactTabs& tabs, const Range& range)
+template <typename ET>
+ResizeKernel* createLinearExactKernel(KernelSlot& slot, int type, Size ssize, Size dsize,
+                                      double inv_scale_x, double inv_scale_y)
 {
-    typedef typename fixedtype<ET, interpolation::needsign>::type fixedpoint;
-    typedef void(*hResizeFunc)(ET* src, int cn, int *ofst, fixedpoint* m,
-                               fixedpoint* dst, int dst_min, int dst_max, int dst_width);
-
-    resize_bitExactInvoker<ET, fixedpoint, interpolation::len> invoker(
-        src, src_step, src_width, src_height, dst, dst_step, dst_width, dst_height, cn,
-        tabs.xoffsets, tabs.yoffsets, (fixedpoint*)tabs.xcoeffs, (fixedpoint*)tabs.ycoeffs,
-        tabs.min_x, tabs.max_x, tabs.min_y, tabs.max_y, (hResizeFunc)tabs.hResize);
-    invoker(range);
+    return slot.emplace<LinearExactKernel<ET, interpolationLinear<ET> > >(type, ssize, dsize,
+                                                                         inv_scale_x, inv_scale_y);
 }
 
-typedef void(*be_build_func)(int src_width, int src_height, int dst_width, int dst_height, int cn,
-                             double inv_scale_x, double inv_scale_y,
-                             AutoBuffer<uchar>& buf, BitExactTabs& tabs);
-
-typedef void(*be_run_func)(const uchar* src, size_t src_step, int src_width, int src_height,
-                           uchar* dst, size_t dst_step, int dst_width, int dst_height, int cn,
-                           const BitExactTabs& tabs, const Range& range);
+typedef ResizeKernel* (*LinearExactFactory)(KernelSlot& slot, int type, Size ssize, Size dsize,
+                                            double inv_scale_x, double inv_scale_y);
 
 }
 
@@ -3195,7 +3249,7 @@ int resolveInterpolation(const ResizeParams& params, int depth)
     return params.interpolation;
 }
 
-// Rejects what no table builder covers. Called once per resize(), before any plan is built.
+// Rejects what no kernel covers. Called once per resize(), before any kernel is built.
 void checkResizeParams(const ResizeParams& params)
 {
     if (params.antialias)
@@ -3354,95 +3408,211 @@ void excludeOutsideTaps(float* coeffs, int ksize, int first, int len)
             coeffs[k] /= sum;
 }
 
-// Geometry-only half of a resize: kernel choice plus tables; run() fills any row range.
-class ResizePlan
+// ---- kernels: one per interpolation method, each bound to its tables ----
+
+// Equal sizes under PIXEL_CENTER: a row copy, the shortcut classic cv::resize takes too.
+class CopyKernel CV_FINAL : public ResizeKernel
 {
 public:
-    ResizePlan() : type(0), depth(0), cn(0), srcStep(0), kind(KIND_NONE), func(0), areaFastFunc(0),
-                   areaFunc(0), beRun(0), xofs(0), yofs(0), alpha(0), beta(0),
-                   xmin(0), xmax(0), ksize(0), nnXofs(0), nnYofs(0), nnBeX(0), nnBeY(0),
-                   afOfs(0), afXofs(0), iscale_x(0), iscale_y(0), xtab(0), ytab(0),
-                   xtab_size(0), ytab_size(0), tabofs(0) {}
+    CopyKernel(int _type, Size size) : ResizeKernel(_type, size, size) {}
 
-    // src_step is part of the geometry: the INTER_AREA fast kernel bakes it into offsets.
-    void build(int src_type, Size _ssize, size_t _src_step, Size _dsize, const ResizeParams& params);
-
-    // Row copy, matching the shortcut cv::resize takes when dsize equals the source size.
-    void buildCopy(int src_type, Size size)
+protected:
+    void apply(const Mat& src, Mat& dst, const Range& rows) const CV_OVERRIDE
     {
-        type = src_type; depth = CV_MAT_DEPTH(src_type); cn = CV_MAT_CN(src_type);
-        ssize = dsize = size;
-        kind = KIND_COPY;
+        src.rowRange(rows).copyTo(dst.rowRange(rows));
+    }
+};
+
+// INTER_NEAREST in every coordinate mode: a source byte offset per output column and a source
+// row per output row.
+class NearestKernel CV_FINAL : public ResizeKernel
+{
+public:
+    NearestKernel(int _type, Size _ssize, Size _dsize,
+                  const AxisMap& mapX, const AxisMap& mapY, ResizeNearest rounding)
+        : ResizeKernel(_type, _ssize, _dsize)
+    {
+        buf.allocate(dsize.width + dsize.height);
+        xofs = buf.data();
+        yofs = xofs + dsize.width;
+        buildNearestTab(xofs, dsize.width,  ssize.width,  mapX, rounding, (int)CV_ELEM_SIZE(type));
+        buildNearestTab(yofs, dsize.height, ssize.height, mapY, rounding, 1);
     }
 
-    // Fills dst rows [rows.start,rows.end) serially. runResize() owns the only parallel loop.
-    void run(const uchar* src_data, size_t src_step,
-             uchar* dst_data, size_t dst_step, const Range& rows) const;
+protected:
+    void apply(const Mat& src, Mat& dst, const Range& rows) const CV_OVERRIDE
+    {
+        resizeNN(src, dst, xofs, yofs, rows);
+    }
 
 private:
-    enum Kind
-    {
-        KIND_NONE = 0,
-        KIND_COPY,
-        KIND_NEAREST,
-        KIND_NEAREST_EXACT,
-        KIND_LINEAR_EXACT,
-        KIND_AREA_FAST,
-        KIND_AREA,
-        KIND_GENERIC
-    };
-
-    int type, depth, cn;
-    Size ssize, dsize;
-    size_t srcStep;
-    Kind kind;
-
-    // KIND_GENERIC: separable INTER_LINEAR/INTER_CUBIC/INTER_LANCZOS4 (and INTER_AREA upscaling).
-    ResizeFunc func;
-    ResizeAreaFastFunc areaFastFunc;
-    ResizeAreaFunc areaFunc;
-    be_run_func beRun;
-
-    AutoBuffer<uchar> tabBuf;
+    AutoBuffer<int> buf;
     int *xofs, *yofs;
-    void *alpha, *beta;
-    int xmin, xmax, ksize;
+};
 
-    // KIND_NEAREST: one source index per output column and per output row
-    AutoBuffer<int> nnBuf;
-    int *nnXofs, *nnYofs;
+class NearestExactKernel CV_FINAL : public ResizeKernel
+{
+public:
+    NearestExactKernel(int _type, Size _ssize, Size _dsize)
+        : ResizeKernel(_type, _ssize, _dsize), xofs(0), yofs(0)
+    {
+        area.allocate(xofs, dsize.width, CV_SIMD_WIDTH);
+        area.allocate(yofs, dsize.height, CV_SIMD_WIDTH);
+        area.commit();
+        resizeNN_bitexact_tab(ssize.width, dsize.width, xofs);
+        resizeNN_bitexact_tab(ssize.height, dsize.height, yofs);
+    }
 
-    // KIND_NEAREST_EXACT
-    cv::utils::BufferArea nnBeArea;
-    int *nnBeX, *nnBeY;
+protected:
+    void apply(const Mat& src, Mat& dst, const Range& rows) const CV_OVERRIDE
+    {
+        resizeNN_bitexact(src, dst, xofs, yofs, rows);
+    }
 
-    // KIND_LINEAR_EXACT
-    AutoBuffer<uchar> beBuf;
-    BitExactTabs beTabs;
+private:
+    cv::utils::BufferArea area;
+    int *xofs, *yofs;
+};
 
-    // KIND_AREA_FAST
-    AutoBuffer<int> afBuf;
-    int *afOfs, *afXofs;
+// INTER_AREA at an integer decimation factor on both axes.
+class AreaFastKernel CV_FINAL : public ResizeKernel
+{
+public:
+    AreaFastKernel(int _type, Size _ssize, size_t _srcStep, Size _dsize, int _iscale_x, int _iscale_y)
+        : ResizeKernel(_type, _ssize, _dsize), srcStep(_srcStep), iscale_x(_iscale_x), iscale_y(_iscale_y)
+    {
+        static ResizeAreaFastFunc areafast_tab[CV_DEPTH_MAX] =
+        {
+            resizeAreaFast_<uchar, int, ResizeAreaFastVec<uchar, ResizeAreaFastVec_SIMD_8u> >,
+            0,
+            resizeAreaFast_<ushort, float, ResizeAreaFastVec<ushort, ResizeAreaFastVec_SIMD_16u> >,
+            resizeAreaFast_<short, float, ResizeAreaFastVec<short, ResizeAreaFastVec_SIMD_16s> >,
+            0,
+            resizeAreaFast_<float, float, ResizeAreaFastVec_SIMD_32f>,
+            resizeAreaFast_<double, double, ResizeAreaFastNoVec<double, double> >,
+            0
+        };
+        func = areafast_tab[CV_MAT_DEPTH(type)];
+        CV_Assert( func != 0 );
+
+        const int cn = CV_MAT_CN(type), area = iscale_x*iscale_y;
+        buf.allocate(area + dsize.width*cn);
+        ofs = buf.data();
+        xofs = ofs + area;
+
+        // The source step is baked into ofs, which is why the batch cache keys on it.
+        const size_t srcstep = srcStep / CV_ELEM_SIZE1(type);
+        int k = 0;
+        for( int sy = 0; sy < iscale_y; sy++ )
+            for( int sx = 0; sx < iscale_x; sx++ )
+                ofs[k++] = (int)(sy*srcstep + sx*cn);
+
+        for( int dx = 0; dx < dsize.width; dx++ )
+        {
+            const int j = dx*cn, sx = iscale_x*j;
+            for( k = 0; k < cn; k++ )
+                xofs[j + k] = sx + k;
+        }
+    }
+
+protected:
+    void apply(const Mat& src, Mat& dst, const Range& rows) const CV_OVERRIDE
+    {
+        CV_DbgAssert(src.step == srcStep);
+        func(src, dst, ofs, xofs, iscale_x, iscale_y, rows);
+    }
+
+private:
+    ResizeAreaFastFunc func;
+    AutoBuffer<int> buf;
+    int *ofs, *xofs;
+    size_t srcStep;
     int iscale_x, iscale_y;
+};
 
-    // KIND_AREA
-    AutoBuffer<DecimateAlpha> areaBuf;
-    AutoBuffer<int> areaTabofs;
+// INTER_AREA at a non-integer decimation factor.
+class AreaKernel CV_FINAL : public ResizeKernel
+{
+public:
+    AreaKernel(int _type, Size _ssize, Size _dsize, double scale_x, double scale_y)
+        : ResizeKernel(_type, _ssize, _dsize)
+    {
+        static ResizeAreaFunc area_tab[CV_DEPTH_MAX] =
+        {
+            resizeArea_<uchar, float>, 0, resizeArea_<ushort, float>,
+            resizeArea_<short, float>, 0, resizeArea_<float, float>,
+            resizeArea_<double, double>, 0
+        };
+        const int cn = CV_MAT_CN(type);
+        func = area_tab[CV_MAT_DEPTH(type)];
+        CV_Assert( func != 0 );
+
+        buf.allocate((ssize.width + ssize.height)*2);
+        xtab = buf.data();
+        ytab = xtab + ssize.width*2;
+
+        xtab_size = computeResizeAreaTab(ssize.width, dsize.width, cn, scale_x, xtab);
+        ytab_size = computeResizeAreaTab(ssize.height, dsize.height, 1, scale_y, ytab);
+
+        tabofsBuf.allocate(dsize.height + 1);
+        tabofs = tabofsBuf.data();
+        int dy = 0;
+        for( int k = 0; k < ytab_size; k++ )
+        {
+            if( k == 0 || ytab[k].di != ytab[k-1].di )
+            {
+                CV_Assert( ytab[k].di == dy );
+                tabofs[dy++] = k;
+            }
+        }
+        tabofs[dy] = ytab_size;
+    }
+
+protected:
+    void apply(const Mat& src, Mat& dst, const Range& rows) const CV_OVERRIDE
+    {
+        func(src, dst, xtab, xtab_size, ytab, ytab_size, tabofs, rows);
+    }
+
+private:
+    ResizeAreaFunc func;
+    AutoBuffer<DecimateAlpha> buf;
+    AutoBuffer<int> tabofsBuf;
     DecimateAlpha *xtab, *ytab;
     int xtab_size, ytab_size;
     int* tabofs;
 };
 
-void ResizePlan::build(int src_type, Size _ssize, size_t _src_step, Size _dsize,
-                       const ResizeParams& params)
+// Separable INTER_LINEAR, INTER_CUBIC and INTER_LANCZOS4, and INTER_AREA when it upscales.
+// The coordinate mode, the Keys coefficient and exclude_outside only change the tables.
+class SeparableKernel CV_FINAL : public ResizeKernel
 {
-    type = src_type;
-    depth = CV_MAT_DEPTH(src_type);
-    cn = CV_MAT_CN(src_type);
-    ssize = _ssize;
-    srcStep = _src_step;
-    dsize = _dsize;
+public:
+    SeparableKernel(int _type, Size _ssize, Size _dsize, int interpolation,
+                    double inv_scale_x, double inv_scale_y,
+                    const AxisMap& mapX, const AxisMap& mapY, float cubicA, bool excludeOutside);
 
+protected:
+    void apply(const Mat& src, Mat& dst, const Range& rows) const CV_OVERRIDE
+    {
+        func(src, dst, xofs, alpha, yofs, beta, xmin, xmax, ksize, rows);
+    }
+
+private:
+    ResizeFunc func;
+    AutoBuffer<uchar> buf;
+    int *xofs, *yofs;
+    const void *alpha, *beta;
+    int xmin, xmax, ksize;
+};
+
+SeparableKernel::SeparableKernel(int _type, Size _ssize, Size _dsize, int interpolation,
+                                 double inv_scale_x, double inv_scale_y,
+                                 const AxisMap& mapX, const AxisMap& mapY,
+                                 float cubicA, bool excludeOutside)
+    : ResizeKernel(_type, _ssize, _dsize), func(0), xofs(0), yofs(0), alpha(0), beta(0),
+      xmin(0), xmax(_dsize.width), ksize(0)
+{
     static ResizeFunc linear_tab[CV_DEPTH_MAX] =
     {
         resizeGeneric_<
@@ -3528,188 +3698,13 @@ void ResizePlan::build(int src_type, Size _ssize, size_t _src_step, Size _dsize,
         0
     };
 
-    static ResizeAreaFastFunc areafast_tab[CV_DEPTH_MAX] =
-    {
-        resizeAreaFast_<uchar, int, ResizeAreaFastVec<uchar, ResizeAreaFastVec_SIMD_8u> >,
-        0,
-        resizeAreaFast_<ushort, float, ResizeAreaFastVec<ushort, ResizeAreaFastVec_SIMD_16u> >,
-        resizeAreaFast_<short, float, ResizeAreaFastVec<short, ResizeAreaFastVec_SIMD_16s> >,
-        0,
-        resizeAreaFast_<float, float, ResizeAreaFastVec_SIMD_32f>,
-        resizeAreaFast_<double, double, ResizeAreaFastNoVec<double, double> >,
-        0
-    };
-
-    static ResizeAreaFunc area_tab[CV_DEPTH_MAX] =
-    {
-        resizeArea_<uchar, float>, 0, resizeArea_<ushort, float>,
-        resizeArea_<short, float>, 0, resizeArea_<float, float>,
-        resizeArea_<double, double>, 0
-    };
-
-    static be_build_func linear_exact_build_tab[CV_DEPTH_MAX] =
-    {
-        resize_bitExact_build<uchar, interpolationLinear<uchar> >,
-        resize_bitExact_build<schar, interpolationLinear<schar> >,
-        resize_bitExact_build<ushort, interpolationLinear<ushort> >,
-        resize_bitExact_build<short, interpolationLinear<short> >,
-        resize_bitExact_build<int, interpolationLinear<int> >,
-        0,
-        0,
-        0
-    };
-
-    static be_run_func linear_exact_run_tab[CV_DEPTH_MAX] =
-    {
-        resize_bitExact_run<uchar, interpolationLinear<uchar> >,
-        resize_bitExact_run<schar, interpolationLinear<schar> >,
-        resize_bitExact_run<ushort, interpolationLinear<ushort> >,
-        resize_bitExact_run<short, interpolationLinear<short> >,
-        resize_bitExact_run<int, interpolationLinear<int> >,
-        0,
-        0,
-        0
-    };
-
-    double inv_scale_x, inv_scale_y;
-    resolveScales(ssize, dsize, params, inv_scale_x, inv_scale_y);
-    int interpolation = resolveInterpolation(params, depth);
-
-    const bool classicCoord = params.coordMode == ResizeCoord::PIXEL_CENTER;
-    const double trueDstW = !classicCoord && params.fx > 0 ? ssize.width *params.fx : (double)dsize.width;
-    const double trueDstH = !classicCoord && params.fy > 0 ? ssize.height*params.fy : (double)dsize.height;
-
-    double scale_x = 1./inv_scale_x, scale_y = 1./inv_scale_y;
-
-    int iscale_x_ = saturate_cast<int>(scale_x);
-    int iscale_y_ = saturate_cast<int>(scale_y);
-
-    bool is_area_fast = std::abs(scale_x - iscale_x_) < DBL_EPSILON &&
-            std::abs(scale_y - iscale_y_) < DBL_EPSILON;
-
-    if (interpolation == INTER_LINEAR_EXACT)
-    {
-        // in case of inv_scale_x && inv_scale_y is equal to 0.5
-        // INTER_AREA (fast) is equal to bit exact INTER_LINEAR
-        if (is_area_fast && iscale_x_ == 2 && iscale_y_ == 2 && cn != 2)//Area resize implementation for 2-channel images isn't bit-exact
-            interpolation = INTER_AREA;
-        else
-        {
-            be_build_func build_func = linear_exact_build_tab[depth];
-            beRun = linear_exact_run_tab[depth];
-            CV_Assert(build_func != 0 && beRun != 0);
-            build_func(ssize.width, ssize.height, dsize.width, dsize.height, cn,
-                       inv_scale_x, inv_scale_y, beBuf, beTabs);
-            kind = KIND_LINEAR_EXACT;
-            return;
-        }
-    }
-
-    if( interpolation == INTER_NEAREST )
-    {
-        // Classic INTER_NEAREST samples at dst*scale and rounds down, which is exactly ONNX's
-        // asymmetric coordinate mode with nearest_mode=floor.
-        const ResizeCoord nnCoord = classicCoord ? ResizeCoord::ASYMMETRIC : params.coordMode;
-        const ResizeNearest nnRound = classicCoord ? ResizeNearest::FLOOR : params.nearestMode;
-        const AxisMap mapX = makeAxisMap(nnCoord, scale_x, ssize.width,  dsize.width,  trueDstW);
-        const AxisMap mapY = makeAxisMap(nnCoord, scale_y, ssize.height, dsize.height, trueDstH);
-        const int pix_size = (int)CV_ELEM_SIZE(type);
-
-        nnBuf.allocate(dsize.width + dsize.height);
-        nnXofs = nnBuf.data();
-        nnYofs = nnXofs + dsize.width;
-        buildNearestTab(nnXofs, dsize.width,  ssize.width,  mapX, nnRound, pix_size);
-        buildNearestTab(nnYofs, dsize.height, ssize.height, mapY, nnRound, 1);
-        kind = KIND_NEAREST;
-        return;
-    }
-
-    if( interpolation == INTER_NEAREST_EXACT )
-    {
-        nnBeArea.allocate(nnBeX, dsize.width, CV_SIMD_WIDTH);
-        nnBeArea.allocate(nnBeY, dsize.height, CV_SIMD_WIDTH);
-        nnBeArea.commit();
-        resizeNN_bitexact_tab(ssize.width, dsize.width, nnBeX);
-        resizeNN_bitexact_tab(ssize.height, dsize.height, nnBeY);
-        kind = KIND_NEAREST_EXACT;
-        return;
-    }
-
+    const int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    const double scale_x = 1./inv_scale_x, scale_y = 1./inv_scale_y;
     int k, sx, sy, dx, dy;
-
-    {
-        // in case of scale_x && scale_y is equal to 2
-        // INTER_AREA (fast) also is equal to INTER_LINEAR
-        if( interpolation == INTER_LINEAR && is_area_fast && iscale_x_ == 2 && iscale_y_ == 2 )
-            interpolation = INTER_AREA;
-
-        // true "area" interpolation is only implemented for the case (scale_x >= 1 && scale_y >= 1).
-        // In other cases it is emulated using some variant of bilinear interpolation
-        if( interpolation == INTER_AREA && scale_x >= 1 && scale_y >= 1 )
-        {
-            if( is_area_fast )
-            {
-                int area = iscale_x_*iscale_y_;
-                afBuf.allocate(area + dsize.width*cn);
-                afOfs = afBuf.data();
-                afXofs = afOfs + area;
-                areaFastFunc = areafast_tab[depth];
-                CV_Assert( areaFastFunc != 0 );
-
-                size_t srcstep = srcStep / CV_ELEM_SIZE1(type);
-                for( sy = 0, k = 0; sy < iscale_y_; sy++ )
-                    for( sx = 0; sx < iscale_x_; sx++ )
-                        afOfs[k++] = (int)(sy*srcstep + sx*cn);
-
-                for( dx = 0; dx < dsize.width; dx++ )
-                {
-                    int j = dx * cn;
-                    sx = iscale_x_ * j;
-                    for( k = 0; k < cn; k++ )
-                        afXofs[j + k] = sx + k;
-                }
-
-                iscale_x = iscale_x_;
-                iscale_y = iscale_y_;
-                kind = KIND_AREA_FAST;
-                return;
-            }
-
-            areaFunc = area_tab[depth];
-            CV_Assert( areaFunc != 0 );
-
-            areaBuf.allocate((ssize.width + ssize.height)*2);
-            xtab = areaBuf.data();
-            ytab = xtab + ssize.width*2;
-
-            xtab_size = computeResizeAreaTab(ssize.width, dsize.width, cn, scale_x, xtab);
-            ytab_size = computeResizeAreaTab(ssize.height, dsize.height, 1, scale_y, ytab);
-
-            areaTabofs.allocate(dsize.height + 1);
-            tabofs = areaTabofs.data();
-            for( k = 0, dy = 0; k < ytab_size; k++ )
-            {
-                if( k == 0 || ytab[k].di != ytab[k-1].di )
-                {
-                    CV_Assert( ytab[k].di == dy );
-                    tabofs[dy++] = k;
-                }
-            }
-            tabofs[dy] = ytab_size;
-            kind = KIND_AREA;
-            return;
-        }
-    }
-
-    xmin = 0;
-    xmax = dsize.width;
     int width = dsize.width*cn;
     bool area_mode = interpolation == INTER_AREA;
     bool fixpt = depth == CV_8U;
     float fx, fy;
-    // INTER_AREA keeps its own decimation geometry; every other kernel reads its coordinates here.
-    const AxisMap mapX = makeAxisMap(params.coordMode, scale_x, ssize.width,  dsize.width,  trueDstW);
-    const AxisMap mapY = makeAxisMap(params.coordMode, scale_y, ssize.height, dsize.height, trueDstH);
     if( interpolation == INTER_CUBIC )
         ksize = 4, func = cubic_tab[depth];
     else if( interpolation == INTER_LANCZOS4 )
@@ -3721,13 +3716,12 @@ void ResizePlan::build(int src_type, Size _ssize, size_t _src_step, Size _dsize,
     int ksize2 = ksize/2;
     // With two taps, dropping the outside one and renormalising is edge replication, which the
     // kernels already do; only the wider kernels see a difference.
-    const bool exclude = params.excludeOutside && ksize > 2;
-    const float cubicA = params.cubicCoeffA;
+    const bool exclude = excludeOutside && ksize > 2;
 
     CV_Assert( func != 0 );
 
-    tabBuf.allocate((width + dsize.height)*(sizeof(int) + sizeof(float)*ksize));
-    xofs = (int*)tabBuf.data();
+    buf.allocate((width + dsize.height)*(sizeof(int) + sizeof(float)*ksize));
+    xofs = (int*)buf.data();
     yofs = xofs + width;
     float* alphaf = (float*)(yofs + dsize.height);
     short* ialpha = (short*)alphaf;
@@ -3835,61 +3829,110 @@ void ResizePlan::build(int src_type, Size _ssize, size_t _src_step, Size _dsize,
         }
     }
 
-    alpha = fixpt ? (void*)ialpha : (void*)alphaf;
-    beta  = fixpt ? (void*)ibeta  : (void*)betaf;
-    kind = KIND_GENERIC;
+    alpha = fixpt ? (const void*)ialpha : (const void*)alphaf;
+    beta  = fixpt ? (const void*)ibeta  : (const void*)betaf;
 }
 
-void ResizePlan::run(const uchar* src_data, size_t src_step,
-                     uchar* dst_data, size_t dst_step, const Range& rows) const
+// Picks the kernel for one geometry and builds its tables. This is the only code that reads
+// ResizeParams: coordMode, nearestMode, cubicCoeffA and excludeOutside all end up in the tables,
+// so every combination of them runs the same kernels at the same speed.
+ResizeKernel* createResizeKernel(KernelSlot& slot, int type, Size ssize, size_t srcStep, Size dsize,
+                                 const ResizeParams& params)
 {
-    if (rows.start >= rows.end)
-        return;
-    CV_DbgAssert(kind != KIND_AREA_FAST || src_step == srcStep);
+    const int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    const bool classicCoord = params.coordMode == ResizeCoord::PIXEL_CENTER;
 
-    Mat src(ssize, type, const_cast<uchar*>(src_data), src_step);
-    Mat dst(dsize, type, dst_data, dst_step);
+    // Classic cv::resize short-circuits an equal-size resize to a copy. Most coordinate modes
+    // are not the identity at scale 1, so only PIXEL_CENTER gets the shortcut.
+    if (classicCoord && ssize == dsize)
+        return slot.emplace<CopyKernel>(type, ssize);
 
-    switch (kind)
+    double inv_scale_x, inv_scale_y;
+    resolveScales(ssize, dsize, params, inv_scale_x, inv_scale_y);
+    int interpolation = resolveInterpolation(params, depth);
+
+    const double trueDstW = !classicCoord && params.fx > 0 ? ssize.width *params.fx : (double)dsize.width;
+    const double trueDstH = !classicCoord && params.fy > 0 ? ssize.height*params.fy : (double)dsize.height;
+
+    const double scale_x = 1./inv_scale_x, scale_y = 1./inv_scale_y;
+    const int iscale_x = saturate_cast<int>(scale_x);
+    const int iscale_y = saturate_cast<int>(scale_y);
+    const bool is_area_fast = std::abs(scale_x - iscale_x) < DBL_EPSILON &&
+                              std::abs(scale_y - iscale_y) < DBL_EPSILON;
+    const bool halving = is_area_fast && iscale_x == 2 && iscale_y == 2;
+
+    if (interpolation == INTER_LINEAR_EXACT)
     {
-    case KIND_COPY:
-        src.rowRange(rows).copyTo(dst.rowRange(rows));
-        break;
-    case KIND_NEAREST:
-        resizeNN(src, dst, nnXofs, nnYofs, rows);
-        break;
-    case KIND_NEAREST_EXACT:
-        resizeNN_bitexact(src, dst, nnBeX, nnBeY, rows);
-        break;
-    case KIND_LINEAR_EXACT:
-        beRun(src_data, src_step, ssize.width, ssize.height,
-              dst_data, dst_step, dsize.width, dsize.height, cn, beTabs, rows);
-        break;
-    case KIND_AREA_FAST:
-        areaFastFunc(src, dst, afOfs, afXofs, iscale_x, iscale_y, rows);
-        break;
-    case KIND_AREA:
-        areaFunc(src, dst, xtab, xtab_size, ytab, ytab_size, tabofs, rows);
-        break;
-    case KIND_GENERIC:
-        func(src, dst, xofs, alpha, yofs, beta, xmin, xmax, ksize, rows);
-        break;
-    default:
-        CV_Error(cv::Error::StsInternal, "resize: the plan was never built");
+        // in case of inv_scale_x && inv_scale_y is equal to 0.5
+        // INTER_AREA (fast) is equal to bit exact INTER_LINEAR
+        if (halving && cn != 2)//Area resize implementation for 2-channel images isn't bit-exact
+            interpolation = INTER_AREA;
+        else
+        {
+            static LinearExactFactory linear_exact_tab[CV_DEPTH_MAX] =
+            {
+                createLinearExactKernel<uchar>,
+                createLinearExactKernel<schar>,
+                createLinearExactKernel<ushort>,
+                createLinearExactKernel<short>,
+                createLinearExactKernel<int>,
+                0,
+                0,
+                0
+            };
+            LinearExactFactory create = linear_exact_tab[depth];
+            CV_Assert(create != 0);
+            return create(slot, type, ssize, dsize, inv_scale_x, inv_scale_y);
+        }
     }
+
+    if (interpolation == INTER_NEAREST)
+    {
+        // Classic INTER_NEAREST samples at dst*scale and rounds down, which is exactly ONNX's
+        // asymmetric coordinate mode with nearest_mode=floor.
+        const ResizeCoord nnCoord = classicCoord ? ResizeCoord::ASYMMETRIC : params.coordMode;
+        const ResizeNearest nnRound = classicCoord ? ResizeNearest::FLOOR : params.nearestMode;
+        return slot.emplace<NearestKernel>(type, ssize, dsize,
+                                           makeAxisMap(nnCoord, scale_x, ssize.width,  dsize.width,  trueDstW),
+                                           makeAxisMap(nnCoord, scale_y, ssize.height, dsize.height, trueDstH),
+                                           nnRound);
+    }
+
+    if (interpolation == INTER_NEAREST_EXACT)
+        return slot.emplace<NearestExactKernel>(type, ssize, dsize);
+
+    // in case of scale_x && scale_y is equal to 2
+    // INTER_AREA (fast) also is equal to INTER_LINEAR
+    if (interpolation == INTER_LINEAR && halving)
+        interpolation = INTER_AREA;
+
+    // true "area" interpolation is only implemented for the case (scale_x >= 1 && scale_y >= 1).
+    // In other cases it is emulated using some variant of bilinear interpolation
+    if (interpolation == INTER_AREA && scale_x >= 1 && scale_y >= 1)
+    {
+        if (is_area_fast)
+            return slot.emplace<AreaFastKernel>(type, ssize, srcStep, dsize, iscale_x, iscale_y);
+        return slot.emplace<AreaKernel>(type, ssize, dsize, scale_x, scale_y);
+    }
+
+    // INTER_AREA keeps its own decimation geometry; every other kernel reads its coordinates here.
+    return slot.emplace<SeparableKernel>(type, ssize, dsize, interpolation, inv_scale_x, inv_scale_y,
+        makeAxisMap(params.coordMode, scale_x, ssize.width,  dsize.width,  trueDstW),
+        makeAxisMap(params.coordMode, scale_y, ssize.height, dsize.height, trueDstH),
+        params.cubicCoeffA, params.excludeOutside);
 }
 
 
 // ---- batch scheduling ----
 
-// One image of a batch, bound to the plan its geometry resolved to.
+// One image of a batch, bound to the kernel its geometry resolved to.
 struct BatchItem
 {
     const uchar* srcData;
     size_t srcStep;
     uchar* dstData;
     size_t dstStep;
-    const ResizePlan* plan;
+    const ResizeKernel* kernel;
     int firstRow;   // this image's first destination row in the batch-wide row list
     int rows;
 };
@@ -3918,14 +3961,14 @@ void runResize(const BatchItem* items, size_t count, int totalRows, double total
             const BatchItem& it = items[i];
             const Range rows(std::max(chunk.start - it.firstRow, 0),
                              std::min(chunk.end - it.firstRow, it.rows));
-            it.plan->run(it.srcData, it.srcStep, it.dstData, it.dstStep, rows);
+            it.kernel->run(it.srcData, it.srcStep, it.dstData, it.dstStep, rows);
         }
     }, nstripes);
 }
 
-// One plan per distinct geometry. A uniform batch -- the common case, and the whole of the
+// One kernel per distinct geometry. A uniform batch -- the common case, and the whole of the
 // tensor path -- leaves the linear scan a single entry, so the tables are built exactly once.
-struct PlanCache
+struct KernelCache
 {
     struct Key
     {
@@ -3937,35 +3980,29 @@ struct PlanCache
     };
 
     std::vector<Key> keys;
-    std::vector<Ptr<ResizePlan> > plans;
+    std::vector<Ptr<ResizeKernel> > kernels;
 
-    // The returned plan lives as long as the cache.
-    const ResizePlan* get(const ResizeParams& params, int type, Size ssize, size_t srcStep, Size dsize)
+    // The returned kernel lives as long as the cache.
+    const ResizeKernel* get(const ResizeParams& params, int type, Size ssize, size_t srcStep, Size dsize)
     {
         Key key; key.ssize = ssize; key.dsize = dsize; key.srcStep = srcStep; key.type = type;
         for (size_t i = 0; i < keys.size(); i++)
             if (keys[i] == key)
-                return plans[i].get();
+                return kernels[i].get();
 
-        Ptr<ResizePlan> p = makePtr<ResizePlan>();
-        // Classic cv::resize short-circuits an equal-size resize to a copy. Most coordinate modes
-        // are not the identity at scale 1, so only PIXEL_CENTER gets the shortcut.
-        if (params.coordMode == ResizeCoord::PIXEL_CENTER && ssize == dsize)
-            p->buildCopy(type, ssize);
-        else
-            p->build(type, ssize, srcStep, dsize, params);
-
+        KernelSlot slot;
+        createResizeKernel(slot, type, ssize, srcStep, dsize, params);
         keys.push_back(key);
-        plans.push_back(p);
-        return p.get();
+        kernels.push_back(slot.heap);
+        return slot.heap.get();
     }
 };
 
-// Collects a batch: hands out plans, lays the images onto the flat row list, totals the work.
+// Collects a batch: hands out kernels, lays the images onto the flat row list, totals the work.
 // The two batch kinds then differ only in where their pixels come from.
 struct BatchBuilder
 {
-    PlanCache cache;
+    KernelCache cache;
     AutoBuffer<BatchItem> items;
     size_t count;
     int totalRows;
@@ -3973,13 +4010,13 @@ struct BatchBuilder
 
     explicit BatchBuilder(size_t n) : items(n), count(0), totalRows(0), totalPixels(0) {}
 
-    void add(const ResizePlan* plan, const uchar* srcData, size_t srcStep,
+    void add(const ResizeKernel* kernel, const uchar* srcData, size_t srcStep,
              uchar* dstData, size_t dstStep, Size dsize)
     {
         CV_Assert((int64)totalRows + dsize.height <= INT_MAX);
 
         BatchItem& it = items[count++];
-        it.plan = plan;
+        it.kernel = kernel;
         it.srcData = srcData;
         it.srcStep = srcStep;
         it.dstData = dstData;
@@ -3991,7 +4028,7 @@ struct BatchBuilder
         totalPixels += dsize.area();
     }
 
-    // Same, resolving the geometry to a cached plan first.
+    // Same, resolving the geometry to a cached kernel first.
     void add(const ResizeParams& params, int type, const uchar* srcData, size_t srcStep, Size ssize,
              uchar* dstData, size_t dstStep, Size dsize)
     {
@@ -4001,16 +4038,16 @@ struct BatchBuilder
     void run() const { runResize(items.data(), count, totalRows, totalPixels); }
 };
 
-// One image: a batch of one. The plan stays on the stack rather than in the cache, so the classic
-// single-image path allocates nothing extra for going through the batch machinery.
+// One image: a batch of one, with its kernel on the stack rather than in the cache.
 void resizeOne(int type, const uchar* srcData, size_t srcStep, Size ssize,
                uchar* dstData, size_t dstStep, Size dsize, const ResizeParams& params)
 {
-    ResizePlan plan;
-    plan.build(type, ssize, srcStep, dsize, params);
+    CV_DECL_ALIGNED(64) uchar storage[4096];
+    KernelSlot slot(storage, sizeof(storage));
+    const ResizeKernel* kernel = createResizeKernel(slot, type, ssize, srcStep, dsize, params);
 
     BatchBuilder batch(1);
-    batch.add(&plan, srcData, srcStep, dstData, dstStep, dsize);
+    batch.add(kernel, srcData, srcStep, dstData, dstStep, dsize);
     batch.run();
 }
 
@@ -4050,7 +4087,7 @@ void resizeTensorBatch(const Mat& src, const ResizeParams& params, OutputArray _
 
     const size_t srcStep = src.step[D - 2], dstStep = dst.step[D - 2];
 
-    // Every plane shares one geometry, so the cache builds one plan for the whole tensor.
+    // Every plane shares one geometry, so the cache builds one kernel for the whole tensor.
     BatchBuilder batch(numPlanes);
     for (int p = 0; p < numPlanes; p++)
         batch.add(params, src.type(), src.data + planeOffset(src, p), srcStep, ssize,
@@ -4058,7 +4095,7 @@ void resizeTensorBatch(const Mat& src, const ResizeParams& params, OutputArray _
     batch.run();
 }
 
-// vector<Mat> batch: the elements may differ in size, so only the matching ones share a plan.
+// vector<Mat> batch: the elements may differ in size, so only the matching ones share a kernel.
 void resizeMatVectorBatch(const std::vector<Mat>& srcs, const ResizeParams& params, OutputArray _dst)
 {
     const size_t n = srcs.size();
@@ -4073,7 +4110,7 @@ void resizeMatVectorBatch(const std::vector<Mat>& srcs, const ResizeParams& para
     std::vector<Mat>* dstv = _dst.kind() == _InputArray::STD_VECTOR_MAT
                            ? (std::vector<Mat>*)_dst.getObj() : 0;
 
-    // Plans are built here, before any thread runs; a same-shape batch shares a single one.
+    // Kernels are built here, before any thread runs; a same-shape batch shares a single one.
     BatchBuilder batch(n);
     for (size_t i = 0; i < n; i++)
     {
@@ -4108,7 +4145,7 @@ void resize(int src_type,
 
     CALL_HAL(resize, cv_hal_resize, src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, inv_scale_x, inv_scale_y, interpolation);
 
-    // This entry point is given the scale, so leave dsize empty and let the plan derive it.
+    // This entry point is given the scale, so leave dsize empty and let the kernel derive it.
     ResizeParams params;
     params.fx = inv_scale_x;
     params.fy = inv_scale_y;
@@ -4206,7 +4243,7 @@ void cv::resize( InputArray _src, OutputArray _dst, const ResizeParams& params )
 
     if (_src.isUMatVector())
     {
-        // OpenCL elements go one at a time: the plans below address host memory.
+        // OpenCL elements go one at a time: the kernels below address host memory.
         std::vector<UMat> srcs;
         _src.getUMatVector(srcs);
         CV_Assert(!srcs.empty());
