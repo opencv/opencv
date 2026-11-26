@@ -56,6 +56,38 @@ void checkEqual(Mat img0, Mat img1, double threshold, const string& name)
     ASSERT_FALSE(max > threshold) << "max=" << max << " threshold=" << threshold << " method=" << name;
 }
 
+// Radiance .hdr files store three mantissas with one shared exponent, so each
+// channel is stored to a precision proportional to the pixel's brightest channel.
+// Compare against that scale instead of one absolute threshold for the whole image.
+void checkEqualRelativeToPixelMax(const Mat& expected, const Mat& actual, double threshold, const string& name)
+{
+    ASSERT_EQ(CV_32FC3, expected.type());
+    ASSERT_EQ(expected.type(), actual.type());
+    ASSERT_EQ(expected.size(), actual.size());
+    // minMaxLoc() below may skip NaN, so reject non-finite values first.
+    ASSERT_TRUE(cv::checkRange(expected)) << "non-finite values in the expected image, method=" << name;
+    ASSERT_TRUE(cv::checkRange(actual)) << "non-finite values in the actual image, method=" << name;
+    std::vector<Mat> channels;
+    cv::split(expected, channels);
+    Mat scale;
+    cv::max(channels[0], channels[1], scale);
+    cv::max(scale, channels[2], scale);
+    double min_scale = 0;
+    cv::minMaxLoc(scale, &min_scale);
+    ASSERT_GT(min_scale, 0) << "method=" << name;
+    std::vector<Mat> diff;
+    cv::split(abs(expected - actual), diff);
+    Mat worst;
+    cv::max(diff[0], diff[1], worst);
+    cv::max(worst, diff[2], worst);
+    cv::divide(worst, scale, worst);
+    double max_rel = 0;
+    Point where;
+    cv::minMaxLoc(worst, NULL, &max_rel, NULL, &where);
+    ASSERT_LE(max_rel, threshold) << "method=" << name << " at " << where
+        << " expected=" << expected.at<Vec3f>(where) << " actual=" << actual.at<Vec3f>(where);
+}
+
 static vector<float> DEFAULT_VECTOR;
 void loadExposureSeq(String path, vector<Mat>& images, vector<float>& times = DEFAULT_VECTOR)
 {
@@ -226,8 +258,7 @@ TEST(Photo_MergeRobertson, regression)
     loadImage(test_path + "merge/robertson.hdr", expected);
     merge->process(images, result, times);
 
-    const float eps = 6.f;
-    checkEqual(expected, result, eps, "MergeRobertson");
+    checkEqualRelativeToPixelMax(expected, result, 0.015, "MergeRobertson");
 }
 
 TEST(Photo_MergeDebevec, regression_depth_consistency)
