@@ -278,6 +278,10 @@ private:
             const Ptr<LayerInfo>& L = prog()[j];
             if (!L || L->outputs.size() != 1 || L->subgraphs())
                 break;
+            // the CPU TransformLayout must not take an op from an accelerator run that already
+            // passed the OPENCV_DNN_MIN_SUBGRAPH_SIZE check, or that run would shrink below it
+            if (transformLayoutOnly_ && net_.isPlannedForAccelerator(L.get()))
+                break;
             Layer* l = dynamic_cast<Layer*>(L.get());
             if (!l)
                 break;

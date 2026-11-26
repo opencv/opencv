@@ -140,6 +140,7 @@ class FailingCudaExec CV_FINAL : public Layer
 {
 public:
     static int attempts;
+    static bool outOfMemory;  // fail the way a cudaMalloc() that ran out of memory does
     static Ptr<Layer> create(const Ptr<LayerInfo>& info, void*)
     {
         Ptr<FailingCudaExec> e = makePtr<FailingCudaExec>();
@@ -153,10 +154,13 @@ public:
     void forwardCUDA(InputArrayOfArrays, OutputArrayOfArrays, void*) CV_OVERRIDE
     {
         attempts++;
+        if (outOfMemory)
+            CV_Error(Error::GpuApiCallError, "out of memory");
         CV_Error(Error::StsNotImplemented, "this test exec always fails");
     }
 };
 int FailingCudaExec::attempts = 0;
+bool FailingCudaExec::outOfMemory = false;
 
 class DNN_Partition_CUDA : public ::testing::Test
 {
@@ -172,6 +176,7 @@ public:
         cudaNet.setPreferableTarget(DNN_TARGET_CUDA);
         cudaNet.enableTF32(false);
         FailingCudaExec::attempts = 0;
+        FailingCudaExec::outOfMemory = false;
     }
 
     static std::vector<Mat> run(Net& net, const Mat& inp)
@@ -239,6 +244,49 @@ TEST_F(DNN_Partition_CUDA, failing_op_moves_to_cpu_once)
         EXPECT_EQ(b, CPU);
 }
 
+// xfeat.onnx is exported for 640x640; at 1280x1280 its fixed-size branch no longer matches the other
+// input of an Add, so the CUDA Add rejects the shapes. That is the caller's input, not the Add.
+TEST_F(DNN_Partition_CUDA, bad_input_does_not_pin_an_op_to_cpu)
+{
+    compareWithCPU();
+    std::vector<int> before = placementOf("");
+    Mat big(std::vector<int>{1, 1, 1280, 1280}, CV_32F, Scalar(0.5f));
+    try { run(cudaNet, big); } catch (const cv::Exception&) {}
+    compareWithCPU();
+    EXPECT_EQ(placementOf(""), before);
+}
+
+// an op that fails again with other input shapes is unsupported, so it stays on CPU
+TEST_F(DNN_Partition_CUDA, op_failing_with_two_input_shapes_stays_on_cpu)
+{
+    ScopedExec reg("Pad2", GPU, FailingCudaExec::create, 0, INT_MAX);
+    compareWithCPU();
+    EXPECT_EQ(FailingCudaExec::attempts, 1);
+    Mat big(std::vector<int>{1, 1, 1280, 1280}, CV_32F, Scalar(0.5f));
+    try { run(cudaNet, big); } catch (const cv::Exception&) {}
+    EXPECT_EQ(FailingCudaExec::attempts, 2);
+    compareWithCPU();
+    EXPECT_EQ(FailingCudaExec::attempts, 2);
+    std::vector<int> pad = placementOf("Pad2");
+    ASSERT_FALSE(pad.empty());
+    for (int b : pad)
+        EXPECT_EQ(b, CPU);
+}
+
+// running out of device memory is reported, not treated as the op's fault and retried on CPU
+TEST_F(DNN_Partition_CUDA, out_of_memory_keeps_the_placement)
+{
+    ScopedExec reg("Pad2", GPU, FailingCudaExec::create, 0, INT_MAX);
+    FailingCudaExec::outOfMemory = true;
+    Mat inp(std::vector<int>{1, 1, 640, 640}, CV_32F, Scalar(0.5f));
+    EXPECT_THROW(run(cudaNet, inp), cv::Exception);
+    EXPECT_EQ(FailingCudaExec::attempts, 1);
+    std::vector<int> pad = placementOf("Pad2");
+    ASSERT_FALSE(pad.empty());
+    for (int b : pad)
+        EXPECT_EQ(b, GPU);
+}
+
 TEST_F(DNN_Partition_CUDA, exec_outside_its_opset_range_is_not_used)
 {
     ScopedExec reg("Pad2", GPU, FailingCudaExec::create, 12, INT_MAX);  // xfeat.onnx is opset 11
@@ -248,6 +296,30 @@ TEST_F(DNN_Partition_CUDA, exec_outside_its_opset_range_is_not_used)
     ASSERT_FALSE(pad.empty());
     for (int b : pad)
         EXPECT_EQ(b, CPU);
+}
+
+// In mosaic-9.onnx the residual Add after the last InstanceNormalization (CPU, block layout) reads two
+// TransformLayout outputs and opens a CUDA run; the TransformLayout fusion after planning must not take it.
+TEST(DNN_Partition_CUDA_Fusion, transform_layout_leaves_accelerated_ops_alone)
+{
+    if (getAvailableTargets(DNN_BACKEND_CUDA).empty())
+        throw SkipTestException("CUDA backend is not available");
+    if (LayerFactory::isExecSupported("InstanceNormalization", GPU))
+        throw SkipTestException("InstanceNormalization runs on CUDA, so no TransformLayout feeds the Add");
+    Net net = readNetFromONNX(findDataFile("dnn/mosaic-9.onnx", false));
+    net.setPreferableBackend(DNN_BACKEND_CUDA);
+    net.setPreferableTarget(DNN_TARGET_CUDA);
+    net.setInput(Mat(std::vector<int>{1, 3, 224, 224}, CV_32F, Scalar(0.5f)));
+    net.forward();
+
+    Ptr<Graph> graph = net.getMainGraph();
+    int addBackend = -1;
+    for (size_t i = 0; i < graph->prog().size(); i++) {
+        const Ptr<LayerInfo>& op = graph->prog()[i];
+        if (op && op->name == "onnx_node!51")
+            addBackend = graph->opBackend((int)i);
+    }
+    EXPECT_EQ(addBackend, GPU) << "the Add was absorbed into a CPU TransformLayout or moved to CPU";
 }
 
 }} // namespace opencv_test

@@ -693,7 +693,7 @@ static void markHostShapeOps(const Net::Impl& net, const std::vector<Ptr<LayerIn
 // Why @p op cannot run on CUDA, or an empty string if the CUDA table accepts it.
 static std::string cudaPlacementBlocker(const Net::Impl& net, const Ptr<LayerInfo>& op)
 {
-    if (net.accelFailedOps.count(op.get()))
+    if (net.isAccelBlocked(op.get()))
         return "it failed on CUDA in an earlier forward";
     if (op->subgraphs())
         return "control-flow bodies stay on CPU";
@@ -787,6 +787,12 @@ void Net::Impl::planOpPlacement(const Ptr<Graph>& graph, bool useCUDA,
     }
 }
 
+bool Net::Impl::isPlannedForAccelerator(const LayerInfo* op) const
+{
+    auto it = plannedBackend.find(op);
+    return it != plannedBackend.end() && it->second != DNN_BACKEND_OPENCV && it->second != PLACED_ON_HOST;
+}
+
 static void logPartition(const std::string& graphName, const std::vector<Ptr<LayerInfo> >& prog,
                          const std::vector<GraphSegment>& segments,
                          const std::vector<ArgTransition>& transitions, const Net::Impl& net)
@@ -825,20 +831,6 @@ void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
     std::vector<int> placement;
     std::vector<Ptr<Layer> > accelExecs;
     planOpPlacement(graph, useCUDA, placement, accelExecs);
-
-#ifdef HAVE_CUDA
-    if (graph == mainGraph) {
-        bool anyCPU = false, anyCUDA = false;
-        for (i = 0; i < nops; i++) {
-            if (!prog[i] || g->hostShapeOp_[i])
-                continue;
-            anyCUDA |= placement[i] == DNN_BACKEND_CUDA;
-            anyCPU |= placement[i] == DNN_BACKEND_OPENCV;
-        }
-        // device temps may share buffers only when no CPU op reads or writes them
-        cudaPoolTemps = anyCUDA && !anyCPU;
-    }
-#endif
 
     for (i = 0; i < nops; i++) {
         const Ptr<LayerInfo>& op = prog[i];
@@ -953,7 +945,8 @@ void Net::Impl::finalize()
     cudaArgHostDirty.clear();
     cudaArgDeviceDirty.clear();
     cudaTempBuffers.clear();
-    cudaPoolTemps = false;
+    cudaPooledArg.clear();
+    cudaWholeGraph = cudaAnyOp = false;
     cudaGraphReset();  // the recorded graph wrote into the buffers released here
     if (preferableBackend == DNN_BACKEND_CUDA && haveCUDA()) {
         useCUDA = true;
@@ -986,32 +979,132 @@ void Net::Impl::finalize()
 
     for (const Ptr<Graph>& g : allgraphs)
         finalizeGraph(g, useCUDA);
+#ifdef HAVE_CUDA
+    if (useCUDA)
+        planCudaBuffers();
+#endif
 
     finalized = true;
+}
+
+#ifdef HAVE_CUDA
+// Temps that only CUDA ops touch share device buffers by lifetime, as their host buffers do; a temp the
+// host also touches keeps its own, so its dirty flags never describe storage another tensor took over.
+void Net::Impl::planCudaBuffers()
+{
+    enum { ON_HOST = 1, ON_DEVICE = 2 };
+    std::vector<uchar> touched(args.size(), 0);
+    cudaWholeGraph = cudaAnyOp = false;
+    for (const Ptr<Graph>& graph : allgraphs) {
+        const GraphImpl* g = static_cast<const GraphImpl*>(graph.get());
+        const std::vector<Ptr<LayerInfo> >& prog = g->prog_;
+        if (graph != mainGraph) {
+            // the parent graph writes a subgraph's inputs and reads its outputs on the host
+            for (const Arg& a : graph->inputs())
+                if (!a.empty())
+                    touched[a.idx] |= ON_HOST;
+            for (const Arg& a : graph->outputs())
+                if (!a.empty())
+                    touched[a.idx] |= ON_HOST;
+        }
+        bool anyCUDA = false, anyCPU = false;
+        for (size_t i = 0; i < prog.size(); i++) {
+            const Ptr<LayerInfo>& op = prog[i];
+            if (!op)
+                continue;
+            const bool hostOp = i < g->hostShapeOp_.size() && g->hostShapeOp_[i];
+            const bool onDevice = !hostOp && i < g->execBackend_.size() &&
+                                  g->execBackend_[i] == DNN_BACKEND_CUDA;
+            anyCUDA |= onDevice;
+            anyCPU |= !onDevice && !hostOp;
+            // the same reads forwardGraph() does: a host Shape op needs only the header, and a dynamic
+            // CUDA op downloads its sizing inputs as well as uploading them
+            const bool sizedOnHost = onDevice && op->dynamicOutputShapes();
+            const size_t ninp = op->inputs.size();
+            for (size_t j = 0; j < ninp; j++) {
+                const Arg& inp = op->inputs[j];
+                if (inp.empty() || (hostOp && op->type == "Shape"))
+                    continue;
+                if (!onDevice || (sizedOnHost && (j > 0 || ninp == 1)))
+                    touched[inp.idx] |= ON_HOST;
+                if (onDevice)
+                    touched[inp.idx] |= ON_DEVICE;
+            }
+            for (const Arg& out : op->outputs)
+                if (!out.empty())
+                    touched[out.idx] |= onDevice ? ON_DEVICE : ON_HOST;
+        }
+        if (graph == mainGraph)
+            cudaWholeGraph = anyCUDA && !anyCPU;
+        cudaAnyOp |= anyCUDA;
+    }
+    cudaPooledArg.assign(args.size(), 0);
+    for (size_t a = 0; a < args.size(); a++)
+        cudaPooledArg[a] = touched[a] == ON_DEVICE && args[a].kind == DNN_ARG_TEMP;
+}
+
+// True when @p e reports a failed device or host allocation rather than a problem of the op itself.
+static bool isOutOfMemory(const cv::Exception& e, cudaError_t lastError)
+{
+    if (lastError == cudaErrorMemoryAllocation || e.code == Error::StsNoMem)
+        return true;
+    // cudaGetErrorString(), cuBLAS and cuDNN (8: ALLOC_FAILED, 9: ..._ALLOCATION_FAILED) texts
+    static const char* const markers[] = {
+        "out of memory", "ALLOC_FAILED", "ALLOCATION_FAILED", "cannot allocate a device tensor"
+    };
+    for (const char* m : markers)
+        if (e.err.find(m) != std::string::npos)
+            return true;
+    return false;
+}
+#endif
+
+bool Net::Impl::isAccelBlocked(const LayerInfo* op) const
+{
+    auto it = accelFailures.find(op);
+    return it != accelFailures.end() && it->second.state != ACCEL_RETRYING;
 }
 
 bool Net::Impl::retryAfterAccelFailure(const cv::Exception& e)
 {
     const LayerInfo* op = accelRunningOp;
     accelRunningOp = nullptr;
-    if (!op || accelFailedOps.count(op))
+    if (!op || isAccelBlocked(op))
         return false;
 #ifdef HAVE_CUDA
+    // Running out of memory says the graph does not fit, not that this op cannot run on the device;
+    // moving ops to CPU one at a time would rerun the forward for every op that asks for memory next.
+    if (isOutOfMemory(e, cudaGetLastError())) {
+        CV_LOG_ERROR(NULL, cv::format("DNN/NewEngine: out of memory while running op '%s' (%s) on the "
+                                      "accelerator; it is not moved to CPU", op->name.c_str(), op->type.c_str()));
+        return false;
+    }
     // A kernel fault leaves the CUDA context unusable for good; only a failure that the context
-    // survives (an unsupported case, a JIT compile error, an allocation) can move to CPU.
-    cudaGetLastError();
+    // survives (an unsupported case, a JIT compile error) can move to CPU.
     if (!cudaInfo || cudaStreamSynchronize(cudaInfo->context.stream.get()) != cudaSuccess) {
         CV_LOG_ERROR(NULL, cv::format("DNN/NewEngine: op '%s' (%s) failed and the CUDA context is no "
                                       "longer usable", op->name.c_str(), op->type.c_str()));
         return false;
     }
 #endif
-    accelFailedOps.insert(op);
-    CV_LOG_WARNING(NULL, cv::format("DNN/NewEngine: op '%s' (%s) failed on the accelerator (%s); "
-                                    "it runs on CPU from now on", op->name.c_str(), op->type.c_str(),
-                                    e.err.c_str()));
+    const bool again = accelFailures.count(op) != 0;  // it was back for a second try, with other input shapes
+    accelFailures[op] = AccelFailure{again ? ACCEL_FAILED_FOR_GOOD : ACCEL_FAILED, forwardInputShapes};
+    CV_LOG_WARNING(NULL, cv::format("DNN/NewEngine: op '%s' (%s) failed on the accelerator (%s); it runs on "
+                                    "CPU %s", op->name.c_str(), op->type.c_str(), e.err.c_str(),
+                                    again ? "from now on" : "until the input shapes change"));
     finalized = false;
     return true;
+}
+
+// An op that failed with other input shapes than these goes back to the accelerator for one more try.
+void Net::Impl::retryFailedAccelOps()
+{
+    for (auto& f : accelFailures) {
+        if (f.second.state == ACCEL_FAILED && f.second.inputShapes != forwardInputShapes) {
+            f.second.state = ACCEL_RETRYING;
+            finalized = false;
+        }
+    }
 }
 
 void Net::Impl::allocateLayerOutputs(
@@ -1119,6 +1212,12 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
     if (!mainGraph) {
         CV_Error(Error::StsNullPtr, "the model was not loaded");
     }
+    const std::vector<Arg>& gr_inputs = mainGraph->inputs();
+    const bool explicitInputs = !inputs.empty() && inputs.total() == gr_inputs.size();
+    forwardInputShapes.resize(gr_inputs.size());
+    for (size_t i = 0; i < gr_inputs.size(); i++)
+        forwardInputShapes[i] = explicitInputs ? inputs.getMat((int)i).shape() : argTensor(gr_inputs[i]).shape();
+    retryFailedAccelOps();
     finalize();  // select per-op executors for the chosen backend/target (idempotent)
     // ************ uncomment one of the lines below for debugging **********
     //tracingMode = DNN_TRACE_OP;
@@ -1138,6 +1237,9 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
         }
         finalize();
     }
+    // an op that got another try and did not fail again was let down by the earlier input, not by its exec
+    for (auto it = accelFailures.begin(); it != accelFailures.end();)
+        it = it->second.state == ACCEL_RETRYING ? accelFailures.erase(it) : std::next(it);
 
     // Feed present.* outputs back as past_key_values.* inputs for the next step (causal-lm-with-past).
     if (useKVCache && kvCacheManager.hasRoutes)
@@ -1749,7 +1851,7 @@ int Net::Impl::cudaDeviceType(const Mat& hostMat) const
 
 UMat& Net::Impl::cudaDeviceBuffer(Arg arg)
 {
-    if (cudaPoolTemps && argKind(arg) == DNN_ARG_TEMP) {
+    if (arg.idx >= 0 && (size_t)arg.idx < cudaPooledArg.size() && cudaPooledArg[arg.idx]) {
         int bufidx = bufidxs.at(arg.idx);
         CV_Assert(bufidx >= 0);
         if (cudaTempBuffers.size() != buffers.size())
@@ -1977,7 +2079,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 cudaGraphDestroy(interrupted);
         }
     } captureGuard;
-    if (isMainGraph && cudaPoolTemps && tracingMode == DNN_TRACE_NONE && profilingMode == DNN_PROFILE_NONE) {
+    if (isMainGraph && cudaWholeGraph && tracingMode == DNN_TRACE_NONE && profilingMode == DNN_PROFILE_NONE) {
         std::vector<MatShape> inputShapes(n_gr_inputs);
         for (i = 0; i < n_gr_inputs; i++)
             inputShapes[i] = argTensor(gr_inputs[i]).shape();
@@ -2385,7 +2487,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             }
         }
     }
-    if (isMainGraph && cudaPoolTemps) {
+    if (isMainGraph && cudaAnyOp) {
         // the outputs are read next anyway, so this sync only moves the wait earlier
         cudaInfo->context.stream.synchronize();
         if (*cudaInfo->errorFlag) {
