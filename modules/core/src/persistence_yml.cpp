@@ -14,6 +14,14 @@ enum
 namespace cv
 {
 
+static inline int parseHexDigit(char c)
+{
+    if ('0' <= c && c <= '9') return c - '0';
+    if ('a' <= c && c <= 'f') return c - 'a' + 10;
+    if ('A' <= c && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
 class YAMLEmitter : public FileStorageEmitter
 {
 public:
@@ -145,7 +153,7 @@ public:
                    c != '(' && c != ')' && c != '/' && c != '+' && c != ';' )
                     need_quote = 1;
 
-                if( !cv_isalnum(c) && (!cv_isprint(c) || c == '\\' || c == '\'' || c == '\"') )
+                if( !cv_isalnum(c) && (!cv_isprint(c) || c == '\\' || c == '\"') )
                 {
                     *data++ = '\\';
                     if( cv_isprint(c) )
@@ -158,7 +166,7 @@ public:
                         *data++ = 't';
                     else
                     {
-                        snprintf( data, sizeof(buf) - (data - buf), "x%02x", c );
+                        snprintf( data, sizeof(buf) - (data - buf), "x%02x", (uchar)c );
                         data += 3;
                     }
                 }
@@ -616,30 +624,133 @@ public:
                     else if( c == '\\' )
                     {
                         d = *++ptr;
-                        if( d == '\'' )
+                        if( d == '\"' || d == '\\' || d == '\'' || d == '/' || d == ' ' || d == '\t' )
                             buf[len++] = d;
-                        else if( d == '\"' || d == '\\' || d == '\'' )
-                            buf[len++] = d;
-                        else if( d == 'n' )
-                            buf[len++] = '\n';
-                        else if( d == 'r' )
-                            buf[len++] = '\r';
+                        else if( d == 'a' )
+                            buf[len++] = '\a';
+                        else if( d == 'b' )
+                            buf[len++] = '\b';
                         else if( d == 't' )
                             buf[len++] = '\t';
-                        else if( d == 'x' || (cv_isdigit(d) && d < '8') )
+                        else if( d == 'n' )
+                            buf[len++] = '\n';
+                        else if( d == 'v' )
+                            buf[len++] = '\v';
+                        else if( d == 'f' )
+                            buf[len++] = '\f';
+                        else if( d == 'r' )
+                            buf[len++] = '\r';
+                        else if( d == 'e' )
+                            buf[len++] = (char)0x1b;
+                        else if( d == 'N' )
                         {
-                            int val, is_hex = d == 'x';
-                            c = ptr[3];
-                            ptr[3] = '\0';
-                            val = (int)strtol( ptr + is_hex, &endptr, is_hex ? 8 : 16 );
-                            ptr[3] = c;
-                            if( endptr == ptr + is_hex )
-                                buf[len++] = 'x';
+                            buf[len++] = (char)0xc2;
+                            buf[len++] = (char)0x85;
+                        }
+                        else if( d == '_' )
+                        {
+                            buf[len++] = (char)0xc2;
+                            buf[len++] = (char)0xa0;
+                        }
+                        else if( d == 'L' )
+                        {
+                            buf[len++] = (char)0xe2;
+                            buf[len++] = (char)0x80;
+                            buf[len++] = (char)0xa8;
+                        }
+                        else if( d == 'P' )
+                        {
+                            buf[len++] = (char)0xe2;
+                            buf[len++] = (char)0x80;
+                            buf[len++] = (char)0xa9;
+                        }
+                        else if( d == 'x' )
+                        {
+                            int hi = parseHexDigit(ptr[1]);
+                            int lo = hi >= 0 ? parseHexDigit(ptr[2]) : -1;
+                            if( lo < 0 )
+                                CV_PARSE_ERROR_CPP( "Invalid hex escape sequence" );
+                            buf[len++] = (char)((hi << 4) | lo);
+                            ptr += 2;
+                        }
+                        else if( d == 'u' || d == 'U' )
+                        {
+                            uint32_t cp = 0;
+                            int ndigits = d == 'u' ? 4 : 8;
+                            for( int k = 0; k < ndigits; k++ )
+                            {
+                                int digit = parseHexDigit(ptr[1]);
+                                if( digit < 0 )
+                                    CV_PARSE_ERROR_CPP( "Invalid Unicode escape sequence" );
+                                cp = (cp << 4) | (uint32_t)digit;
+                                ++ptr;
+                            }
+                            if( d == 'u' && 0xD800u <= cp && cp <= 0xDBFFu )
+                            {
+                                if( ptr[1] != '\\' || ptr[2] != 'u' )
+                                    CV_PARSE_ERROR_CPP( "Invalid Unicode surrogate pair" );
+                                ptr += 2;
+                                uint32_t low = 0;
+                                for( int k = 0; k < 4; k++ )
+                                {
+                                    int digit = parseHexDigit(ptr[1]);
+                                    if( digit < 0 )
+                                        CV_PARSE_ERROR_CPP( "Invalid Unicode escape sequence" );
+                                    low = (low << 4) | (uint32_t)digit;
+                                    ++ptr;
+                                }
+                                if( low < 0xDC00u || low > 0xDFFFu )
+                                    CV_PARSE_ERROR_CPP( "Invalid Unicode surrogate pair" );
+                                cp = 0x10000u + (((cp - 0xD800u) << 10) | (low - 0xDC00u));
+                            }
+                            else if( (0xD800u <= cp && cp <= 0xDFFFu) || cp > 0x10FFFFu )
+                            {
+                                CV_PARSE_ERROR_CPP( "Invalid Unicode code point" );
+                            }
+
+                            if( cp <= 0x7Fu )
+                            {
+                                buf[len++] = (char)cp;
+                            }
+                            else if( cp <= 0x7FFu )
+                            {
+                                buf[len++] = (char)(0xC0u | (cp >> 6));
+                                buf[len++] = (char)(0x80u | (cp & 0x3Fu));
+                            }
+                            else if( cp <= 0xFFFFu )
+                            {
+                                buf[len++] = (char)(0xE0u | (cp >> 12));
+                                buf[len++] = (char)(0x80u | ((cp >> 6) & 0x3Fu));
+                                buf[len++] = (char)(0x80u | (cp & 0x3Fu));
+                            }
                             else
                             {
-                                buf[len++] = (char)val;
-                                ptr = endptr;
+                                buf[len++] = (char)(0xF0u | (cp >> 18));
+                                buf[len++] = (char)(0x80u | ((cp >> 12) & 0x3Fu));
+                                buf[len++] = (char)(0x80u | ((cp >> 6) & 0x3Fu));
+                                buf[len++] = (char)(0x80u | (cp & 0x3Fu));
                             }
+                        }
+                        else if( '0' <= d && d <= '7' )
+                        {
+                            int val = d - '0';
+                            if( '0' <= ptr[1] && ptr[1] <= '7' )
+                            {
+                                val = (val << 3) + (ptr[1] - '0');
+                                ++ptr;
+                                if( '0' <= ptr[1] && ptr[1] <= '7' )
+                                {
+                                    val = (val << 3) + (ptr[1] - '0');
+                                    ++ptr;
+                                }
+                            }
+                            if( val > 0xff )
+                                CV_PARSE_ERROR_CPP( "Octal escape sequence out of range" );
+                            buf[len++] = (char)val;
+                        }
+                        else
+                        {
+                            CV_PARSE_ERROR_CPP( "Invalid escape sequence" );
                         }
                     }
                     else
