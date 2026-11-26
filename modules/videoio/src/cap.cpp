@@ -603,7 +603,6 @@ static bool isPrefetchSupported(const Ptr<IVideoCapture>& cap)
     switch (api)
     {
         case CAP_FFMPEG:
-        case CAP_GSTREAMER:
         case CAP_V4L2:
         case CAP_IMAGES:
         case CAP_OPENCV_MJPEG:

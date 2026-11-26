@@ -1136,7 +1136,7 @@ TEST_P(prefetch_capture, hw_acceleration_is_rejected)
 
 static VideoCaptureAPIs thread_affine_apis[] = {CAP_MSMF, CAP_DSHOW, CAP_OBSENSOR, CAP_AVFOUNDATION};
 
-static VideoCaptureAPIs prefetch_apis[] = {CAP_FFMPEG, CAP_GSTREAMER};
+static VideoCaptureAPIs prefetch_apis[] = {CAP_FFMPEG};
 
 typedef testing::TestWithParam<VideoCaptureAPIs> prefetch_unsupported;
 
