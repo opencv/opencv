@@ -612,6 +612,41 @@ TEST_F(fisheyeTest, jacobians)
     CV_Assert (cv::norm(x2 - xpred) < 1e-10);
 }
 
+TEST_F(fisheyeTest, jacobiansScaleInverselyNearCameraCenter)
+{
+    // The projection depends only on the ray direction. Scaling a camera
+    // frame point by t therefore leaves the image point and all Jacobian
+    // columns unchanged except those of the translation, which scale by 1/t.
+    constexpr double distanceScale = 1e-200;
+    constexpr double alpha = 0.01;
+    constexpr double relativeTolerance = 1e-12;
+    constexpr int translationColumn = 11;
+    constexpr int translationSize = 3;
+    const cv::Vec3d direction(0.6, -0.3, 0.5);
+    const std::vector<cv::Vec3d> unitPoint{direction};
+    const std::vector<cv::Vec3d> scaledPoint{direction * distanceScale};
+
+    std::vector<cv::Vec2d> unitProjection;
+    std::vector<cv::Vec2d> scaledProjection;
+    cv::Mat unitJacobian;
+    cv::Mat scaledJacobian;
+    cv::fisheye::projectPoints(unitPoint, unitProjection, cv::Vec3d::all(0),
+                               cv::Vec3d::all(0), this->K, this->D, alpha, unitJacobian);
+    cv::fisheye::projectPoints(scaledPoint, scaledProjection, cv::Vec3d::all(0),
+                               cv::Vec3d::all(0), this->K, this->D, alpha, scaledJacobian);
+
+    ASSERT_TRUE(cv::checkRange(scaledJacobian));
+    EXPECT_MAT_NEAR(cv::Mat(scaledProjection), cv::Mat(unitProjection),
+                    relativeTolerance * cv::norm(cv::Mat(unitProjection), cv::NORM_INF));
+
+    cv::Mat normalizedJacobian = scaledJacobian.clone();
+    cv::Mat normalizedTranslationColumns =
+        normalizedJacobian.colRange(translationColumn, translationColumn + translationSize);
+    normalizedTranslationColumns *= distanceScale;
+    EXPECT_MAT_NEAR(normalizedJacobian, unitJacobian,
+                    relativeTolerance * cv::norm(unitJacobian, cv::NORM_INF));
+}
+
 class FisheyeExtrinsicRefinementScaleTest
     : public fisheyeTest,
       public ::testing::WithParamInterface<double>
@@ -684,6 +719,72 @@ INSTANTIATE_TEST_CASE_P(Fisheye, FisheyeExtrinsicRefinementScaleTest,
                                           smallObjectPointScale,
                                           smallestNormalObjectPointScale));
 
+TEST_F(fisheyeTest, CalibrationInitializesWithPiFocalGuess)
+{
+    const cv::Size testImageSize(2432, 2048);
+    constexpr double pixelCenterOffset = 0.5;
+    constexpr int initializationIterations = 0;
+    const double focalLength = std::max(testImageSize.width, testImageSize.height) / CV_PI;
+    cv::Matx33d cameraMatrix(
+        focalLength, 0.0, testImageSize.width / 2.0 - pixelCenterOffset,
+        0.0, focalLength, testImageSize.height / 2.0 - pixelCenterOffset,
+        0.0, 0.0, 1.0);
+    cv::Vec4d distortion = cv::Vec4d::all(0);
+    const std::vector<std::vector<cv::Point3d> > objectPoints = {{
+        {0.0, 800.0, 0.0},
+        {300.0, 800.0, 0.0},
+        {400.0, 800.0, 0.0},
+        {600.0, 800.0, 0.0},
+        {800.0, 800.0, 0.0},
+        {900.0, 800.0, 0.0},
+        {1100.0, 800.0, 0.0},
+        {1100.0, 700.0, 0.0},
+        {1100.0, 500.0, 0.0},
+        {1100.0, 300.0, 0.0},
+        {1100.0, 200.0, 0.0},
+        {1100.0, 100.0, 0.0},
+        {0.0, 600.0, 0.0},
+        {0.0, 500.0, 0.0},
+        {500.0, 0.0, 0.0},
+        {600.0, 0.0, 0.0},
+        {700.0, 0.0, 0.0},
+        {900.0, 0.0, 0.0},
+        {1000.0, 0.0, 0.0}}};
+    const std::vector<std::vector<cv::Point2d> > imagePoints = {{
+        {55.751190185546875, 1404.0474853515625},
+        {193.7936248779297, 1371.4703369140625},
+        {261.0496520996094, 1353.757568359375},
+        {429.8731384277344, 1305.6209716796875},
+        {629.921630859375, 1244.861572265625},
+        {732.163818359375, 1212.6514892578125},
+        {921.693603515625, 1151.18212890625},
+        {961.9454956054688, 1250.607666015625},
+        {1050.19873046875, 1438.04248046875},
+        {1138.5526123046875, 1595.322265625},
+        {1179.6268310546875, 1660.5601806640625},
+        {1217.89453125, 1717.2725830078125},
+        {145.92713928222656, 1626.9112548828125},
+        {208.84829711914062, 1729.0655517578125},
+        {868.4423217773438, 2026.8885498046875},
+        {937.1198120117188, 1995.27392578125},
+        {1005.6630859375, 1957.218505859375},
+        {1137.001220703125, 1866.7117919921875},
+        {1197.398681640625, 1816.8116455078125}}};
+    std::vector<cv::Vec3d> rotations;
+    std::vector<cv::Vec3d> translations;
+    const double rms = cv::fisheye::calibrate(
+        objectPoints, imagePoints, testImageSize, cameraMatrix, distortion,
+        rotations, translations, cv::fisheye::CALIB_USE_INTRINSIC_GUESS,
+        cv::TermCriteria(cv::TermCriteria::COUNT, initializationIterations, 0.0));
+    EXPECT_TRUE(std::isfinite(rms));
+    EXPECT_TRUE(cv::checkRange(cv::Mat(cameraMatrix)));
+    EXPECT_TRUE(cv::checkRange(cv::Mat(distortion)));
+    ASSERT_EQ(rotations.size(), objectPoints.size());
+    ASSERT_EQ(translations.size(), objectPoints.size());
+    EXPECT_TRUE(cv::checkRange(cv::Mat(rotations[0])));
+    EXPECT_TRUE(cv::checkRange(cv::Mat(translations[0])));
+}
+
 TEST_F(fisheyeTest, CalibrationHandlesTranslatedObjectPoints)
 {
     const cv::Matx33d cameraMatrix(600.0, 0.0, 320.0,
@@ -737,6 +838,311 @@ TEST_F(fisheyeTest, CalibrationHandlesTranslatedObjectPoints)
     const double reprojectionRms =
         std::sqrt(rms / (2 * baseObjectPoints.size()));
     EXPECT_NEAR(reprojectionRms, 0.0, reprojectionTolerance);
+}
+
+/**
+ * Generates planar views of a board observed by a wide-angle fisheye camera.
+ * Only points inside the image whose rays deviate from the optical axis by
+ * less than @p maximumRayAngle are kept, which may exceed 90 degrees.
+ */
+static void createWideAngleViews(const cv::Matx33d& cameraMatrix,
+                                 const cv::Vec4d& distortion,
+                                 const cv::Size& size,
+                                 double maximumRayAngle,
+                                 std::vector<std::vector<cv::Point3d> >& objectPoints,
+                                 std::vector<std::vector<cv::Point2d> >& imagePoints,
+                                 std::vector<cv::Vec3d>& rotations,
+                                 std::vector<cv::Vec3d>& translations)
+{
+    constexpr int gridColumns = 12;
+    constexpr int gridRows = 9;
+    constexpr double gridSpacing = 100.0;
+    constexpr int numberOfViews = 40;
+    constexpr int minimumPointsPerView = 20;
+    constexpr double rotationDeviation = 0.6;
+    constexpr double depthDirectionScale = 0.4;
+    constexpr double minimumDistance = 600.0;
+    constexpr double maximumDistance = 1500.0;
+    constexpr uint64 seed = 0x5eed;
+
+    std::vector<cv::Point3d> grid;
+    const cv::Point3d gridCenter((gridColumns - 1) * gridSpacing / 2.0,
+                                 (gridRows - 1) * gridSpacing / 2.0, 0.0);
+    for (int row = 0; row < gridRows; ++row)
+    {
+        for (int column = 0; column < gridColumns; ++column)
+        {
+            grid.push_back(cv::Point3d(column * gridSpacing, row * gridSpacing, 0.0) - gridCenter);
+        }
+    }
+
+    cv::RNG rng(seed);
+    while (static_cast<int>(objectPoints.size()) < numberOfViews)
+    {
+        const cv::Vec3d rotation(rng.gaussian(rotationDeviation),
+                                 rng.gaussian(rotationDeviation),
+                                 rng.gaussian(rotationDeviation));
+        cv::Vec3d direction(rng.gaussian(1.0), rng.gaussian(1.0),
+                            std::abs(rng.gaussian(1.0)) * depthDirectionScale);
+        direction /= cv::norm(direction);
+        const cv::Vec3d translation =
+            direction * rng.uniform(minimumDistance, maximumDistance);
+
+        cv::Matx33d rotationMatrix;
+        cv::Rodrigues(rotation, rotationMatrix);
+        std::vector<cv::Point2d> projected;
+        cv::fisheye::projectPoints(grid, projected, rotation, translation,
+                                   cameraMatrix, distortion);
+
+        std::vector<cv::Point3d> visibleObjectPoints;
+        std::vector<cv::Point2d> visibleImagePoints;
+        for (size_t i = 0; i < grid.size(); ++i)
+        {
+            const cv::Vec3d camera = rotationMatrix * cv::Vec3d(grid[i]) + translation;
+            const double rayAngle = std::atan2(std::hypot(camera[0], camera[1]), camera[2]);
+            const cv::Point2d& pixel = projected[i];
+            if (rayAngle < maximumRayAngle && pixel.x >= 0 && pixel.y >= 0 &&
+                pixel.x < size.width && pixel.y < size.height)
+            {
+                visibleObjectPoints.push_back(grid[i]);
+                visibleImagePoints.push_back(pixel);
+            }
+        }
+        if (static_cast<int>(visibleObjectPoints.size()) >= minimumPointsPerView)
+        {
+            objectPoints.push_back(visibleObjectPoints);
+            imagePoints.push_back(visibleImagePoints);
+            rotations.push_back(rotation);
+            translations.push_back(translation);
+        }
+    }
+}
+
+static const cv::Size wideAngleImageSize(2432, 2048);
+static const cv::Matx33d wideAngleCameraMatrix(870.0, 0.0, 1240.0,
+                                               0.0, 870.0, 998.0,
+                                               0.0, 0.0, 1.0);
+static const cv::Vec4d wideAngleDistortion(-0.04, 0.0, 0.0, 0.0);
+static const double wideAngleMaximumRayAngle = 100.0 * CV_PI / 180.0;
+
+TEST_F(fisheyeTest, CalibrationRecomputesExtrinsicsForWideAngleViews)
+{
+    constexpr double reprojectionTolerance = 1e-6;
+    constexpr double cameraMatrixTolerance = 1e-6;
+    constexpr double distortionTolerance = 1e-9;
+    std::vector<std::vector<cv::Point3d> > objectPoints;
+    std::vector<std::vector<cv::Point2d> > imagePoints;
+    std::vector<cv::Vec3d> rotations;
+    std::vector<cv::Vec3d> translations;
+    createWideAngleViews(wideAngleCameraMatrix, wideAngleDistortion, wideAngleImageSize,
+                         wideAngleMaximumRayAngle, objectPoints, imagePoints,
+                         rotations, translations);
+
+    cv::Matx33d estimatedK;
+    cv::Vec4d estimatedD;
+    std::vector<cv::Vec3d> estimatedR;
+    std::vector<cv::Vec3d> estimatedT;
+    double rms = 0.0;
+    ASSERT_NO_THROW(rms = cv::fisheye::calibrate(
+        objectPoints, imagePoints, wideAngleImageSize, estimatedK, estimatedD,
+        estimatedR, estimatedT, cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC));
+    EXPECT_LT(rms, reprojectionTolerance);
+    EXPECT_MAT_NEAR(cv::Mat(estimatedK), cv::Mat(wideAngleCameraMatrix), cameraMatrixTolerance);
+    EXPECT_MAT_NEAR(cv::Mat(estimatedD), cv::Mat(wideAngleDistortion), distortionTolerance);
+}
+
+TEST_F(fisheyeTest, InitExtrinsicsRecoversPoseWithRayOnCameraPlane)
+{
+    // Rotating the board about the y axis and shifting it along the optical
+    // axis places the corner with the largest x coordinate exactly on the
+    // camera plane z = 0, i.e., at a ray angle of 90 degrees.
+    constexpr double rotationTolerance = 1e-9;
+    constexpr double relativeTranslationTolerance = 1e-9;
+    constexpr int gridColumns = 12;
+    constexpr int gridRows = 9;
+    constexpr double gridSpacing = 100.0;
+    constexpr double tilt = 1.0;
+    std::vector<cv::Point3d> objectPoints;
+    for (int row = 0; row < gridRows; ++row)
+    {
+        for (int column = 0; column < gridColumns; ++column)
+        {
+            objectPoints.push_back(cv::Point3d((column - (gridColumns - 1) / 2.0) * gridSpacing,
+                                               (row - (gridRows - 1) / 2.0) * gridSpacing, 0.0));
+        }
+    }
+    const cv::Vec3d rotation(0.0, tilt, 0.0);
+    cv::Matx33d rotationMatrix;
+    cv::Rodrigues(rotation, rotationMatrix);
+    const cv::Vec3d corner(objectPoints[gridColumns - 1]);
+    const cv::Vec3d translation(0.0, 0.0, -(rotationMatrix * corner)[2]);
+    ASSERT_EQ((rotationMatrix * corner + translation)[2], 0.0);
+
+    std::vector<cv::Point2d> imagePoints;
+    cv::fisheye::projectPoints(objectPoints, imagePoints, rotation, translation,
+                               wideAngleCameraMatrix, wideAngleDistortion);
+    cv::internal::IntrinsicParams param;
+    param.Init(cv::Vec2d(wideAngleCameraMatrix(0, 0), wideAngleCameraMatrix(1, 1)),
+               cv::Vec2d(wideAngleCameraMatrix(0, 2), wideAngleCameraMatrix(1, 2)),
+               wideAngleDistortion);
+
+    cv::Mat estimatedRotation;
+    cv::Mat estimatedTranslation;
+    ASSERT_NO_THROW(cv::internal::InitExtrinsics(
+        cv::Mat(imagePoints).reshape(2), cv::Mat(objectPoints).reshape(3),
+        param, estimatedRotation, estimatedTranslation));
+    EXPECT_MAT_NEAR(estimatedRotation.reshape(1, 3), cv::Mat(rotation), rotationTolerance);
+    EXPECT_MAT_NEAR(estimatedTranslation.reshape(1, 3), cv::Mat(translation),
+                    relativeTranslationTolerance * cv::norm(translation));
+}
+
+TEST_F(fisheyeTest, InitExtrinsicsHandlesAnglesBeyondInvertibleRange)
+{
+    // With k1 = -0.3 the distorted angle peaks at about 0.70 radians. Every
+    // point lies beyond this peak, so no angle reproduces any of them exactly.
+    constexpr double focalLength = 500.0;
+    constexpr double principalPoint = 400.0;
+    constexpr double distortedRadius = 0.8 * focalLength;
+    constexpr int numberOfPoints = 8;
+    const cv::Vec4d distortion(-0.3, 0.0, 0.0, 0.0);
+    cv::internal::IntrinsicParams param;
+    param.Init(cv::Vec2d(focalLength, focalLength),
+               cv::Vec2d(principalPoint, principalPoint), distortion);
+
+    std::vector<cv::Point2d> imagePoints;
+    std::vector<cv::Point3d> objectPoints;
+    for (int i = 0; i < numberOfPoints; ++i)
+    {
+        const double azimuth = 2.0 * CV_PI * i / numberOfPoints;
+        imagePoints.push_back(cv::Point2d(principalPoint + distortedRadius * std::cos(azimuth),
+                                          principalPoint + distortedRadius * std::sin(azimuth)));
+        objectPoints.push_back(cv::Point3d(std::cos(azimuth), std::sin(azimuth), 0.0));
+    }
+
+    cv::Mat rotation;
+    cv::Mat translation;
+    ASSERT_NO_THROW(cv::internal::InitExtrinsics(
+        cv::Mat(imagePoints).reshape(2), cv::Mat(objectPoints).reshape(3),
+        param, rotation, translation));
+    EXPECT_TRUE(cv::checkRange(rotation));
+    EXPECT_TRUE(cv::checkRange(translation));
+}
+
+TEST_F(fisheyeTest, InitExtrinsicsIgnoresPointsThatCannotBeUndistorted)
+{
+    // The negative k4 limits the distorted angle to a maximum of about
+    // 0.98 rad. Image points beyond that radius cannot be undistorted.
+    const cv::Vec2d focalLength(600.0, 600.0);
+    const cv::Vec2d principalPoint(640.0, 480.0);
+    const cv::Vec4d distortion(0.0, 0.0, 0.0, -0.05);
+    const cv::Matx33d cameraMatrix(focalLength[0], 0.0, principalPoint[0],
+                                   0.0, focalLength[1], principalPoint[1],
+                                   0.0, 0.0, 1.0);
+    const cv::Vec3d trueR(0.1, -0.2, 0.05);
+    const cv::Vec3d trueT(-0.1, 0.05, 2.0);
+    constexpr int gridSize = 4;
+    constexpr double gridSpacing = 0.2;
+    constexpr double undistortionFailureCoordinate = -1e6;
+    constexpr double poseTolerance = 1e-6;
+
+    std::vector<cv::Point3d> objectPoints;
+    for (int row = 0; row < gridSize; ++row)
+    {
+        for (int column = 0; column < gridSize; ++column)
+        {
+            objectPoints.emplace_back(column * gridSpacing, row * gridSpacing,
+                                      0.0);
+        }
+    }
+
+    std::vector<cv::Point2d> imagePoints;
+    cv::fisheye::projectPoints(objectPoints, imagePoints, trueR, trueT,
+                               cameraMatrix, distortion);
+
+    const std::vector<cv::Point2d> invalidImagePoints = {
+        {1340.0, 930.0}, {1300.0, 950.0}, {1260.0, 960.0}};
+    const std::vector<cv::Point3d> invalidObjectPoints = {
+        {-0.2, 0.0, 0.0}, {0.0, -0.2, 0.0}, {-0.2, -0.2, 0.0}};
+    imagePoints.insert(imagePoints.end(), invalidImagePoints.begin(),
+                       invalidImagePoints.end());
+    objectPoints.insert(objectPoints.end(), invalidObjectPoints.begin(),
+                        invalidObjectPoints.end());
+
+    // The undistortion marks the added points with a sentinel coordinate.
+    std::vector<cv::Point2d> undistorted;
+    cv::fisheye::undistortPoints(invalidImagePoints, undistorted, cameraMatrix, distortion);
+    for (const cv::Point2d& point : undistorted)
+    {
+        ASSERT_EQ(point.x, undistortionFailureCoordinate);
+        ASSERT_EQ(point.y, undistortionFailureCoordinate);
+    }
+
+    const cv::internal::IntrinsicParams param(focalLength, principalPoint,
+                                              distortion);
+    // InitExtrinsics expects column vectors like CalibrateExtrinsics passes.
+    const int numberOfPoints = static_cast<int>(imagePoints.size());
+    const cv::Mat imagePointsMat = cv::Mat(imagePoints).reshape(2, numberOfPoints);
+    const cv::Mat objectPointsMat =
+        cv::Mat(objectPoints).reshape(3, numberOfPoints);
+
+    cv::Mat rvec;
+    cv::Mat tvec;
+    cv::internal::InitExtrinsics(imagePointsMat, objectPointsMat, param, rvec,
+                                 tvec);
+
+    EXPECT_MAT_NEAR(rvec.reshape(1, 3), cv::Mat(trueR), poseTolerance);
+    EXPECT_MAT_NEAR(tvec.reshape(1, 3), cv::Mat(trueT), poseTolerance);
+}
+
+TEST_F(fisheyeTest, InitExtrinsicsHandlesCollinearBoardPoints)
+{
+    // Collinear board points leave the rotation about their line undetermined,
+    // which must not prevent an initial pose.
+    struct CollinearView
+    {
+        const char* name;
+        cv::Vec2d focalLength;
+        cv::Vec2d principalPoint;
+        cv::Point2d firstPixel;
+        cv::Point2d pixelStep;
+        cv::Point3d firstBoardPoint;
+        cv::Point3d boardStep;
+        int numberOfPoints;
+    };
+    const CollinearView views[] = {
+        {"diagonal with unit camera", {1.0, 1.0}, {0.0, 0.0}, {0.0, 0.0}, {1.0, 1.0},
+         {0.0, 0.0, 10.0}, {1.0, 1.0, 0.0}, 10},
+        {"shifted diagonal with unit camera", {1.0, 1.0}, {0.0, 0.0}, {0.5, 0.5}, {1.0, 1.0},
+         {0.5, 0.5, 10.0}, {1.0, 1.0, 0.0}, 15},
+        {"axis-aligned through center", {500.0, 500.0}, {320.0, 240.0}, {320.0, 240.0}, {20.0, 0.0},
+         {0.0, 0.0, 0.0}, {100.0, 0.0, 0.0}, 8},
+        {"axis-aligned off center", {500.0, 500.0}, {320.0, 240.0}, {100.0, 300.0}, {20.0, 0.0},
+         {0.0, 0.0, 0.0}, {100.0, 0.0, 0.0}, 8},
+        {"oblique through center", {500.0, 500.0}, {320.0, 240.0}, {320.0, 240.0}, {20.0, 10.0},
+         {0.0, 0.0, 0.0}, {100.0, 50.0, 0.0}, 8},
+    };
+
+    for (const CollinearView& view : views)
+    {
+        SCOPED_TRACE(view.name);
+        cv::internal::IntrinsicParams param;
+        param.Init(view.focalLength, view.principalPoint);
+        std::vector<cv::Point2d> imagePoints;
+        std::vector<cv::Point3d> objectPoints;
+        for (int i = 0; i < view.numberOfPoints; ++i)
+        {
+            imagePoints.push_back(view.firstPixel + i * view.pixelStep);
+            objectPoints.push_back(view.firstBoardPoint + i * view.boardStep);
+        }
+
+        cv::Mat rotation;
+        cv::Mat translation;
+        ASSERT_NO_THROW(cv::internal::InitExtrinsics(
+            cv::Mat(imagePoints).reshape(2), cv::Mat(objectPoints).reshape(3),
+            param, rotation, translation));
+        EXPECT_TRUE(cv::checkRange(rotation));
+        EXPECT_TRUE(cv::checkRange(translation));
+    }
 }
 
 TEST_F(fisheyeTest, CalibrationRefinesNearCollinearView)
@@ -873,67 +1279,6 @@ TEST_F(fisheyeTest, CalibrationWithFixedFocalLength)
 
     EXPECT_MAT_NEAR(theK, newK, 1e-6);
     EXPECT_MAT_NEAR(theD, newD, 1e-6);
-}
-
-TEST_F(fisheyeTest, Homography)
-{
-    const int n_images = 1;
-
-    std::vector<std::vector<cv::Point2d> > imagePoints(n_images);
-    std::vector<std::vector<cv::Point3d> > objectPoints(n_images);
-
-    const std::string folder = combine(datasets_repository_path, "calib-3_stereo_from_JY");
-    cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_left.isOpened());
-    for(int i = 0; i < n_images; ++i)
-        fs_left[cv::format("image_%d", i )] >> imagePoints[i];
-    fs_left.release();
-
-    cv::FileStorage fs_object(combine(folder, "object.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_object.isOpened());
-    for(int i = 0; i < n_images; ++i)
-        fs_object[cv::format("image_%d", i )] >> objectPoints[i];
-    fs_object.release();
-
-    cv::internal::IntrinsicParams param;
-    param.Init(cv::Vec2d(cv::max(imageSize.width, imageSize.height) / CV_PI, cv::max(imageSize.width, imageSize.height) / CV_PI),
-               cv::Vec2d(imageSize.width  / 2.0 - 0.5, imageSize.height / 2.0 - 0.5));
-
-    cv::Mat _imagePoints (imagePoints[0]);
-    cv::Mat _objectPoints(objectPoints[0]);
-
-    cv::Mat imagePointsNormalized = NormalizePixels(_imagePoints, param).reshape(1).t();
-    _objectPoints = _objectPoints.reshape(1).t();
-    cv::Mat objectPointsMean, covObjectPoints;
-
-    int Np = imagePointsNormalized.cols;
-    cv::calcCovarMatrix(_objectPoints, covObjectPoints, objectPointsMean, cv::COVAR_NORMAL | cv::COVAR_COLS);
-    cv::SVD svd(covObjectPoints);
-    cv::Mat theR(svd.vt);
-
-    if (cv::norm(theR(cv::Rect(2, 0, 1, 2))) < 1e-6)
-        theR = cv::Mat::eye(3,3, CV_64FC1);
-    if (cv::determinant(theR) < 0)
-        theR = -theR;
-
-    cv::Mat theT = -theR * objectPointsMean;
-    cv::Mat X_new = theR * _objectPoints + theT * cv::Mat::ones(1, Np, CV_64FC1);
-    cv::Mat H = cv::internal::ComputeHomography(imagePointsNormalized, X_new.rowRange(0, 2));
-
-    cv::Mat M = cv::Mat::ones(3, X_new.cols, CV_64FC1);
-    X_new.rowRange(0, 2).copyTo(M.rowRange(0, 2));
-    cv::Mat mrep = H * M;
-
-    cv::divide(mrep, cv::Mat::ones(3,1, CV_64FC1) * mrep.row(2).clone(), mrep);
-
-    cv::Mat merr = (mrep.rowRange(0, 2) - imagePointsNormalized).t();
-
-    cv::Vec2d std_err;
-    cv::meanStdDev(merr.reshape(2), cv::noArray(), std_err);
-    std_err *= sqrt((double)merr.reshape(2).total() / (merr.reshape(2).total() - 1));
-
-    cv::Vec2d correct_std_err(0.00516740156010384, 0.00644205331553901);
-    EXPECT_MAT_NEAR(std_err, correct_std_err, 1e-12);
 }
 
 TEST_F(fisheyeTest, EstimateUncertainties)
