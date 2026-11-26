@@ -29,91 +29,61 @@ namespace cv { namespace dnn {
 
 namespace {
 
-enum class CoordTransMode {
-    HALF_PIXEL,
-    PYTORCH_HALF_PIXEL,
-    TF_HALF_PIXEL_FOR_NN,
-    TF_CROP_AND_RESIZE,
-    HALF_PIXEL_SYMMETRIC,
-    ASYMMETRIC
-};
-
-static inline CoordTransMode parseCoordTransMode(const String& s)
+// ONNX coordinate_transformation_mode as the cv::ResizeCoord that cv::resize takes as well.
+// tf_crop_and_resize has no ResizeCoord: it maps the ROI input rather than the whole axis, so the
+// layer keeps it as a separate flag (see isCropAndResize).
+static inline ResizeCoord parseCoordTransMode(const String& s)
 {
-    if (s == "half_pixel") return CoordTransMode::HALF_PIXEL;
-    if (s == "pytorch_half_pixel") return CoordTransMode::PYTORCH_HALF_PIXEL;
-    if (s == "tf_half_pixel_for_nn") return CoordTransMode::TF_HALF_PIXEL_FOR_NN;
-    if (s == "tf_crop_and_resize") return CoordTransMode::TF_CROP_AND_RESIZE;
-    if (s == "half_pixel_symmetric") return CoordTransMode::HALF_PIXEL_SYMMETRIC;
-    return CoordTransMode::ASYMMETRIC;
+    if (s == "half_pixel") return ResizeCoord::HALF_PIXEL;
+    if (s == "pytorch_half_pixel") return ResizeCoord::PYTORCH_HALF_PIXEL;
+    if (s == "tf_half_pixel_for_nn") return ResizeCoord::TF_HALF_PIXEL_FOR_NN;
+    if (s == "half_pixel_symmetric") return ResizeCoord::HALF_PIXEL_SYMMETRIC;
+    if (s == "align_corners") return ResizeCoord::ALIGN_CORNERS;
+    return ResizeCoord::ASYMMETRIC;
 }
 
-enum class NearestMode {
-    FLOOR,
-    CEIL,
-    ROUND_PREFER_CEIL,
-    ROUND_PREFER_FLOOR
-};
+static inline bool isCropAndResize(const String& s)
+{
+    return s == "tf_crop_and_resize";
+}
 
 using std::clamp;
 
-static inline NearestMode parseNearestMode(const String& s)
+static inline ResizeNearest parseNearestMode(const String& s)
 {
-    if (s == "floor") return NearestMode::FLOOR;
-    if (s == "ceil") return NearestMode::CEIL;
-    if (s == "round_prefer_ceil") return NearestMode::ROUND_PREFER_CEIL;
-    return NearestMode::ROUND_PREFER_FLOOR;
-}
-
-static inline ResizeCoord toResizeCoord(CoordTransMode m, bool alignCorners)
-{
-    if (alignCorners)
-        return ResizeCoord::ALIGN_CORNERS; // caller already checked coordTransMode is asymmetric
-    switch (m) {
-    case CoordTransMode::HALF_PIXEL: return ResizeCoord::HALF_PIXEL;
-    case CoordTransMode::PYTORCH_HALF_PIXEL: return ResizeCoord::PYTORCH_HALF_PIXEL;
-    case CoordTransMode::TF_HALF_PIXEL_FOR_NN: return ResizeCoord::TF_HALF_PIXEL_FOR_NN;
-    case CoordTransMode::HALF_PIXEL_SYMMETRIC: return ResizeCoord::HALF_PIXEL_SYMMETRIC;
-    default: return ResizeCoord::ASYMMETRIC;
-    }
-}
-
-static inline ResizeNearest toResizeNearest(NearestMode m)
-{
-    switch (m) {
-    case NearestMode::FLOOR: return ResizeNearest::FLOOR;
-    case NearestMode::CEIL: return ResizeNearest::CEIL;
-    case NearestMode::ROUND_PREFER_CEIL: return ResizeNearest::ROUND_PREFER_CEIL;
-    default: return ResizeNearest::ROUND_PREFER_FLOOR;
-    }
+    if (s == "floor") return ResizeNearest::FLOOR;
+    if (s == "ceil") return ResizeNearest::CEIL;
+    if (s == "round_prefer_ceil") return ResizeNearest::ROUND_PREFER_CEIL;
+    return ResizeNearest::ROUND_PREFER_FLOOR;
 }
 
 static constexpr int kResizeNumStripes = 16;
 
 inline float computeSrcGeneric(int dst, float scale, int limit, int len,
-                               CoordTransMode coordTransMode, bool /*halfPixelCenters*/,
+                               ResizeCoord coordMode, bool cropAndResize,
                                float start_coord = 0.0f, float end_coord = 1.0f)
 {
-    if (coordTransMode == CoordTransMode::TF_CROP_AND_RESIZE)
+    if (cropAndResize)
     {
         if (len > 1)
             return start_coord * (limit - 1) + dst * (end_coord - start_coord) * (limit - 1) / float(len - 1);
         else
             return 0.5f * (start_coord + end_coord) * (limit - 1);
     }
-    if (coordTransMode == CoordTransMode::PYTORCH_HALF_PIXEL)
+    if (coordMode == ResizeCoord::PYTORCH_HALF_PIXEL)
         return (len > 1) ? (dst + 0.5f)*scale - 0.5f : 0.f;
-    if (coordTransMode == CoordTransMode::HALF_PIXEL)
+    if (coordMode == ResizeCoord::HALF_PIXEL)
         return (dst + 0.5f)*scale - 0.5f;
-    if (coordTransMode == CoordTransMode::TF_HALF_PIXEL_FOR_NN)
+    if (coordMode == ResizeCoord::TF_HALF_PIXEL_FOR_NN)
         return (dst + 0.5f)*scale;
-    if (coordTransMode == CoordTransMode::HALF_PIXEL_SYMMETRIC)
+    if (coordMode == ResizeCoord::HALF_PIXEL_SYMMETRIC)
     {
         // ONNX half_pixel_symmetric: offset = center*(1 - len_resized/(len_orig*x_scale)),
         // with scale == 1/x_scale and limit == input length.
         const float offset = limit*0.5f - len*scale*0.5f;
         return offset + (dst + 0.5f)*scale - 0.5f;
     }
+    // ASYMMETRIC, and ALIGN_CORNERS, whose scale updateOutSizeAndScale() set to (in-1)/(out-1)
     return dst*scale;
 }
 
@@ -124,18 +94,18 @@ static inline void buildNearestIndexMap(std::vector<int>& map,
                                         int len,
                                         float start_coord,
                                         float end_coord,
-                                        CoordTransMode coordTransMode,
-                                        NearestMode nearestMode,
-                                        bool halfPixelCenters)
+                                        ResizeCoord coordMode,
+                                        ResizeNearest nearestMode,
+                                        bool cropAndResize)
 {
     auto nearestIndex = [&](float src) {
         const int f = cvFloor(src);
         const float frac = src - f;
         const float eps = 1e-6f;
         int idx;
-        if (nearestMode == NearestMode::FLOOR) idx = cvFloor(src);
-        else if (nearestMode == NearestMode::CEIL)  idx = cvCeil(src);
-        else if (nearestMode == NearestMode::ROUND_PREFER_CEIL) {
+        if (nearestMode == ResizeNearest::FLOOR) idx = cvFloor(src);
+        else if (nearestMode == ResizeNearest::CEIL)  idx = cvCeil(src);
+        else if (nearestMode == ResizeNearest::ROUND_PREFER_CEIL) {
             idx = (abs(frac - 0.5f) <= eps) ? (f + 1) : cvRound(src);
         } else {
             idx = (abs(frac - 0.5f) <= eps) ? f : cvRound(src);
@@ -147,8 +117,8 @@ static inline void buildNearestIndexMap(std::vector<int>& map,
     for (int i = 0; i < outLen; ++i)
     {
         float src = computeSrcGeneric(i, scale, inLen, len,
-                                      coordTransMode, halfPixelCenters, start_coord, end_coord);
-        if (coordTransMode == CoordTransMode::TF_CROP_AND_RESIZE) {
+                                      coordMode, cropAndResize, start_coord, end_coord);
+        if (cropAndResize) {
             if (src < 0.f || src >= float(inLen)) {
                 map[i] = -1; // out of bounds
                 continue;
@@ -170,8 +140,7 @@ static inline void buildBilinearIndexAndLerp(std::vector<int>& i0,
                                              int len,
                                              float start_coord,
                                              float end_coord,
-                                             CoordTransMode coordTransMode,
-                                             bool halfPixelCenters,
+                                             ResizeCoord coordMode,
                                              bool tf_crop_and_resize_mode)
 {
     i0.resize(outLen);
@@ -182,7 +151,7 @@ static inline void buildBilinearIndexAndLerp(std::vector<int>& i0,
     for (int o = 0; o < outLen; ++o)
     {
         float src = computeSrcGeneric(o, scale, inLen, len,
-                                      coordTransMode, halfPixelCenters, start_coord, end_coord);
+                                      coordMode, tf_crop_and_resize_mode, start_coord, end_coord);
         if (tf_crop_and_resize_mode)
         {
             if (src < 0.f || src > float(inLen - 1)) {
@@ -225,8 +194,7 @@ static inline void buildCubicIndexAndWeights(std::vector<std::array<int,4>>& ids
                                              int len,
                                              float start_coord,
                                              float end_coord,
-                                             CoordTransMode coordTransMode,
-                                             bool halfPixelCenters,
+                                             ResizeCoord coordMode,
                                              bool tf_crop_and_resize_mode,
                                              bool excludeOutside,
                                              float cubicA)
@@ -238,7 +206,7 @@ static inline void buildCubicIndexAndWeights(std::vector<std::array<int,4>>& ids
     for (int o = 0; o < outLen; ++o)
     {
         float src = computeSrcGeneric(o, scale, inLen, len,
-                                      coordTransMode, halfPixelCenters, start_coord, end_coord);
+                                      coordMode, tf_crop_and_resize_mode, start_coord, end_coord);
         int i = int(std::floor(src));
         float d = src - i;
         float sw = 0.f;
@@ -295,9 +263,9 @@ template<typename T>
 void resizeNearest(const Mat &inp, Mat &out,
                    float scaleH, float scaleW,
                    int lenY, int lenX,
-                   NearestMode nearestMode,
-                   const String &coordTransMode,
-                   bool halfPixelCenters,
+                   ResizeNearest nearestMode,
+                   ResizeCoord coordMode,
+                   bool tf_crop_and_resize_mode,
                    float start_y = 0.0f, float end_y = 1.0f,
                    float start_x = 0.0f, float end_x = 1.0f,
                    float extrapolation_value = 0.0f)
@@ -306,16 +274,13 @@ void resizeNearest(const Mat &inp, Mat &out,
     int outH      = out.size[2], outW      = out.size[3];
     CV_Assert(inp.isContinuous() && out.isContinuous());
 
-    CoordTransMode coordMode = parseCoordTransMode(coordTransMode);
-    const bool tf_crop_and_resize_mode = (coordMode == CoordTransMode::TF_CROP_AND_RESIZE);
-
     std::vector<int> mapY(outH);
     buildNearestIndexMap(mapY, outH, inH, scaleH, lenY, start_y, end_y,
-                         coordMode, nearestMode, halfPixelCenters);
+                         coordMode, nearestMode, tf_crop_and_resize_mode);
 
     std::vector<int> mapX(outW);
     buildNearestIndexMap(mapX, outW, inW, scaleW, lenX, start_x, end_x,
-                         coordMode, nearestMode, halfPixelCenters);
+                         coordMode, nearestMode, tf_crop_and_resize_mode);
 
     if (inp.shape().layout == DATA_LAYOUT_BLOCK) {
         CV_Assert(inp.dims == 5 && out.dims == 5);
@@ -416,8 +381,8 @@ template<typename T>
 void resizeBilinear(const Mat &inp, Mat &out,
                     float scaleH, float scaleW,
                     int lenY, int lenX,
-                    const String &coordTransMode,
-                    bool halfPixelCenters,
+                    ResizeCoord coordMode,
+                    bool tf_crop_and_resize_mode,
                     float start_y = 0.0f, float end_y = 1.0f,
                     float start_x = 0.0f, float end_x = 1.0f,
                     float extrapolation_value = 0.0f)
@@ -426,22 +391,19 @@ void resizeBilinear(const Mat &inp, Mat &out,
     int outH      = out.size[2], outW = out.size[3];
     CV_Assert(inp.isContinuous() && out.isContinuous());
 
-    CoordTransMode coordMode = parseCoordTransMode(coordTransMode);
-    const bool tf_crop_and_resize_mode = (coordMode == CoordTransMode::TF_CROP_AND_RESIZE);
-
     std::vector<int>    x0(outW), x1(outW);
     std::vector<float> lx(outW);
     std::vector<uint8_t>  outOfBoundsX(outW);
     buildBilinearIndexAndLerp(x0, x1, lx, outOfBoundsX,
                               outW, inW, scaleW, lenX, start_x, end_x,
-                              coordMode, halfPixelCenters, tf_crop_and_resize_mode);
+                              coordMode, tf_crop_and_resize_mode);
 
     std::vector<int>    y0(outH), y1(outH);
     std::vector<float> ly(outH);
     std::vector<uint8_t>  outOfBoundsY(outH);
     buildBilinearIndexAndLerp(y0, y1, ly, outOfBoundsY,
                               outH, inH, scaleH, lenY, start_y, end_y,
-                              coordMode, halfPixelCenters, tf_crop_and_resize_mode);
+                              coordMode, tf_crop_and_resize_mode);
 
     if (inp.shape().layout == DATA_LAYOUT_BLOCK) {
         CV_Assert(inp.dims == 5 && out.dims == 5);
@@ -579,7 +541,7 @@ void resizeCubic(const Mat &inp, Mat &out,
                  float scaleH, float scaleW,
                  int lenY, int lenX,
                  float cubicA, bool excludeOutside,
-                 const String &coordTransMode, bool halfPixelCenters,
+                 ResizeCoord coordMode, bool tf_crop_and_resize_mode,
                  float start_y = 0.0f, float end_y = 1.0f,
                  float start_x = 0.0f, float end_x = 1.0f,
                  float extrapolation_value = 0.0f)
@@ -587,15 +549,12 @@ void resizeCubic(const Mat &inp, Mat &out,
     int inH = inp.size[2], inW = inp.size[3];
     int outH = out.size[2], outW = out.size[3];
 
-    CoordTransMode coordMode = parseCoordTransMode(coordTransMode);
-    const bool tf_crop_and_resize_mode = (coordMode == CoordTransMode::TF_CROP_AND_RESIZE);
-
     std::vector<std::array<int,4>> x_id(outW);
     std::vector<std::array<float,4>> x_w (outW);
     std::vector<uint8_t> outOfBoundsX(outW);
     buildCubicIndexAndWeights(x_id, x_w, outOfBoundsX,
                               outW, inW, scaleW, lenX, start_x, end_x,
-                              coordMode, halfPixelCenters, tf_crop_and_resize_mode,
+                              coordMode, tf_crop_and_resize_mode,
                               excludeOutside, cubicA);
 
     std::vector<std::array<int,4>> y_id(outH);
@@ -603,7 +562,7 @@ void resizeCubic(const Mat &inp, Mat &out,
     std::vector<uint8_t> outOfBoundsY(outH);
     buildCubicIndexAndWeights(y_id, y_w, outOfBoundsY,
                               outH, inH, scaleH, lenY, start_y, end_y,
-                              coordMode, halfPixelCenters, tf_crop_and_resize_mode,
+                              coordMode, tf_crop_and_resize_mode,
                               excludeOutside, cubicA);
 
     if (inp.shape().layout == DATA_LAYOUT_BLOCK) {
@@ -823,7 +782,7 @@ struct AAWeights
 };
 
 static void buildAAWeights(AAWeights& p, int inS, int outS, float xscale,
-                           bool cubic, float cubicA, CoordTransMode coordMode)
+                           bool cubic, float cubicA, ResizeCoord coordMode, bool cropAndResize)
 {
     const float scaleC = 1.f / xscale;                  // input/output direction
     const float radius = cubic ? 2.f : 1.f;
@@ -835,7 +794,7 @@ static void buildAAWeights(AAWeights& p, int inS, int outS, float xscale,
     std::vector<float> tmp;
     for (int y = 0; y < outS; y++)
     {
-        const float center = computeSrcGeneric(y, scaleC, inS, outS, coordMode, true);
+        const float center = computeSrcGeneric(y, scaleC, inS, outS, coordMode, cropAndResize);
         const int xmin = (int)std::floor(center - support + 0.5f);
         const int xmax = (int)std::floor(center + support + 0.5f);  // inclusive
         const int lo = std::min(std::max(xmin, 0), inS - 1);
@@ -860,7 +819,7 @@ static void buildAAWeights(AAWeights& p, int inS, int outS, float xscale,
 template<typename T>
 void resizeAntialias(const Mat& inp, Mat& out,
                      float xscaleH, float xscaleW,
-                     bool cubic, float cubicA, CoordTransMode coordMode)
+                     bool cubic, float cubicA, ResizeCoord coordMode, bool cropAndResize)
 {
     CV_Assert(inp.dims == 4 && out.dims == 4 && inp.isContinuous() && out.isContinuous());
     const int N = inp.size[0], C = inp.size[1];
@@ -868,8 +827,8 @@ void resizeAntialias(const Mat& inp, Mat& out,
     const int outH = out.size[2], outW = out.size[3];
 
     AAWeights px, py;
-    buildAAWeights(px, inW, outW, xscaleW, cubic, cubicA, coordMode);
-    buildAAWeights(py, inH, outH, xscaleH, cubic, cubicA, coordMode);
+    buildAAWeights(px, inW, outW, xscaleW, cubic, cubicA, coordMode, cropAndResize);
+    buildAAWeights(py, inH, outH, xscaleH, cubic, cubicA, coordMode, cropAndResize);
 
     const int planes = N * C;
     parallel_for_(Range(0, planes), [&](const Range& r) {
@@ -941,10 +900,13 @@ public:
         excludeOutside = params.get<bool>("exclude_outside", false);
         dynamicROI = params.get<bool>("dynamic_roi", false);
 
-        alignCorners = params.get<bool>("align_corners", false);
-        halfPixelCenters = params.get<bool>("half_pixel_centers", false);
-        coordTransMode = params.get<String>("coordinate_transformation_mode", "half_pixel");
+        const String coordTransMode = params.get<String>("coordinate_transformation_mode", "half_pixel");
         coordTransModeE = parseCoordTransMode(coordTransMode);
+        cropAndResize = isCropAndResize(coordTransMode);
+        // The importer sets align_corners from the mode as well; params built by hand may only
+        // name the mode.
+        alignCorners = params.get<bool>("align_corners", coordTransModeE == ResizeCoord::ALIGN_CORNERS);
+        halfPixelCenters = params.get<bool>("half_pixel_centers", false);
 
         if (interpolation == "opencv_linear")
             halfPixelCenters = true;
@@ -1214,7 +1176,7 @@ public:
         updateOutSizeAndScale(inpShape, outShape);
 
         // Read ROI if dynamicROI is enabled
-        if (dynamicROI && coordTransModeE == CoordTransMode::TF_CROP_AND_RESIZE && ninputs >= 2)
+        if (dynamicROI && cropAndResize && ninputs >= 2)
         {
             Mat roiTensor = inputs[1];
             std::vector<float> roi;
@@ -1273,8 +1235,7 @@ public:
         // align_corners maps the output corners onto the input corners, so it keeps the
         // shape-derived (in - 1) / (out - 1) set by updateOutSizeAndScale(); "sizes" and
         // tf_crop_and_resize do not use the scale either.
-        if (sizes.empty() && !alignCorners && onnxScaleH > 0 && onnxScaleW > 0 &&
-            coordTransModeE != CoordTransMode::TF_CROP_AND_RESIZE)
+        if (sizes.empty() && !alignCorners && onnxScaleH > 0 && onnxScaleW > 0 && !cropAndResize)
         {
             scaleHeight = 1.f / onnxScaleH;
             scaleWidth  = 1.f / onnxScaleW;
@@ -1338,65 +1299,60 @@ public:
             const float xsH = onnxScaleH > 0.f ? onnxScaleH : float(outShape[2]) / inpShape[2];
             const float xsW = onnxScaleW > 0.f ? onnxScaleW : float(outShape[3]) / inpShape[3];
             switch (depth) {
-            case CV_8S:  resizeAntialias<int8_t>(inp, out, xsH, xsW, cubic, cubicCoeffA, coordTransModeE); break;
-            case CV_8U:  resizeAntialias<uint8_t>(inp, out, xsH, xsW, cubic, cubicCoeffA, coordTransModeE); break;
-            case CV_16F: resizeAntialias<hfloat>(inp, out, xsH, xsW, cubic, cubicCoeffA, coordTransModeE); break;
-            case CV_16BF: resizeAntialias<bfloat>(inp, out, xsH, xsW, cubic, cubicCoeffA, coordTransModeE); break;
-            case CV_32F: resizeAntialias<float>(inp, out, xsH, xsW, cubic, cubicCoeffA, coordTransModeE); break;
+            case CV_8S:  resizeAntialias<int8_t>(inp, out, xsH, xsW, cubic, cubicCoeffA, coordTransModeE, cropAndResize); break;
+            case CV_8U:  resizeAntialias<uint8_t>(inp, out, xsH, xsW, cubic, cubicCoeffA, coordTransModeE, cropAndResize); break;
+            case CV_16F: resizeAntialias<hfloat>(inp, out, xsH, xsW, cubic, cubicCoeffA, coordTransModeE, cropAndResize); break;
+            case CV_16BF: resizeAntialias<bfloat>(inp, out, xsH, xsW, cubic, cubicCoeffA, coordTransModeE, cropAndResize); break;
+            case CV_32F: resizeAntialias<float>(inp, out, xsH, xsW, cubic, cubicCoeffA, coordTransModeE, cropAndResize); break;
             default: CV_Error(Error::StsUnsupportedFormat, "Unsupported depth");
             }
         }
         else if ((interpolation == "nearest" || interpolation == "bilinear" || interpolation == "opencv_linear" || interpolation == "cubic") &&
                  inp.dims == 4 && inp.shape().layout != DATA_LAYOUT_BLOCK &&
-                 coordTransModeE != CoordTransMode::TF_CROP_AND_RESIZE &&
-                 (!alignCorners || coordTransModeE == CoordTransMode::ASYMMETRIC) &&
+                 !cropAndResize &&
+                 (!alignCorners || coordTransModeE == ResizeCoord::ASYMMETRIC ||
+                  coordTransModeE == ResizeCoord::ALIGN_CORNERS) &&
                  (depth == CV_32F || (depth == CV_8U && interpolation == "nearest")))
         {
             // cv::resize treats inp's N,C dims as a batch; other kernels handle remaining cases.
             ResizeParams params;
             params.interpolation = (interpolation == "nearest") ? INTER_NEAREST
                                   : (interpolation == "cubic") ? INTER_CUBIC : INTER_LINEAR;
-            params.coordMode = toResizeCoord(coordTransModeE, alignCorners);
-            params.nearestMode = toResizeNearest(nearestModeE);
+            params.coordMode = alignCorners ? ResizeCoord::ALIGN_CORNERS : coordTransModeE;
+            params.nearestMode = nearestModeE;
             params.excludeOutside = excludeOutside;
             params.cubicCoeffA = cubicCoeffA;
 
-            double trueFx = (double)out.size[3] / inp.size[3], trueFy = (double)out.size[2] / inp.size[2];
-            if (!scales.empty())
-            {
-                int hIdx, wIdx;
-                spatialIndices(scales.size(), hIdx, wIdx);
-                trueFy = scales[hIdx];
-                trueFx = scales[wIdx];
-            }
-
+            // The true scale, not out/in: ONNX steps by 1/scale. Only align_corners with folded
+            // constant scales keeps the shape-derived (in-1)/(out-1), as the layer's own kernels do.
+            const bool shapeDerived = alignCorners && scales.empty();
             params.dsize = Size(out.size[3], out.size[2]);
-            params.fx = trueFx;
-            params.fy = trueFy;
+            params.fx = onnxScaleW > 0.f && !shapeDerived ? onnxScaleW : (double)out.size[3] / inp.size[3];
+            params.fy = onnxScaleH > 0.f && !shapeDerived ? onnxScaleH : (double)out.size[2] / inp.size[2];
             resize(inp, out, params);
         }
         else if(interpolation=="nearest"){
             switch(depth){
             case CV_8S:
-                resizeNearest<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                resizeNearest<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransModeE,cropAndResize,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             case CV_8U:
-                resizeNearest<uint8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                resizeNearest<uint8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransModeE,cropAndResize,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             case CV_16F:
-                resizeNearest<hfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                resizeNearest<hfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransModeE,cropAndResize,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             case CV_16BF:
-                resizeNearest<bfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                resizeNearest<bfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransModeE,cropAndResize,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             case CV_32F:
-                resizeNearest<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                resizeNearest<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransModeE,cropAndResize,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             case CV_32S:
-                resizeNearest<int32_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                resizeNearest<int32_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransModeE,cropAndResize,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             case CV_64S:
-                resizeNearest<int64_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                resizeNearest<int64_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransModeE,cropAndResize,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             default: CV_Error(Error::StsUnsupportedFormat,"Unsupported depth");
             }
@@ -1404,19 +1360,19 @@ public:
         else if(interpolation=="bilinear"||interpolation=="opencv_linear"){
             switch(depth){
             case CV_8S:
-                resizeBilinear<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                resizeBilinear<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransModeE,cropAndResize,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             case CV_8U:
-                resizeBilinear<uint8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                resizeBilinear<uint8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransModeE,cropAndResize,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             case CV_16F:
-                resizeBilinear<hfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                resizeBilinear<hfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransModeE,cropAndResize,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             case CV_16BF:
-                resizeBilinear<bfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                resizeBilinear<bfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransModeE,cropAndResize,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             case CV_32F:
-                resizeBilinear<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                resizeBilinear<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransModeE,cropAndResize,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             default: CV_Error(Error::StsUnsupportedFormat,"Unsupported depth");
             }
@@ -1424,19 +1380,19 @@ public:
         else if(interpolation=="cubic"){
             switch (depth) {
             case CV_8S:
-                resizeCubic<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                resizeCubic<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransModeE,cropAndResize,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             case CV_8U:
-                resizeCubic<uint8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                resizeCubic<uint8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransModeE,cropAndResize,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             case CV_16F:
-                resizeCubic<hfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                resizeCubic<hfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransModeE,cropAndResize,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             case CV_16BF:
-                resizeCubic<bfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                resizeCubic<bfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransModeE,cropAndResize,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             case CV_32F:
-                resizeCubic<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                resizeCubic<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransModeE,cropAndResize,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             default:
                 CV_Error(Error::StsUnsupportedFormat, "Unsupported depth");
@@ -1601,9 +1557,9 @@ protected:
     bool alignCorners;
     bool dynamicROI;
     bool halfPixelCenters;
-    String coordTransMode;
-    CoordTransMode coordTransModeE;
-    NearestMode nearestModeE;  // ONNX "nearest_mode" attribute
+    ResizeCoord coordTransModeE;  // ONNX "coordinate_transformation_mode" attribute
+    bool cropAndResize;           // ... when it is "tf_crop_and_resize"
+    ResizeNearest nearestModeE;   // ONNX "nearest_mode" attribute
     bool excludeOutside; // ONNX attribute for cubic
     float cubicCoeffA;
     float roi_start_y, roi_end_y, roi_start_x, roi_end_x;
