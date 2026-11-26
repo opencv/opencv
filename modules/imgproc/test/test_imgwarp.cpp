@@ -1428,6 +1428,32 @@ TEST_P(Imgproc_CubicChannelConsistency, near_rounding_tie)
 
 INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_CubicChannelConsistency, testing::Values(5, 9, 12));
 
+typedef testing::TestWithParam<tuple<int, int>> Imgproc_CubicChannelDepths;
+
+TEST_P(Imgproc_CubicChannelDepths, channels_agree_across_vector_tails)
+{
+    const int depth = get<0>(GetParam()), channels = get<1>(GetParam());
+    const Mat_<uchar> plane({4, 4}, {66, 52, 87, 206,
+                                   160, 249, 235, 41,
+                                   35, 214, 37, 142,
+                                   159, 242, 238, 226});
+    Mat widePlane, src, dst;
+    plane.convertTo(widePlane, depth);
+    merge(std::vector<Mat>(channels, widePlane), src);
+    const Mat map(1, 1, CV_32FC2, Scalar(0x1.ce788p0, 0x1.de6fp0));
+    remap(src, dst, map, noArray(), INTER_CUBIC);
+
+    // Every channel holds the same data, so the position of its vector block must not change the result.
+    Mat values;
+    dst.reshape(1).convertTo(values, CV_64F);
+    double lo, hi;
+    minMaxLoc(values, &lo, &hi);
+    EXPECT_EQ(lo, hi);
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_CubicChannelDepths, testing::Combine(
+    testing::Values(CV_8U, CV_16U, CV_16S, CV_32F), testing::Values(5, 6, 7, 9, 12, 13, 20)));
+
 typedef testing::TestWithParam<tuple<int, Size, int>> Imgproc_CubicPeriodicCoordinates;
 
 static Mat makePeriodicSource(Size size, int type)
