@@ -700,29 +700,12 @@ void cv::findContours(InputArray _image,
 
     // preprocess: build a padded copy of the image with a 1-pixel zero border, binarizing
     // directly into the interior instead of first copying the whole image (copyMakeBorder)
-    // and then thresholding it (a second full-image pass). The border is zeroed separately,
-    // an O(width+height) cost, so this does a single full-image-sized pass instead of two.
+    // and then thresholding it (a second full-image pass).
     Mat image;
     if (_image.empty())
-    {
         image = Mat::zeros(2, 2, _image.type());
-    }
     else
-    {
-        const Size sz = _image.size();
-        const int type = _image.type();
-        image.create(sz.height + 2, sz.width + 2, type);
-        image.row(0).setTo(Scalar::all(0));
-        image.row(image.rows - 1).setTo(Scalar::all(0));
-        image.col(0).setTo(Scalar::all(0));
-        image.col(image.cols - 1).setTo(Scalar::all(0));
-
-        Mat interior = image(Rect(1, 1, sz.width, sz.height));
-        if (type != CV_32SC1)
-            threshold(_image, interior, 0, 1, THRESH_BINARY);
-        else
-            _image.getMat().copyTo(interior);
-    }
+        image = buildZeroBorderedImage(_image, _image.type() != CV_32SC1, 1);
 
     // find contours
     ContourPointsStorage::storage_t pointsStorage;

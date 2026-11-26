@@ -657,17 +657,7 @@ void findTRUContours(InputArray _src, OutputArrayOfArrays _contours, int minSize
     // Buffer handling: binarize (or copy) directly into the interior of a freshly
     // allocated, zero-bordered buffer instead of copyMakeBorder-ing the whole image and
     // then thresholding it as a separate full-image pass.
-    cv::Mat padded(src.rows + 2, src.cols + 2, src.type());
-    padded.row(0).setTo(cv::Scalar(0));
-    padded.row(padded.rows - 1).setTo(cv::Scalar(0));
-    padded.col(0).setTo(cv::Scalar(0));
-    padded.col(padded.cols - 1).setTo(cv::Scalar(0));
-
-    cv::Mat interior = padded(cv::Rect(1, 1, src.cols, src.rows));
-    if (binarize)
-        cv::threshold(src, interior, 0, 255, cv::THRESH_BINARY);
-    else
-        src.copyTo(interior);
+    cv::Mat padded = buildZeroBorderedImage(src, binarize, 255);
 
 
     // Fast path: caller passed std::vector<std::vector<cv::Point>> directly.
