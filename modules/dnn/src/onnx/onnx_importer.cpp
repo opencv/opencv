@@ -3505,6 +3505,33 @@ void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeP
             node_proto.set_input(0, padLp.name);
         }
     }
+    else if (layerParams.has("pad_t") && layerParams.has("pad_b"))
+    {
+        // 1D case: pads arrive via pad_t/pad_b instead of "pad" (gh-31140).
+        // Same escape hatch as above, with one spatial axis.
+        const int pad_t = layerParams.get<int>("pad_t");
+        const int pad_b = layerParams.get<int>("pad_b");
+        if (pad_t != pad_b)
+        {
+            std::vector<int> paddings = {0, 0, 0, 0, pad_t, pad_b};
+            LayerParams padLp;
+            padLp.name = layerParams.name + "/pad";
+            padLp.type = "PaddingInt8";
+            padLp.set("paddings", DictValue::arrayInt(&paddings[0], paddings.size()));
+            padLp.set("depth", CV_8S);
+            padLp.set("value", inp_zp);
+
+            opencv_onnx::NodeProto proto;
+            proto.add_input(node_proto.input(0));
+            proto.add_output(padLp.name);
+
+            addLayer(padLp, proto);
+            node_proto.set_input(0, padLp.name);
+
+            layerParams.set("pad_t", 0);
+            layerParams.set("pad_b", 0);
+        }
+    }
 
     Mat weights = getBlob(node_proto, 3);
     int outCn = weights.size[0];
@@ -3528,6 +3555,7 @@ void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeP
     }
 
     layerParams.type = "ConvolutionInt8";
+    layerParams.set("depth", CV_8S);
     layerParams.set("num_output", outCn);
     layerParams.set("input_zeropoint", inp_zp);
     layerParams.set("input_scale",inp_sc);
