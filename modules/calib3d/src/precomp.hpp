@@ -154,7 +154,7 @@ void projectPoints( InputArray objectPoints,
 
 void getUndistortRectangles(InputArray _cameraMatrix, InputArray _distCoeffs,
               InputArray R, InputArray newCameraMatrix, Size imgSize,
-              Rect_<double>& inner, Rect_<double>& outer );
+              Rect_<double>& inner, Rect_<double>& outer, bool ignoreCorners = false);
 
 // cols and rows contains masks to use to get the sub-matrix.
 void subMatrixWithMasks(const Mat& src, Mat& dst, const std::vector<uchar>& cols,
