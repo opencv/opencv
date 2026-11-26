@@ -487,7 +487,22 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
                 {
                     // Convolution or pooling.
                     CV_Assert(attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 4 || attribute_proto.ints_size() == 6);
-                    lp.set("pad", parse(attribute_proto.ints()));
+                    if (attribute_proto.ints_size() == 2)
+                    {
+                        // 1D convolution or pooling: the two values are the begin
+                        // and end pads of the single spatial axis. Pass them
+                        // separately: getStrideAndPadding() would otherwise treat
+                        // a two-element "pad" as one symmetric pad per axis and
+                        // silently drop the end pad.
+                        lp.set("pad_t", saturate_cast<int32_t>(attribute_proto.ints(0)));
+                        lp.set("pad_b", saturate_cast<int32_t>(attribute_proto.ints(1)));
+                        lp.set("pad_l", 0);
+                        lp.set("pad_r", 0);
+                    }
+                    else
+                    {
+                        lp.set("pad", parse(attribute_proto.ints()));
+                    }
                 }
             }
             else if(attribute_name == "auto_pad")
