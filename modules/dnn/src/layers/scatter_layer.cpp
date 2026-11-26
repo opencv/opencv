@@ -27,7 +27,7 @@ public:
     {
         setParamsFrom(params);
 
-        axis = params.get<int>("axis", 0);
+        axis = axis_param = params.get<int>("axis", 0);
         String reduction_name = toLowerCase(params.get<String>("reduction", "none"));
         if (reduction_name == "none")
             reduction = REDUCTION::NONE;
@@ -57,13 +57,24 @@ public:
         CV_CheckEQ(inputs.size(), 3ull, "Scatter: require three inputs.");
         CV_CheckEQ(inputs[0].size(), inputs[1].size(), "Scatter: input data should have the same ndim with indices.");
         CV_CheckEQ(inputs[0].size(), inputs[2].size(), "Scatter: input data should have the same ndim with updates.");
+        const size_t normalized_axis = normalize_axis(axis_param, inputs[0]);
         for (size_t i = 0; i < inputs[0].size(); i++)
         {
-            CV_CheckGE(inputs[0][i], inputs[1][i], "Scatter: each dim of input data should be greater than (or equal to) indices'.");
+            if (i != normalized_axis)
+                CV_CheckGE(inputs[0][i], inputs[1][i],
+                           "Scatter: each dim of input data should be greater than "
+                           "(or equal to) indices'.");
             CV_CheckEQ(inputs[1][i], inputs[2][i], "Scatter: each dim of indices should be equal to updates'.");
         }
         outputs.assign(1, inputs[0]);
         return false;
+    }
+
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
+    {
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
+        axis = normalize_axis(axis_param, inputs[0].dims);
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -143,8 +154,13 @@ public:
         };
 
         size_t total = indices_mat.total();
-        double nstripes = (size_t)total * ndims * (1 / 1024.0);
-        parallel_for_(Range(0, total), fn, nstripes);
+        if (reduction == REDUCTION::NONE) {
+            double nstripes = (size_t)total * ndims * (1 / 1024.0);
+            parallel_for_(Range(0, total), fn, nstripes);
+        } else {
+            // Different updates can share the same destination.
+            fn(Range(0, total));
+        }
     }
 
     template<typename... Args>
@@ -230,6 +246,7 @@ public:
 private:
     // Attributes
     int axis;
+    int axis_param;
 };
 
 Ptr<ScatterLayer> ScatterLayer::create(const LayerParams& params)
