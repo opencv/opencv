@@ -248,13 +248,13 @@ void Domain_Filter::compute_boxfilter(Mat &output, Mat &hz, Mat &psketch, float 
 
         for(int j=0;j<w;j++)
         {
-            if(domain_row.at<float>(0,j) > lower_pos_row.at<float>(0,0))
+            if(domain_row.at<float>(0,j) >= lower_pos_row.at<float>(0,0))
             {
                 temp_lower_idx.at<float>(0,0) = (float) j;
                 break;
             }
         }
-        for(int j=0;j<w;j++)
+        for(int j=0;j<=w;j++)
         {
             if(domain_row.at<float>(0,j) > upper_pos_row.at<float>(0,0))
             {
@@ -269,7 +269,7 @@ void Domain_Filter::compute_boxfilter(Mat &output, Mat &hz, Mat &psketch, float 
             int count=0;
             for(int k=(int) temp_lower_idx.at<float>(0,j-1);k<w+1;k++)
             {
-                if(domain_row.at<float>(0,k) > lower_pos_row.at<float>(0,j))
+                if(domain_row.at<float>(0,k) >= lower_pos_row.at<float>(0,j))
                 {
                     temp = count;
                     break;
@@ -386,8 +386,10 @@ void Domain_Filter::init(const Mat &img, int flags, float sigma_s, float sigma_r
     Mat final = Mat(h,w,CV_32FC3);
 
     Mat tempx,tempy;
-    multiply(distx,sigma_s/sigma_r,tempx);
-    multiply(disty,sigma_s/sigma_r,tempy);
+    const double max_scale = 1.0e20;
+    const double scale = (sigma_r > 0.0f) ? std::min((double)sigma_s / (double)sigma_r, max_scale) : max_scale;
+    multiply(distx, scale, tempx);
+    multiply(disty, scale, tempy);
 
     horiz = 1.0f + tempx;
     vert = 1.0f + tempy;
