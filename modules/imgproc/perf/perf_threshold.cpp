@@ -1,11 +1,15 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, Intel Corporation, all rights reserved.
 #include "perf_precomp.hpp"
 
 namespace opencv_test {
 
 CV_ENUM(ThreshType, THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV)
+
+#define THRESHOLD_INPLACE_TYPES CV_8UC1, CV_16SC1, CV_32FC1
+#define THRESHOLD_TYPES         THRESHOLD_INPLACE_TYPES, CV_64FC1
 
 typedef tuple<Size, MatType, ThreshType> Size_MatType_ThreshType_t;
 typedef perf::TestBaseWithParam<Size_MatType_ThreshType_t> Size_MatType_ThreshType;
@@ -13,7 +17,7 @@ typedef perf::TestBaseWithParam<Size_MatType_ThreshType_t> Size_MatType_ThreshTy
 PERF_TEST_P(Size_MatType_ThreshType, threshold,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
-                testing::Values(CV_8UC1, CV_16SC1, CV_32FC1, CV_64FC1),
+                testing::Values(THRESHOLD_TYPES),
                 ThreshType::all()
                 )
             )
@@ -35,6 +39,59 @@ PERF_TEST_P(Size_MatType_ThreshType, threshold,
     TEST_CYCLE_MULTIRUN(runs) cv::threshold(src, dst, thresh, maxval, threshType);
 
     SANITY_CHECK(dst);
+}
+
+PERF_TEST_P(Size_MatType_ThreshType, threshold_inplace,
+            testing::Combine(
+                testing::Values(TYPICAL_MAT_SIZES),
+                testing::Values(THRESHOLD_INPLACE_TYPES),
+                ThreshType::all()
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    ThreshType threshType = get<2>(GetParam());
+
+    Mat src(sz, type);
+    Mat dst(sz, type);
+
+    double thresh = theRNG().uniform(1, 254);
+    double maxval = theRNG().uniform(1, 254);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    while (next())
+    {
+        src.copyTo(dst);
+        startTimer();
+        cv::threshold(dst, dst, thresh, maxval, threshType);
+        stopTimer();
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+typedef perf::TestBaseWithParam<Size> Size_ThreshInplaceOtsu;
+PERF_TEST_P(Size_ThreshInplaceOtsu, threshold_inplace_otsu, testing::Values(TYPICAL_MAT_SIZES))
+{
+    Size sz = GetParam();
+
+    Mat src(sz, CV_8UC1);
+    Mat dst(sz, CV_8UC1);
+    double maxval = theRNG().uniform(1, 254);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    while (next())
+    {
+        src.copyTo(dst);
+        startTimer();
+        cv::threshold(dst, dst, 0, maxval, THRESH_BINARY | THRESH_OTSU);
+        stopTimer();
+    }
+
+    SANITY_CHECK_NOTHING();
 }
 
 typedef perf::TestBaseWithParam<Size> Size_Only;
