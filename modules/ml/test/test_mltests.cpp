@@ -311,28 +311,54 @@ INSTANTIATE_TEST_CASE_P(/**/, ML_SL_Params, testing::ValuesIn(ML_SL_Params_List)
 
 //==================================================================================================
 
-TEST(ML_DTrees, default_cvfolds_train_no_crash_regression_28942)
+TEST(ML_DTrees, default_cvfolds_classification)
 {
-    const int N = 10;
-    const int F = 2;
+    const Mat samples = (Mat_<float>(20, 1) <<
+        -10, -9, -8, -7, -6, -5, -4, -3, -2, -1,
+          1,  2,  3,  4,  5,  6,  7,  8,  9, 10);
+    const Mat labels = (Mat_<int>(20, 1) <<
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        7, 7, 7, 7, 7, 7, 7, 7, 7, 7);
 
-    Mat samples(N, F, CV_32FC1);
-    Mat labels(N, 1, CV_32SC1);
-    for (int i = 0; i < N; i++)
+    Ptr<DTrees> tree = DTrees::create();
+    EXPECT_EQ(0, tree->getCVFolds());
+    ASSERT_TRUE(tree->train(samples, ROW_SAMPLE, labels));
+    ASSERT_TRUE(tree->isClassifier());
+    const Mat probes = (Mat_<float>(2, 1) << -0.5f, 0.5f);
+    EXPECT_FLOAT_EQ(2.f, tree->predict(probes.row(0)));
+    EXPECT_FLOAT_EQ(7.f, tree->predict(probes.row(1)));
+}
+
+TEST(ML_DTrees, cvfolds_validation)
+{
+    Ptr<DTrees> tree = DTrees::create();
+    tree->setCVFolds(1);
+    EXPECT_EQ(0, tree->getCVFolds());
+    EXPECT_THROW(tree->setCVFolds(2), cv::Exception);
+    EXPECT_EQ(0, tree->getCVFolds());
+}
+
+TEST(ML_DTrees, default_cvfolds_regression_with_sample_indices)
+{
+    const int sampleCount = 24;
+    Mat_<float> samples(sampleCount, 1), responses(sampleCount, 1);
+    Mat_<int> sampleIdx(1, sampleCount / 2);
+    for (int i = 0; i < sampleCount; ++i)
     {
-        samples.at<float>(i, 0) = static_cast<float>(i % 2);
-        samples.at<float>(i, 1) = static_cast<float>(i / 2);
-        labels.at<int>(i, 0) = i % 2;
+        samples(i) = static_cast<float>(i);
+        // Excluded rows have a different response from the selected training rows.
+        responses(i) = i % 2 == 0 ? 100.f : (i < sampleCount / 2 ? -3.5f : 8.25f);
     }
+    for (int i = 0; i < sampleIdx.cols; ++i)
+        sampleIdx(i) = 2 * i + 1;
 
-    Ptr<TrainData> train_data = TrainData::create(samples, ROW_SAMPLE, labels);
-    ASSERT_FALSE(train_data.empty());
-
-    Ptr<DTrees> dtree = DTrees::create();
-    ASSERT_FALSE(dtree.empty());
-    EXPECT_EQ(1, dtree->getCVFolds());
-    dtree->setMaxDepth(10);
-    EXPECT_TRUE(dtree->train(train_data));
+    Ptr<TrainData> data = TrainData::create(samples, ROW_SAMPLE, responses, noArray(), sampleIdx);
+    ASSERT_EQ(sampleCount / 2, data->getNTrainSamples());
+    Ptr<DTrees> tree = DTrees::create();
+    ASSERT_TRUE(tree->train(data));
+    ASSERT_FALSE(tree->isClassifier());
+    EXPECT_FLOAT_EQ(-3.5f, tree->predict(samples.row(4)));
+    EXPECT_FLOAT_EQ(8.25f, tree->predict(samples.row(18)));
 }
 
 //==================================================================================================

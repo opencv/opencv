@@ -1090,10 +1090,9 @@ public:
     /** @copybrief getMinSampleCount @see getMinSampleCount */
     CV_WRAP virtual void setMinSampleCount(int val) = 0;
 
-    /** If CVFolds \> 1 then algorithms prunes the built decision tree using K-fold
-    cross-validation procedure where K is equal to CVFolds.
-    Default value is 1. Note: cross-validation pruning (CVFolds > 1) is currently not implemented;
-    use CVFolds = 0 or CVFolds = 1.*/
+    /** Number of folds for cross-validation pruning. The default is 0 (no pruning).
+    Setting the value to 1 is equivalent to setting it to 0. K-fold cross-validation pruning
+    (values greater than 1) is currently unsupported. */
     /** @see setCVFolds */
     CV_WRAP virtual int getCVFolds() const = 0;
     /** @copybrief getCVFolds @see getCVFolds */

@@ -57,7 +57,7 @@ TreeParams::TreeParams()
     regressionAccuracy = 0.01f;
     useSurrogates = false;
     maxCategories = 10;
-    CVFolds = 1;
+    CVFolds = 0;
     use1SERule = true;
     truncatePrunedTree = true;
     priors = Mat();
@@ -203,19 +203,6 @@ void DTreesImpl::startTraining( const Ptr<TrainData>& data, int )
     }
     else
         data->getResponses().copyTo(w->ord_responses);
-
-    const int cv_n = params.getCVFolds();
-    if( cv_n > 0 )
-    {
-        const int nall_samples = data->getNSamples();
-        w->cv_labels.assign(nall_samples, 0);
-        for( size_t fold_idx = 0; fold_idx < w->sidx.size(); fold_idx++ )
-        {
-            const int si = w->sidx[fold_idx];
-            CV_Assert( 0 <= si && si < nall_samples );
-            w->cv_labels[si] = (int)(fold_idx % (size_t)cv_n);
-        }
-    }
 }
 
 
@@ -255,7 +242,10 @@ const vector<int>& DTreesImpl::getActiveVars()
 
 int DTreesImpl::addTree(const vector<int>& sidx )
 {
-    size_t n = (params.getMaxDepth() > 0 ? (1 << params.getMaxDepth()) : 1024) + w->wnodes.size();
+    const int maxDepth = params.getMaxDepth();
+    // The default depth is unlimited (INT_MAX), so use a fixed initial reserve.
+    const size_t initialReserve = maxDepth > 0 && maxDepth <= 25 ? size_t(1) << maxDepth : 1024;
+    const size_t n = initialReserve + w->wnodes.size();
 
     w->wnodes.reserve(n);
     w->wsplits.reserve(n);
@@ -489,7 +479,6 @@ void DTreesImpl::calcValue( int nidx, const vector<int>& _sidx )
 
     if( cv_n > 0 )
     {
-        CV_Assert(!w->cv_labels.empty());
         size_t sz = w->cv_Tn.size();
         w->cv_Tn.resize(sz + cv_n);
         w->cv_node_risk.resize(sz + cv_n);
