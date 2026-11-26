@@ -1034,6 +1034,10 @@ void AKAZEFeatures::Compute_Descriptors_UMat(std::vector<KeyPoint>& kpts, Output
     return;
   }
 
+  for (size_t i = 0; i < kpts.size(); i++) {
+    CV_Assert(0 <= kpts[i].class_id && kpts[i].class_id < static_cast<int>(uPyr.size()));
+  }
+
   // Determine descriptor size based on options
   int descriptor_size = 64;
   int descriptor_type = CV_32FC1;
@@ -1056,10 +1060,7 @@ void AKAZEFeatures::Compute_Descriptors_UMat(std::vector<KeyPoint>& kpts, Output
     // Group keypoints by their level to process each level independently
     std::vector<std::vector<int>> kpts_by_level(uPyr.size());
     for (int i = 0; i < num_keypoints; i++) {
-      int level = kpts[i].class_id;
-      if (level >= 0 && level < (int)uPyr.size()) {
-        kpts_by_level[level].push_back(i);
-      }
+      kpts_by_level[kpts[i].class_id].push_back(i);
     }
 
     // Process each level independently on GPU
