@@ -729,8 +729,8 @@ static void conv32fC8_1x1(const void* inp__, const void* residual__, void* out__
         for (int t = range.start; t < range.end; t++) {
             const int block_id = t / nSpatChunks;
             const int chunk_id = t % nSpatChunks;
-            const int p0 = chunk_id * planeblocks / nSpatChunks;
-            const int p1 = (chunk_id + 1) * planeblocks / nSpatChunks;
+            const int p0 = (int)((int64_t)chunk_id * planeblocks / nSpatChunks);
+            const int p1 = (int)((int64_t)(chunk_id + 1) * planeblocks / nSpatChunks);
             const int n = block_id / (ngroups * Kblk);
             const int rem = block_id - n * (ngroups * Kblk);
             const int g = rem / Kblk;
@@ -900,8 +900,8 @@ static void conv32fC8_1x1_kpair(const void* inp__, const void* residual__, void*
         for (int t = range.start; t < range.end; t++) {
             const int block_id = t / nSpatChunks;
             const int chunk_id = t % nSpatChunks;
-            const int p0 = chunk_id * planeblocks / nSpatChunks;
-            const int p1 = (chunk_id + 1) * planeblocks / nSpatChunks;
+            const int p0 = (int)((int64_t)chunk_id * planeblocks / nSpatChunks);
+            const int p1 = (int)((int64_t)(chunk_id + 1) * planeblocks / nSpatChunks);
             const int n = block_id / (ngroups * Kpair);
             const int rem = block_id - n * (ngroups * Kpair);
             const int g = rem / Kpair;
@@ -1128,8 +1128,8 @@ static void conv32fC8_3x3s1(const void* inp__, const void* residual__, void* out
         for (int t = range.start; t < range.end; t++) {
             const int block_id = t / nSpatChunks;
             const int chunk_id = t % nSpatChunks;
-            const int p0 = chunk_id * planeblocks / nSpatChunks;
-            const int p1 = (chunk_id + 1) * planeblocks / nSpatChunks;
+            const int p0 = (int)((int64_t)chunk_id * planeblocks / nSpatChunks);
+            const int p1 = (int)((int64_t)(chunk_id + 1) * planeblocks / nSpatChunks);
             const int n = block_id / (ngroups * Kblk);
             const int rem = block_id - n * (ngroups * Kblk);
             const int g = rem / Kblk;
@@ -1409,8 +1409,8 @@ static void conv32fC8_3x3_kpair(const void* inp__, const void* residual__, void*
         for (int t = range.start; t < range.end; t++) {
             const int block_id = t / nSpatChunks;
             const int chunk_id = t % nSpatChunks;
-            const int p0 = chunk_id * planeblocks / nSpatChunks;
-            const int p1 = (chunk_id + 1) * planeblocks / nSpatChunks;
+            const int p0 = (int)((int64_t)chunk_id * planeblocks / nSpatChunks);
+            const int p1 = (int)((int64_t)(chunk_id + 1) * planeblocks / nSpatChunks);
             const int n = block_id / (ngroups * Kpair);
             const int rem = block_id - n * (ngroups * Kpair);
             const int g = rem / Kpair;
@@ -1717,8 +1717,8 @@ static void conv32fC8_1x1_strided(const void* inp__, const void* residual__, voi
         for (int t = range.start; t < range.end; t++) {
             const int block_id = t / nSpatChunks;
             const int chunk_id = t % nSpatChunks;
-            const int p0 = chunk_id * planeblocks / nSpatChunks;
-            const int p1 = (chunk_id + 1) * planeblocks / nSpatChunks;
+            const int p0 = (int)((int64_t)chunk_id * planeblocks / nSpatChunks);
+            const int p1 = (int)((int64_t)(chunk_id + 1) * planeblocks / nSpatChunks);
             const int n = block_id / (ngroups * Kblk);
             const int rem = block_id - n * (ngroups * Kblk);
             const int g = rem / Kblk;
@@ -1915,8 +1915,8 @@ static void conv32fC8_3x3_strided(const void* inp__, const void* residual__, voi
         for (int t = range.start; t < range.end; t++) {
             const int block_id = t / nSpatChunks;
             const int chunk_id = t % nSpatChunks;
-            const int p0 = chunk_id * planeblocks / nSpatChunks;
-            const int p1 = (chunk_id + 1) * planeblocks / nSpatChunks;
+            const int p0 = (int)((int64_t)chunk_id * planeblocks / nSpatChunks);
+            const int p1 = (int)((int64_t)(chunk_id + 1) * planeblocks / nSpatChunks);
             const int n = block_id / (ngroups * Kblk);
             const int rem = block_id - n * (ngroups * Kblk);
             const int g = rem / Kblk;
@@ -2329,8 +2329,8 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
         for (int t = range.start; t < range.end; t++) {
             const int block_id = t / nSpatChunks;
             const int chunk_id = t % nSpatChunks;
-            const int p0 = chunk_id * planeblocks / nSpatChunks;
-            const int p1 = (chunk_id + 1) * planeblocks / nSpatChunks;
+            const int p0 = (int)((int64_t)chunk_id * planeblocks / nSpatChunks);
+            const int p1 = (int)((int64_t)(chunk_id + 1) * planeblocks / nSpatChunks);
             const int n = block_id / (ngroups * Kblk);
             const int rem = block_id - n * (ngroups * Kblk);
             const int g = rem / Kblk;
