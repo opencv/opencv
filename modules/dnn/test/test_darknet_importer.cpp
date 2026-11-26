@@ -44,6 +44,7 @@
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include <clocale>
 
 namespace opencv_test { namespace {
 
@@ -1143,5 +1144,430 @@ TEST_P(Test_Darknet_layers, sam)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_layers, dnnBackendsAndTargets());
+
+TEST(Test_Darknet, readNetFromDarknet_in_memory_valid_control)
+{
+    const std::string cfg =
+        "[net]\n"
+        "width=4\n"
+        "height=4\n"
+        "channels=1\n"
+        "[convolutional]\n"
+        "filters=1\n"
+        "groups=1\n"
+        "size=1\n"
+        "stride=1\n"
+        "pad=0\n"
+        "activation=linear\n";
+
+    std::vector<char> weights(20 + 2 * sizeof(float), 0);
+    int32_t major = 0, minor = 2, revision = 0;
+    uint64_t seen = 0;
+    std::memcpy(weights.data() + 0, &major, sizeof(int32_t));
+    std::memcpy(weights.data() + 4, &minor, sizeof(int32_t));
+    std::memcpy(weights.data() + 8, &revision, sizeof(int32_t));
+    std::memcpy(weights.data() + 12, &seen, sizeof(uint64_t));
+    const float bias = 0.5f;
+    const float kernel = 2.0f;
+    std::memcpy(weights.data() + 20, &bias, sizeof(float));
+    std::memcpy(weights.data() + 24, &kernel, sizeof(float));
+
+    Net net = readNetFromDarknet(cfg.data(), cfg.size(), weights.data(), weights.size());
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(DNN_TARGET_CPU);
+
+    const int inpSz[] = {1, 1, 4, 4};
+    Mat inp(4, inpSz, CV_32F, Scalar(1.0f));
+    net.setInput(inp);
+    Mat out = net.forward();
+    ASSERT_EQ(out.dims, 4);
+    EXPECT_EQ(out.size[0], 1);
+    EXPECT_EQ(out.size[1], 1);
+    EXPECT_EQ(out.size[2], 4);
+    EXPECT_EQ(out.size[3], 4);
+    EXPECT_NEAR(out.ptr<float>()[0], 2.5f, 1e-5f);
+}
+
+TEST(Test_Darknet, readNetFromDarknet_rejects_malformed_cfg_and_truncated_weights)
+{
+    const std::string conv_cfg =
+        "[net]\n"
+        "width=4\n"
+        "height=4\n"
+        "channels=1\n"
+        "[convolutional]\n"
+        "filters=1\n"
+        "size=1\n"
+        "stride=1\n"
+        "pad=0\n"
+        "activation=linear\n";
+    std::vector<char> header_only_weights(20, 0);
+    int32_t minor = 2;
+    std::memcpy(header_only_weights.data() + 4, &minor, sizeof(int32_t));
+    EXPECT_THROW(
+        readNetFromDarknet(conv_cfg.data(), conv_cfg.size(),
+                           header_only_weights.data(), header_only_weights.size()),
+        cv::Exception);
+
+    const std::string bad_conv_groups_cfg =
+        "[net]\n"
+        "width=4\n"
+        "height=4\n"
+        "channels=4\n"
+        "[convolutional]\n"
+        "filters=4\n"
+        "groups=-2\n"
+        "size=1\n"
+        "stride=1\n"
+        "pad=0\n"
+        "activation=linear\n";
+    EXPECT_THROW(
+        readNetFromDarknet(bad_conv_groups_cfg.data(), bad_conv_groups_cfg.size()),
+        cv::Exception);
+
+    const std::string bad_route_group_id_cfg =
+        "[net]\n"
+        "width=4\n"
+        "height=4\n"
+        "channels=4\n"
+        "[maxpool]\n"
+        "size=2\n"
+        "stride=2\n"
+        "[route]\n"
+        "layers=-1\n"
+        "groups=2\n"
+        "group_id=2\n";
+    EXPECT_THROW(
+        readNetFromDarknet(bad_route_group_id_cfg.data(), bad_route_group_id_cfg.size()),
+        cv::Exception);
+
+    const std::string bad_route_layers_list_cfg =
+        "[net]\n"
+        "width=4\n"
+        "height=4\n"
+        "channels=4\n"
+        "[maxpool]\n"
+        "size=2\n"
+        "stride=2\n"
+        "[route]\n"
+        "layers=invalid_index\n";
+    EXPECT_THROW(
+        readNetFromDarknet(bad_route_layers_list_cfg.data(), bad_route_layers_list_cfg.size()),
+        cv::Exception);
+
+    const std::string bad_maxpool_pad_cfg =
+        "[net]\n"
+        "width=4\n"
+        "height=4\n"
+        "channels=2\n"
+        "[maxpool]\n"
+        "size=3\n"
+        "stride=2\n"
+        "padding=-10\n";
+    EXPECT_THROW(
+        readNetFromDarknet(bad_maxpool_pad_cfg.data(), bad_maxpool_pad_cfg.size()),
+        cv::Exception);
+
+    const std::string bad_upsample_stride_cfg =
+        "[net]\n"
+        "width=4\n"
+        "height=4\n"
+        "channels=2\n"
+        "[upsample]\n"
+        "stride=0\n";
+    EXPECT_THROW(
+        readNetFromDarknet(bad_upsample_stride_cfg.data(), bad_upsample_stride_cfg.size()),
+        cv::Exception);
+}
+
+static std::string darknetRouteCfg(const std::string& layers)
+{
+    return "[net]\nwidth=1\nheight=1\nchannels=1\n"
+           "[maxpool]\nsize=1\nstride=1\n"
+           "[maxpool]\nsize=1\nstride=1\n"
+           "[route]\nlayers=" + layers + "\n";
+}
+
+static std::string darknetRegionCfg(const std::string& anchors)
+{
+    return "[net]\nwidth=1\nheight=1\nchannels=1\n"
+           "[convolutional]\nfilters=6\nsize=1\nstride=1\npad=0\nactivation=linear\n"
+           "[region]\nanchors=" + anchors + "\nnum=1\nclasses=1\ncoords=4\nsoftmax=1\n";
+}
+
+static std::string darknetYoloCfg(const std::string& anchors, const std::string& mask, int num = 1)
+{
+    return "[net]\nwidth=1\nheight=1\nchannels=1\n"
+           "[convolutional]\nfilters=6\nsize=1\nstride=1\npad=0\nactivation=linear\n"
+           "[yolo]\nmask=" + mask + "\nanchors=" + anchors + format("\nnum=%d\nclasses=1\n", num);
+}
+
+static std::vector<char> darknetZeroWeights(size_t floats)
+{
+    std::vector<char> weights(20 + floats * sizeof(float), 0);
+    const int32_t minor = 2;
+    std::memcpy(weights.data() + 4, &minor, sizeof(int32_t));
+    return weights;
+}
+
+static void expectDarknetNumericListRejected(const std::string& cfg)
+{
+    try
+    {
+        const std::vector<char> weights = darknetZeroWeights(12);
+        readNetFromDarknet(cfg.data(), cfg.size(), weights.data(), weights.size());
+        FAIL() << "Invalid numeric list was accepted";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_EQ(Error::StsParseError, e.code);
+        EXPECT_NE(std::string::npos, e.err.find("Invalid numeric value in list")) << e.err;
+    }
+}
+
+static void expectDarknetNumericListAccepted(const std::string& cfg, const std::string& layerName,
+                                              float expectedFirst, float expectedSecond)
+{
+    const std::vector<char> weights = darknetZeroWeights(12);
+    Net net = readNetFromDarknet(cfg.data(), cfg.size(), weights.data(), weights.size());
+    EXPECT_FALSE(net.empty());
+    const int layerId = net.getLayerId(layerName);
+    ASSERT_GE(layerId, 0);
+    const Ptr<Layer> layer = net.getLayer(layerId);
+    ASSERT_FALSE(layer.empty());
+    ASSERT_EQ((size_t)1, layer->blobs.size());
+    ASSERT_EQ((size_t)2, layer->blobs[0].total());
+    EXPECT_FLOAT_EQ(expectedFirst, layer->blobs[0].ptr<float>()[0]);
+    EXPECT_FLOAT_EQ(expectedSecond, layer->blobs[0].ptr<float>()[1]);
+}
+
+TEST(Test_Darknet, numeric_list_reject_invalid_prefix_or_range)
+{
+    const char* route[] = {"x-1", "-1,,0", "-1,+", "2147483648x", "-2147483649x",
+                           "999999999999999999999999x"};
+    for (size_t i = 0; i < sizeof(route) / sizeof(route[0]); ++i)
+    {
+        SCOPED_TRACE(std::string("route layers=") + route[i]);
+        expectDarknetNumericListRejected(darknetRouteCfg(route[i]));
+    }
+
+    const char* anchors[] = {"x1,1", "1,.", "1,nan", "inf,1", "-inf,1", "1e400x,1",
+                             "1,-1e39x", "1e-50x,1", "1e-400x,1"};
+    for (size_t i = 0; i < sizeof(anchors) / sizeof(anchors[0]); ++i)
+    {
+        SCOPED_TRACE(std::string("anchors=") + anchors[i]);
+        expectDarknetNumericListRejected(darknetRegionCfg(anchors[i]));
+        expectDarknetNumericListRejected(darknetYoloCfg(anchors[i], "0"));
+    }
+
+    const char* mask[] = {"x0", "+", "0,,0", "2147483648x"};
+    for (size_t i = 0; i < sizeof(mask) / sizeof(mask[0]); ++i)
+    {
+        SCOPED_TRACE(std::string("mask=") + mask[i]);
+        expectDarknetNumericListRejected(darknetYoloCfg("1,1", mask[i]));
+    }
+}
+
+TEST(Test_Darknet, numeric_list_valid_values_control)
+{
+    // Whitespace inside values is removed by the cfg line reader before numeric parsing.
+    const char* route[] = {"-1,-2", "-1, -2", " -1 , -2 \t", "-1,-2,"};
+    for (size_t i = 0; i < sizeof(route) / sizeof(route[0]); ++i)
+    {
+        SCOPED_TRACE(std::string("route layers=") + route[i]);
+        const std::string cfg = darknetRouteCfg(route[i]);
+        Net net = readNetFromDarknet(cfg.data(), cfg.size());
+        ASSERT_FALSE(net.empty());
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setPreferableTarget(DNN_TARGET_CPU);
+        const int shape[] = {1, 1, 1, 1};
+        net.setInput(Mat(4, shape, CV_32F, Scalar(3.0f)));
+        const Mat out = net.forward();
+        ASSERT_EQ(4, out.dims);
+        EXPECT_EQ(2, out.size[1]);
+        EXPECT_NEAR(3.0f, out.ptr<float>()[0], 1e-5f);
+        EXPECT_NEAR(3.0f, out.ptr<float>()[1], 1e-5f);
+    }
+
+    const char* anchors[] = {"1,1", "1, 1", " 1.5 , 2e0 \t", "1e1,.5\r"};
+    const float expected[][2] = {{1.0f, 1.0f}, {1.0f, 1.0f}, {1.5f, 2.0f}, {10.0f, 0.5f}};
+    for (size_t i = 0; i < sizeof(anchors) / sizeof(anchors[0]); ++i)
+    {
+        SCOPED_TRACE(std::string("anchors=") + anchors[i]);
+        expectDarknetNumericListAccepted(darknetRegionCfg(anchors[i]), "detection_out",
+                                         expected[i][0], expected[i][1]);
+        expectDarknetNumericListAccepted(darknetYoloCfg(anchors[i], " 0 \t"), "yolo_1",
+                                         expected[i][0], expected[i][1]);
+    }
+}
+
+TEST(Test_Darknet, anchors_accept_numeric_prefix)
+{
+    const std::string anchors = "1e1px,.5units";
+    expectDarknetNumericListAccepted(darknetRegionCfg(anchors), "detection_out", 10.f, .5f);
+    expectDarknetNumericListAccepted(darknetYoloCfg(anchors, "0"), "yolo_1", 10.f, .5f);
+    expectDarknetNumericListAccepted(darknetRegionCfg("1e+,0tail"), "detection_out", 1.f, 0.f);
+}
+
+TEST(Test_Darknet, mask_accepts_numeric_prefix)
+{
+    expectDarknetNumericListAccepted(darknetYoloCfg("2,3,5,7", "1x", 2), "yolo_1", 5.f, 7.f);
+}
+
+class Test_Darknet_decimal_locale : public testing::TestWithParam<char>
+{
+    std::string savedLocale;
+protected:
+    void SetUp() CV_OVERRIDE { savedLocale = std::setlocale(LC_NUMERIC, NULL); }
+    void TearDown() CV_OVERRIDE { EXPECT_TRUE(std::setlocale(LC_NUMERIC, savedLocale.c_str()) != NULL); }
+};
+
+TEST_P(Test_Darknet_decimal_locale, anchors_accept_fractional_prefix)
+{
+    if (GetParam() == '.')
+    {
+        ASSERT_TRUE(std::setlocale(LC_NUMERIC, "C") != NULL);
+    }
+    else
+    {
+        const char* names[] = {"de_DE.UTF-8", "fr_FR.UTF-8", "German_Germany.1252"};
+        for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); ++i)
+        {
+            if (std::setlocale(LC_NUMERIC, names[i]) && std::string(std::localeconv()->decimal_point) == ",")
+                break;
+        }
+        if (std::string(std::localeconv()->decimal_point) != ",")
+            throw SkipTestException("No comma-decimal numeric locale installed");
+    }
+    ASSERT_STREQ(GetParam() == '.' ? "." : ",", std::localeconv()->decimal_point);
+    expectDarknetNumericListAccepted(darknetRegionCfg("1.25.75,.5units"), "detection_out", 1.25f, .5f);
+    expectDarknetNumericListRejected(darknetRegionCfg("0.5e-999,1"));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_decimal_locale, testing::Values('.', ','));
+
+// The route is the third layer (index 2) and one more layer follows it. Only the
+// layers parsed before the route, 0 and 1, can be its inputs.
+static std::string darknetRouteWithNextLayerCfg(const std::string& layers)
+{
+    return darknetRouteCfg(layers) + "[maxpool]\nsize=1\nstride=1\n";
+}
+
+TEST(Test_Darknet, route_rejects_self_and_forward_references)
+{
+    const char* layers[] = {"2", "3", "-1,2", "0,3", "4", "2147483647"};
+    for (size_t i = 0; i < sizeof(layers) / sizeof(layers[0]); ++i)
+    {
+        SCOPED_TRACE(std::string("route layers=") + layers[i]);
+        const std::string cfg = darknetRouteWithNextLayerCfg(layers[i]);
+        try
+        {
+            readNetFromDarknet(cfg.data(), cfg.size());
+            FAIL() << "Route to a layer that is not parsed yet was accepted";
+        }
+        catch (const cv::Exception& e)
+        {
+            EXPECT_EQ(Error::StsParseError, e.code);
+        }
+    }
+}
+
+TEST(Test_Darknet, route_accepts_preceding_layers)
+{
+    const char* layers[] = {"0", "1", "-2", "0,1", "-1x", "-1tail,-2x", "0x1", "1.5", "-1,0.5"};
+    const int channels[] = {1, 1, 1, 2, 1, 2, 1, 1, 2};
+    for (size_t i = 0; i < sizeof(layers) / sizeof(layers[0]); ++i)
+    {
+        SCOPED_TRACE(std::string("route layers=") + layers[i]);
+        const std::string cfg = darknetRouteWithNextLayerCfg(layers[i]);
+        Net net = readNetFromDarknet(cfg.data(), cfg.size());
+        ASSERT_FALSE(net.empty());
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setPreferableTarget(DNN_TARGET_CPU);
+        const int shape[] = {1, 1, 1, 1};
+        net.setInput(Mat(4, shape, CV_32F, Scalar(3.0f)));
+        const Mat out = net.forward();
+        ASSERT_EQ(4, out.dims);
+        EXPECT_EQ(channels[i], out.size[1]);
+        EXPECT_NEAR(3.0f, out.ptr<float>()[0], 1e-5f);
+    }
+}
+
+TEST(Test_Darknet, cfg_without_layers_is_rejected)
+{
+    const std::string cfgs[] = {"", "[net]\nwidth=4\nheight=4\nchannels=1\n", "# comment\n"};
+    for (size_t i = 0; i < sizeof(cfgs) / sizeof(cfgs[0]); ++i)
+    {
+        SCOPED_TRACE(cfgs[i]);
+        const std::vector<uchar> cfg(cfgs[i].begin(), cfgs[i].end());
+        try
+        {
+            readNetFromDarknet(cfg, std::vector<uchar>());
+            FAIL() << "cfg without layers was accepted";
+        }
+        catch (const cv::Exception& e)
+        {
+            EXPECT_EQ(Error::StsParseError, e.code);
+            EXPECT_NE(std::string::npos, e.err.find("no layers")) << e.err;
+        }
+    }
+}
+
+typedef testing::TestWithParam<std::string> Test_Darknet_from;
+
+static std::string darknetFromCfg(const std::string& layer, const std::string& from)
+{
+    return "[net]\nwidth=1\nheight=1\nchannels=1\n"
+           "[maxpool]\nsize=1\nstride=1\n"
+           "[maxpool]\nsize=1\nstride=1\nactivation=logistic\n[" + layer +
+           "]\nfrom=" + from + "\n";
+}
+
+TEST_P(Test_Darknet_from, rejects_invalid_from)
+{
+    const char* invalid[] = {"-5", "-3", "2", "5", "-2147483648", "2147483647",
+                             "", "invalid", "0,1", "1,,0", "2147483648", "2suffix"};
+    for (size_t i = 0; i < sizeof(invalid) / sizeof(invalid[0]); ++i)
+    {
+        SCOPED_TRACE(invalid[i]);
+        const std::string cfg = darknetFromCfg(GetParam(), invalid[i]);
+        try
+        {
+            readNetFromDarknet(cfg.data(), cfg.size());
+            FAIL() << "Invalid from index was accepted";
+        }
+        catch (const cv::Exception& e)
+        {
+            EXPECT_EQ(Error::StsParseError, e.code);
+        }
+    }
+}
+
+TEST_P(Test_Darknet_from, accepts_valid_from)
+{
+    const char* valid[] = {"-2", "-1", "0", "1", "-2tail", "1x", "0.5", "-1,"};
+    for (size_t i = 0; i < sizeof(valid) / sizeof(valid[0]); ++i)
+    {
+        SCOPED_TRACE(valid[i]);
+        const std::string cfg = darknetFromCfg(GetParam(), valid[i]);
+        Net net = readNetFromDarknet(cfg.data(), cfg.size());
+        ASSERT_FALSE(net.empty());
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setPreferableTarget(DNN_TARGET_CPU);
+        const int shape[] = {1, 1, 1, 1};
+        net.setInput(Mat(4, shape, CV_32F, Scalar(2.0f)));
+        const Mat out = net.forward();
+        ASSERT_EQ(static_cast<size_t>(1), out.total());
+        const float previous = 1.0f / (1.0f + std::exp(-2.0f));
+        const float from = i % 2 == 0 ? 2.0f : previous;
+        const float expected = GetParam() == "shortcut" ? previous + from : previous * from;
+        EXPECT_NEAR(expected, out.ptr<float>()[0], 1e-5f);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_from,
+                       testing::Values(std::string("shortcut"), std::string("scale_channels"),
+                                       std::string("sam")));
 
 }} // namespace
