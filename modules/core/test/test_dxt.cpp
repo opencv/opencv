@@ -962,6 +962,26 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Core_DXT_empty, testing::Combine(
     testing::Values(Size(0, 0), Size(0, 5), Size(5, 0), Size(4, 0))
 ));
 
+TEST(Core_MulSpectrums, empty_input)
+{
+    const Mat spec = Mat::ones(4, 4, CV_32FC1);
+    Mat dst(2, 2, CV_32FC1);
+
+    // both inputs empty: no work, empty destination
+    ASSERT_NO_THROW(mulSpectrums(Mat(), Mat(), dst, 0));
+    EXPECT_TRUE(dst.empty());
+    dst.create(2, 2, CV_32FC1);
+    ASSERT_NO_THROW(mulSpectrums(Mat(0, 4, CV_32F), Mat(0, 4, CV_32F), dst, 0));
+    EXPECT_TRUE(dst.empty());
+    dst.create(2, 2, CV_32FC1);
+    ASSERT_NO_THROW(mulSpectrums(Mat(4, 0, CV_32F), Mat(4, 0, CV_32F), dst, DFT_ROWS));
+    EXPECT_TRUE(dst.empty());
+
+    // only one input empty: size mismatch
+    EXPECT_THROW(mulSpectrums(Mat(), spec, dst, 0), cv::Exception);
+    EXPECT_THROW(mulSpectrums(spec, Mat(), dst, 0), cv::Exception);
+}
+
 class Core_DXTReverseTest : public cvtest::BaseTest
 {
 public:
