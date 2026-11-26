@@ -173,73 +173,79 @@ FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
 
         x = 0;
 #if CV_RVV && CV_SIMD_SCALABLE && CV_SIMD_SCALABLE_64F
-        const int rvvLanes = (int)__riscv_vsetvlmax_e32m1();
+        const int rvvLanes = VTraits<v_float32>::vlanes();
         for (; x <= width - rvvLanes; x += rvvLanes)
         {
-            const size_t vl = rvvLanes;
-            const vfloat32m1x3_t center = __riscv_vlseg3e32_v_f32m1x3(row + x * 3, vl);
-            vfloat64m2_t b1 = __riscv_vfwcvt_f_f_v_f64m2(
-                __riscv_vfmul_vf_f32m1(__riscv_vget_v_f32m1x3_f32m1(center, 0), g[0], vl), vl);
-            vfloat64m2_t b3 = __riscv_vfwcvt_f_f_v_f64m2(
-                __riscv_vfmul_vf_f32m1(__riscv_vget_v_f32m1x3_f32m1(center, 1), g[0], vl), vl);
-            vfloat64m2_t b5 = __riscv_vfwcvt_f_f_v_f64m2(
-                __riscv_vfmul_vf_f32m1(__riscv_vget_v_f32m1x3_f32m1(center, 2), g[0], vl), vl);
-            vfloat64m2_t b2 = __riscv_vfmv_v_f_f64m2(0., vl);
-            vfloat64m2_t b4 = __riscv_vfmv_v_f_f64m2(0., vl);
-            vfloat64m2_t b6 = __riscv_vfmv_v_f_f64m2(0., vl);
+            v_float32 c0, c1, c2;
+            v_load_deinterleave(row + x * 3, c0, c1, c2);
+
+            // Multiply in f32 before converting to f64.
+            v_float32 t0 = v_mul(c0, vx_setall_f32(g[0]));
+            v_float64 b1_lo = v_cvt_f64(t0), b1_hi = v_cvt_f64_high(t0);
+            v_float32 t1 = v_mul(c1, vx_setall_f32(g[0]));
+            v_float64 b3_lo = v_cvt_f64(t1), b3_hi = v_cvt_f64_high(t1);
+            v_float32 t2 = v_mul(c2, vx_setall_f32(g[0]));
+            v_float64 b5_lo = v_cvt_f64(t2), b5_hi = v_cvt_f64_high(t2);
+            v_float64 zero = vx_setall_f64(0.0);
+            v_float64 b2_lo = zero, b2_hi = zero;
+            v_float64 b4_lo = zero, b4_hi = zero;
+            v_float64 b6_lo = zero, b6_hi = zero;
+
             for (int kk = 1; kk <= n; ++kk)
             {
-                const vfloat32m1x3_t plus = __riscv_vlseg3e32_v_f32m1x3(row + (x + kk) * 3, vl);
-                const vfloat32m1x3_t minus = __riscv_vlseg3e32_v_f32m1x3(row + (x - kk) * 3, vl);
-                const vfloat32m1_t p0 = __riscv_vget_v_f32m1x3_f32m1(plus, 0),
-                                   m0 = __riscv_vget_v_f32m1x3_f32m1(minus, 0);
-                const vfloat32m1_t p1 = __riscv_vget_v_f32m1x3_f32m1(plus, 1),
-                                   m1 = __riscv_vget_v_f32m1x3_f32m1(minus, 1);
-                const vfloat32m1_t p2 = __riscv_vget_v_f32m1x3_f32m1(plus, 2),
-                                   m2 = __riscv_vget_v_f32m1x3_f32m1(minus, 2);
-                // Preserve the scalar code's FP32 sums/products before conversion to FP64.
-                const vfloat64m2_t tg = __riscv_vfwcvt_f_f_v_f64m2(__riscv_vfadd_vv_f32m1(p0, m0, vl), vl);
-                b1 = __riscv_vfadd_vv_f64m2(b1, __riscv_vfmul_vf_f64m2(tg, g[kk], vl), vl);
-                b4 = __riscv_vfadd_vv_f64m2(b4, __riscv_vfmul_vf_f64m2(tg, xxg[kk], vl), vl);
-                b2 = __riscv_vfadd_vv_f64m2(
-                    b2,
-                    __riscv_vfwcvt_f_f_v_f64m2(__riscv_vfmul_vf_f32m1(__riscv_vfsub_vv_f32m1(p0, m0, vl), xg[kk], vl),
-                                               vl),
-                    vl);
-                b3 = __riscv_vfadd_vv_f64m2(
-                    b3,
-                    __riscv_vfwcvt_f_f_v_f64m2(__riscv_vfmul_vf_f32m1(__riscv_vfadd_vv_f32m1(p1, m1, vl), g[kk], vl),
-                                               vl),
-                    vl);
-                b6 = __riscv_vfadd_vv_f64m2(
-                    b6,
-                    __riscv_vfwcvt_f_f_v_f64m2(__riscv_vfmul_vf_f32m1(__riscv_vfsub_vv_f32m1(p1, m1, vl), xg[kk], vl),
-                                               vl),
-                    vl);
-                b5 = __riscv_vfadd_vv_f64m2(
-                    b5,
-                    __riscv_vfwcvt_f_f_v_f64m2(__riscv_vfmul_vf_f32m1(__riscv_vfadd_vv_f32m1(p2, m2, vl), g[kk], vl),
-                                               vl),
-                    vl);
+                v_float32 p0, p1, p2, m0, m1, m2;
+                v_load_deinterleave(row + (x + kk) * 3, p0, p1, p2);
+                v_load_deinterleave(row + (x - kk) * 3, m0, m1, m2);
+
+                // Add in f32 before converting to f64.
+                v_float32 tg = v_add(p0, m0);
+                v_float64 tg_lo = v_cvt_f64(tg), tg_hi = v_cvt_f64_high(tg);
+                v_float64 gk = vx_setall_f64(g[kk]);
+                v_float64 xxgk = vx_setall_f64(xxg[kk]);
+                b1_lo = v_fma(tg_lo, gk, b1_lo);
+                b1_hi = v_fma(tg_hi, gk, b1_hi);
+                b4_lo = v_fma(tg_lo, xxgk, b4_lo);
+                b4_hi = v_fma(tg_hi, xxgk, b4_hi);
+
+                // b2: multiply in f32 before converting to f64.
+                v_float32 d0 = v_mul(v_sub(p0, m0), vx_setall_f32(xg[kk]));
+                b2_lo = v_add(b2_lo, v_cvt_f64(d0));
+                b2_hi = v_add(b2_hi, v_cvt_f64_high(d0));
+                // b3 += (p1 + m1) * g[kk]
+                v_float32 s1 = v_mul(v_add(p1, m1), vx_setall_f32(g[kk]));
+                b3_lo = v_add(b3_lo, v_cvt_f64(s1));
+                b3_hi = v_add(b3_hi, v_cvt_f64_high(s1));
+                // b6 += (p1 - m1) * xg[kk]
+                v_float32 d1 = v_mul(v_sub(p1, m1), vx_setall_f32(xg[kk]));
+                b6_lo = v_add(b6_lo, v_cvt_f64(d1));
+                b6_hi = v_add(b6_hi, v_cvt_f64_high(d1));
+                // b5 += (p2 + m2) * g[kk]
+                v_float32 s2 = v_mul(v_add(p2, m2), vx_setall_f32(g[kk]));
+                b5_lo = v_add(b5_lo, v_cvt_f64(s2));
+                b5_hi = v_add(b5_hi, v_cvt_f64_high(s2));
             }
-            const vfloat32m1_t r0 = __riscv_vfncvt_f_f_w_f32m1(__riscv_vfmul_vf_f64m2(b3, ig11, vl), vl);
-            const vfloat32m1_t r1 = __riscv_vfncvt_f_f_w_f32m1(__riscv_vfmul_vf_f64m2(b2, ig11, vl), vl);
-            const vfloat32m1_t r2 =
-                __riscv_vfncvt_f_f_w_f32m1(__riscv_vfadd_vv_f64m2(__riscv_vfmul_vf_f64m2(b1, ig03, vl),
-                                                                  __riscv_vfmul_vf_f64m2(b5, ig33, vl), vl),
-                                           vl);
-            const vfloat32m1_t r3 =
-                __riscv_vfncvt_f_f_w_f32m1(__riscv_vfadd_vv_f64m2(__riscv_vfmul_vf_f64m2(b1, ig03, vl),
-                                                                  __riscv_vfmul_vf_f64m2(b4, ig33, vl), vl),
-                                           vl);
-            const vfloat32m1_t r4 = __riscv_vfncvt_f_f_w_f32m1(__riscv_vfmul_vf_f64m2(b6, ig55, vl), vl);
+
+            v_float64 ig11v = vx_setall_f64(ig11);
+            v_float64 ig03v = vx_setall_f64(ig03);
+            v_float64 ig33v = vx_setall_f64(ig33);
+            v_float64 ig55v = vx_setall_f64(ig55);
+            v_float32 r0 = v_cvt_f32(v_mul(b3_lo, ig11v), v_mul(b3_hi, ig11v));
+            v_float32 r1 = v_cvt_f32(v_mul(b2_lo, ig11v), v_mul(b2_hi, ig11v));
+            v_float32 r2 = v_cvt_f32(v_add(v_mul(b1_lo, ig03v), v_mul(b5_lo, ig33v)),
+                                     v_add(v_mul(b1_hi, ig03v), v_mul(b5_hi, ig33v)));
+            v_float32 r3 = v_cvt_f32(v_add(v_mul(b1_lo, ig03v), v_mul(b4_lo, ig33v)),
+                                     v_add(v_mul(b1_hi, ig03v), v_mul(b4_hi, ig33v)));
+            v_float32 r4 = v_cvt_f32(v_mul(b6_lo, ig55v), v_mul(b6_hi, ig55v));
+
+            // drow has five interleaved channels (CV_32FC(5)). Universal
+            // interleaved stores support up to four channels; retain the RVV store.
             vfloat32m1x5_t result = vfloat32m1x5_t();
             result = __riscv_vset_v_f32m1_f32m1x5(result, 0, r0);
             result = __riscv_vset_v_f32m1_f32m1x5(result, 1, r1);
             result = __riscv_vset_v_f32m1_f32m1x5(result, 2, r2);
             result = __riscv_vset_v_f32m1_f32m1x5(result, 3, r3);
             result = __riscv_vset_v_f32m1_f32m1x5(result, 4, r4);
-            __riscv_vsseg5e32_v_f32m1x5(drow + x * 5, result, vl);
+            __riscv_vsseg5e32_v_f32m1x5(drow + x * 5, result, VTraits<v_float32>::vlanes());
         }
 #endif
         for( ; x < width; x++ )
@@ -513,6 +519,18 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
     }
 #endif
 
+#if CV_RVV && CV_SIMD_SCALABLE
+    // Expand each coefficient into contiguous memory once per function call.
+    // Both blur passes reuse this buffer through ordinary vector loads.
+    const int kernel_lanes = VTraits<v_float32>::vlanes();
+    AutoBuffer<float> expanded_kernel(static_cast<size_t>(m + 1) * kernel_lanes);
+    for (i = 0; i <= m; ++i)
+    {
+        float* coefficient_row = expanded_kernel.data() + static_cast<size_t>(i) * kernel_lanes;
+        std::fill(coefficient_row, coefficient_row + kernel_lanes, kernel[i]);
+    }
+#endif
+
     // compute blur(G)*flow=blur(h)
     for( y = 0; y < height; y++ )
     {
@@ -529,18 +547,16 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
         x = 0;
 
 #if CV_RVV && CV_SIMD_SCALABLE
-        // Broadcast each coefficient for the current vector length.
+        // Load the pre-expanded coefficients from contiguous memory.
         const int lanes = VTraits<v_float32>::vlanes();
         for (; x <= width*5 - lanes; x += lanes)
         {
-            float coefficient = kernel[0];
-            asm volatile("" : "+f"(coefficient));
-            v_float32 acc = v_mul(vx_load(srow[m] + x), vx_setall_f32(coefficient));
+            v_float32 acc = v_mul(vx_load(srow[m] + x), vx_load(expanded_kernel.data()));
             for (i = 1; i <= m; ++i)
             {
-                coefficient = kernel[i];
-                asm volatile("" : "+f"(coefficient));
-                acc = v_fma(v_add(vx_load(srow[m-i] + x), vx_load(srow[m+i] + x)), vx_setall_f32(coefficient), acc);
+                const v_float32 coefficient = vx_load(
+                    expanded_kernel.data() + static_cast<size_t>(i) * kernel_lanes);
+                acc = v_fma(v_add(vx_load(srow[m-i] + x), vx_load(srow[m+i] + x)), coefficient, acc);
             }
             v_store(vsum + x, acc);
         }
@@ -612,18 +628,16 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
         // horizontal blur
         x = 0;
 #if CV_RVV && CV_SIMD_SCALABLE
-        // Broadcast each coefficient for the current vector length.
+        // Load the pre-expanded coefficients from contiguous memory.
         const int hlanes = VTraits<v_float32>::vlanes();
         for (; x <= width*5 - hlanes; x += hlanes)
         {
-            float coefficient = kernel[0];
-            asm volatile("" : "+f"(coefficient));
-            v_float32 acc = v_mul(vx_load(vsum + x), vx_setall_f32(coefficient));
+            v_float32 acc = v_mul(vx_load(vsum + x), vx_load(expanded_kernel.data()));
             for (i = 1; i <= m; ++i)
             {
-                coefficient = kernel[i];
-                asm volatile("" : "+f"(coefficient));
-                acc = v_fma(v_add(vx_load(vsum + x - i*5), vx_load(vsum + x + i*5)), vx_setall_f32(coefficient), acc);
+                const v_float32 coefficient = vx_load(
+                    expanded_kernel.data() + static_cast<size_t>(i) * kernel_lanes);
+                acc = v_fma(v_add(vx_load(vsum + x - i*5), vx_load(vsum + x + i*5)), coefficient, acc);
             }
             v_store(hsum + x, acc);
         }
