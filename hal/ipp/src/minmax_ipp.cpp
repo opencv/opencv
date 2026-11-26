@@ -24,6 +24,9 @@ static inline IppDataType ippiGetDataType(int depth)
 
 #if IPP_VERSION_X100 >= 700
 
+// HACK: Should be removed when IPP management moves to HAL (not in core/base.hpp).
+namespace cv { namespace ipp { unsigned long long getIppTopFeatures(); } }
+
 
 static IppStatus ipp_minMaxIndex_wrap(const void* pSrc, int srcStep, IppiSize size, IppDataType dataType,
     float* pMinVal, float* pMaxVal, IppiPoint* pMinIndex, IppiPoint* pMaxIndex, const Ipp8u*, int)
@@ -173,6 +176,10 @@ int ipp_hal_minMaxIdxMaskStep(const uchar* src_data, size_t src_step, int width,
     if(mask && _maxIdx && cv::ipp::getIppTopFeatures() != ippCPUID_SSE42)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 #endif
+
+    // ippiMinMaxIndx_32f_C1MR (AVX2) over-reads the mask buffer, see #30804 and #31143
+    if (mask && depth == CV_32F && cv::ipp::getIppTopFeatures() == ippCPUID_AVX2)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     IppStatus   status;
     IppDataType dataType = ippiGetDataType(depth);
