@@ -74,6 +74,8 @@ The remaining parameters are set with setters after creation, see cv::StereoBM f
   margin, in percent.
 - setSpeckleWindowSize and setSpeckleRange: remove small blobs ("speckles") of disparity that differ
   from their surroundings, typical near object borders. Speckle filtering is off by default.
+  StereoBM compares the speckle range directly with its fixed-point disparity, which is scaled by 16,
+  so `setSpeckleRange(32)` allows a difference of 2 pixels.
 - setPreFilterType, setPreFilterSize and setPreFilterCap: normalize image brightness before matching.
   Normally you should not need to adjust these.
 
@@ -105,8 +107,9 @@ differ are:
 - disp12MaxDiff: maximum difference, in pixels, between the left-to-right and right-to-left
   disparities. Pixels failing this check, mostly occlusions, are rejected. A non-positive value
   disables the check.
-- speckleWindowSize and speckleRange: the same speckle filter as in StereoBM, here passed to the
-  constructor. speckleRange is multiplied by 16 internally, so 1 or 2 is usually enough.
+- speckleWindowSize and speckleRange: remove speckles as in StereoBM, but StereoSGBM multiplies
+  speckleRange by 16 internally, so it is given in pixels: `speckleRange=2` allows a difference of
+  2 pixels. Do not copy this value to StereoBM's setSpeckleRange, where 2 would mean 1/8 pixel.
 - mode: cv.STEREO_SGBM_MODE_SGBM (5 paths, the default), cv.STEREO_SGBM_MODE_HH (8 paths, the full
   Hirschmuller algorithm, more memory) or the faster cv.STEREO_SGBM_MODE_SGBM_3WAY.
 
