@@ -153,7 +153,11 @@ Ptr<FastConv> initFastConv(
         {
             ifRunDepthWise &= Hk == 3 && Wk == 3 && ((stride_w == 1) || (stride_w == 2 && dilation_w == 1)) &&
                               max(stride_w, dilation_w) >= conv->pad_left && max(stride_h, dilation_h) >= conv->pad_top
-                              && conv->pad_left <= 1 && conv->pad_top <= 1;
+                              && conv->pad_left <= 1 && conv->pad_top <= 1
+                              // the 3x3 kernel reads the middle row without a bounds check, so the bottom
+                              // padding must not exceed the vertical dilation; the left and top padding
+                              // are at most 1 and the right padding is handled by the kernel
+                              && conv->pad_bottom <= dilation_h;
         }
 
         if (!ifRunDepthWise || conv_dim == CONV_3D)
