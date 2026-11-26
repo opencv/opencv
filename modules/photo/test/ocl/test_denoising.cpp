@@ -155,7 +155,6 @@ OCL_TEST(Photo_FastNlMeansDenoising, SubMatrixIsolation)
         { CV_16UC1, NORM_L1, 4000.0f }
     };
 
-    RNG rng(2027);
     for (size_t c = 0; c < sizeof(cases) / sizeof(cases[0]); ++c)
     {
         const int type = cases[c].type;
@@ -165,7 +164,7 @@ OCL_TEST(Photo_FastNlMeansDenoising, SubMatrixIsolation)
         const double high_border_val = is_16u ? 65000.0 : 255.0;
 
         Mat isolated(roi_size, type);
-        rng.fill(isolated, RNG::UNIFORM, Scalar::all(min_val), Scalar::all(max_val));
+        theRNG().fill(isolated, RNG::UNIFORM, Scalar::all(min_val), Scalar::all(max_val));
 
         Mat parent_low(parent_size, type, Scalar::all(0));
         Mat parent_high(parent_size, type, Scalar::all(high_border_val));
