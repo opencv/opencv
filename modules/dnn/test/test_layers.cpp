@@ -2215,6 +2215,128 @@ TEST(Layer_Test_ReduceMean, accuracy_input_0)
     }
 }
 
+typedef testing::TestWithParam<tuple<std::vector<int>, std::string, bool, bool> >
+    Layer_Test_Reduce_all_axes;
+
+TEST_P(Layer_Test_Reduce_all_axes, all_axes_listed_explicitly)
+{
+    // Listing every axis must give the same result as reducing the whole tensor.
+    const std::vector<int> szData = get<0>(GetParam());
+    const std::string op = get<1>(GetParam());
+    const int keepdims = get<2>(GetParam());
+    const int noop = get<3>(GetParam());  // noop_with_empty_axes must not apply: axes are given
+
+    const int rank = (int)szData.size();
+    Mat input(szData, CV_32FC1);
+    for (size_t i = 0; i < input.total(); i++)
+        input.ptr<float>()[i] = (float)i + 1.f;
+    const float expected = op == "MEAN" ? (float)(input.total() + 1) / 2.f : (float)input.total();
+
+    std::vector<int> axes;
+    for (int i = 0; i < rank; i++)
+        axes.push_back(i - rank);  // negative axes, in descending significance
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Reduce";
+    lp.name = "testReduceAllAxes";
+    lp.set("reduce", op);
+    lp.set("keepdims", keepdims);
+    lp.set("noop_with_empty_axes", noop);
+    lp.set("axes", DictValue::arrayInt(axes.data(), (int)axes.size()));
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInput(input);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+
+    Mat output = net.forward();
+    ASSERT_EQ(1u, output.total());
+    EXPECT_NEAR(expected, output.ptr<float>()[0], 1e-5);
+    if (keepdims)
+    {
+        EXPECT_EQ(MatShape(std::vector<int>(rank, 1)), shape(output));
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Reduce_all_axes, Combine(
+    Values(std::vector<int>{3, 4}, std::vector<int>{2, 3, 4}),
+    Values("MEAN", "MAX"),
+    testing::Bool(),
+    testing::Bool()
+));
+
+TEST(Layer_Test_Reduce, singleton_axes_apply_the_operation)
+{
+    // Reducing a dimension of size 1 is not a no-op for SUM_SQUARE, L1, L2 and LOG_SUM:
+    // the operation is still applied to the single element.
+    struct Case { const char* op; float value; float expected; };
+    const Case cases[] = {
+        { "SUM", -2.f, -2.f }, { "MEAN", -2.f, -2.f }, { "MAX", -2.f, -2.f },
+        { "MIN", -2.f, -2.f }, { "PROD", -2.f, -2.f }, { "SUM_SQUARE", -2.f, 4.f },
+        { "L1", -2.f, 2.f }, { "L2", -2.f, 2.f }, { "LOG_SUM", 2.f, std::log(2.f) },
+        { "LOG_SUM_EXP", 2.f, 2.f },
+    };
+    // all axes of a [1, 1] tensor, then only the first axis of a [1, 1] tensor
+    const std::vector<int> axesVariants[] = { {0, 1}, {0} };
+
+    for (const Case& c : cases)
+    {
+        for (const std::vector<int>& axes : axesVariants)
+        {
+            for (int keepdims = 0; keepdims < 2; keepdims++)
+            {
+                Mat input(std::vector<int>{1, 1}, CV_32FC1, Scalar(c.value));
+
+                Net net;
+                LayerParams lp;
+                lp.type = "Reduce";
+                lp.name = "testReduceSingletonAxes";
+                lp.set("reduce", c.op);
+                lp.set("keepdims", keepdims);
+                lp.set("axes", DictValue::arrayInt(axes.data(), (int)axes.size()));
+                net.addLayerToPrev(lp.name, lp.type, lp);
+                net.setInput(input);
+                net.setPreferableBackend(DNN_BACKEND_OPENCV);
+
+                Mat output = net.forward();
+                const std::string msg = cv::format("%s axes=%d keepdims=%d", c.op, (int)axes.size(), keepdims);
+                ASSERT_EQ(1u, output.total()) << msg;
+                EXPECT_NEAR(c.expected, output.ptr<float>()[0], 1e-5) << msg;
+            }
+        }
+    }
+}
+
+TEST(Layer_Test_Reduce, partial_singleton_axes_apply_the_operation)
+{
+    // axes=[0] of a [1, 3] tensor: the singleton axis is reduced, the other one is kept.
+    const float data[3] = { 1.f, -2.f, 3.f };
+    Mat input(std::vector<int>{1, 3}, CV_32FC1, (void*)data);
+    const struct { const char* op; float expected[3]; } cases[] = {
+        { "SUM_SQUARE", { 1.f, 4.f, 9.f } },
+        { "L1",         { 1.f, 2.f, 3.f } },
+        { "L2",         { 1.f, 2.f, 3.f } },
+    };
+    for (const auto& c : cases)
+    {
+        Net net;
+        LayerParams lp;
+        lp.type = "Reduce";
+        lp.name = "testReducePartialSingletonAxes";
+        lp.set("reduce", c.op);
+        lp.set("keepdims", 0);
+        const int axis = 0;
+        lp.set("axes", DictValue::arrayInt(&axis, 1));
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setInput(input);
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+
+        Mat output = net.forward();
+        ASSERT_EQ(3u, output.total()) << c.op;
+        for (int i = 0; i < 3; i++)
+            EXPECT_NEAR(c.expected[i], output.ptr<float>()[i], 1e-5) << c.op << " i=" << i;
+    }
+}
+
 
 // Check if relu is not fused to convolution if we requested it's output
 TEST(Layer_Test_Convolution, relu_fusion)
