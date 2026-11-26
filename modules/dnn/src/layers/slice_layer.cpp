@@ -104,6 +104,16 @@ void transformForNegSteps(const MatShape& inpShape, std::vector<std::vector<Rang
         step = -step;
         start = sliceRanges[0][i].start;
         end = sliceRanges[0][i].end;
+        if (inpShape[i] > 0)
+        {
+            // negative values count from the end; clamp start to [0, n - 1] and end to [-1, n - 1]
+            if (start < 0)
+                start += inpShape[i];
+            if (end < 0)
+                end += inpShape[i];
+            start = std::min(std::max(start, 0), inpShape[i] - 1);
+            end = std::min(std::max(end, -1), inpShape[i] - 1);
+        }
         new_end = start >= inpShape[i] ? inpShape[i] : start + 1;
         new_start = end + 1;
         new_start = new_end - 1 - ((new_end - 1 - new_start) / step) * step;
@@ -329,7 +339,7 @@ public:
                     CV_Assert(step != 0);
                     if (step < 0)
                         neg_step_dims.push_back(i);
-                    if (std::abs(step) > 1)
+                    if (std::abs(step) > 1 || step < 0)
                         hasSteps = true;
                     sliceSteps[0][i] = step;
                 }
@@ -437,10 +447,14 @@ public:
         CV_Assert(inputs.size() == 1);
         MatShape inpShape = shape(inputs[0]);
 
+        // Keep the parsed sliceRanges and sliceSteps untouched: the shape-specific
+        // transformation for negative steps must be redone for every input shape.
+        std::vector<std::vector<Range> > transformedRanges = sliceRanges;
+        finalSliceSteps = sliceSteps;
         if (hasSteps && !neg_step_dims.empty())
-            transformForNegSteps(inpShape, sliceRanges, sliceSteps);
+            transformForNegSteps(inpShape, transformedRanges, finalSliceSteps);
 
-        finalSliceRanges = finalizeSliceRange(shape(inputs[0]), axis, sliceRanges);
+        finalSliceRanges = finalizeSliceRange(shape(inputs[0]), axis, transformedRanges);
 
         if (sliceRanges.empty())
         {
@@ -474,8 +488,8 @@ public:
             }
         }
 
-        if (!sliceSteps.empty() && sliceSteps[0].size() != inputs[0].dims)
-            sliceSteps[0].resize(inputs[0].dims, 1);
+        if (!finalSliceSteps.empty() && finalSliceSteps[0].size() != inputs[0].dims)
+            finalSliceSteps[0].resize(inputs[0].dims, 1);
 
 #if 0
         std::cout << "DEBUG: DNN/Slice: " << outputs.size() << " inpShape=" << inpShape << std::endl;
@@ -764,11 +778,11 @@ public:
             for (size_t i = 0; i < outputs.size(); i++)
             {
                 if (inpMat.type() == CV_16F)
-                    parallel_for_(Range(0, nstripes), ParallelSlice<int16_t>(inpMat, outputs[i], finalSliceRanges[i], sliceSteps.empty() ? dummy_steps : sliceSteps[i], nstripes), nstripes);
+                    parallel_for_(Range(0, nstripes), ParallelSlice<int16_t>(inpMat, outputs[i], finalSliceRanges[i], finalSliceSteps.empty() ? dummy_steps : finalSliceSteps[i], nstripes), nstripes);
                 else if (inpMat.type() == CV_8S)
-                    parallel_for_(Range(0, nstripes), ParallelSlice<int8_t>(inpMat, outputs[i], finalSliceRanges[i], sliceSteps.empty() ? dummy_steps : sliceSteps[i], nstripes), nstripes);
+                    parallel_for_(Range(0, nstripes), ParallelSlice<int8_t>(inpMat, outputs[i], finalSliceRanges[i], finalSliceSteps.empty() ? dummy_steps : finalSliceSteps[i], nstripes), nstripes);
                 else
-                    parallel_for_(Range(0, nstripes), ParallelSlice<float>(inpMat, outputs[i], finalSliceRanges[i], sliceSteps.empty() ? dummy_steps : sliceSteps[i], nstripes), nstripes);
+                    parallel_for_(Range(0, nstripes), ParallelSlice<float>(inpMat, outputs[i], finalSliceRanges[i], finalSliceSteps.empty() ? dummy_steps : finalSliceSteps[i], nstripes), nstripes);
                 // flip for negative steps
                 flip(outputs[i]);
             }
@@ -910,7 +924,7 @@ public:
             dims.push_back(finalSliceRanges[0][i].end);
         }
         if (hasSteps)
-            steps = std::vector<int64_t>(sliceSteps[0].begin(), sliceSteps[0].end());
+            steps = std::vector<int64_t>(finalSliceSteps[0].begin(), finalSliceSteps[0].end());
         else
             steps = std::vector<int64_t>((int64_t)dims.size(), 1);
 
@@ -974,6 +988,8 @@ private:
 protected:
     // The actual non-negative values determined from @p sliceRanges depends on input size.
     std::vector<std::vector<Range> > finalSliceRanges;
+    // Steps for the current input shape (negative steps turned positive, padded to the input rank).
+    std::vector<std::vector<int> > finalSliceSteps;
     std::vector<int> neg_step_dims;
     bool hasDynamicShapes;
     bool shapesInitialized;

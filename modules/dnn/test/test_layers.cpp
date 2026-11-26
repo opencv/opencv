@@ -2816,6 +2816,53 @@ TEST_P(Layer_Test_Slice, variable_input_shape)
     }
 }
 
+// ONNX Slice that reverses an axis with step -1, using a negative start and a negative end:
+// x[-1:-5:-1] selects the last four rows. The second input shape checks that the ranges are
+// recomputed for every input shape.
+TEST_P(Layer_Test_Slice, negative_step_minus_one_negative_bounds)
+{
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
+    if (backendId != DNN_BACKEND_OPENCV)
+        throw SkipTestException("Slice with a negative step is only supported by the default backend");
+
+    int begins[] = {0, -1, 0};
+    int ends[] = {INT_MAX, -5, INT_MAX};
+    int steps[] = {1, -1, 1};
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Slice";
+    lp.name = "testLayer";
+    lp.set("begin", DictValue::arrayInt<int*>(begins, 3));
+    lp.set("end", DictValue::arrayInt<int*>(ends, 3));
+    lp.set("steps", DictValue::arrayInt<int*>(steps, 3));
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+
+    for (int rowsNum = 6; rowsNum <= 8; rowsNum += 2)
+    {
+        const int inpShape[] = {2, rowsNum, 3};
+        Mat input(3, inpShape, CV_32F);
+        for (int i = 0; i < (int)input.total(); ++i)
+            input.ptr<float>()[i] = (float)i;
+
+        const int outShape[] = {inpShape[0], 4, inpShape[2]};
+        Mat ref(3, outShape, CV_32F);
+        for (int a = 0; a < inpShape[0]; ++a)
+            for (int j = 0; j < 4; ++j)
+                for (int c = 0; c < inpShape[2]; ++c)
+                    ref.ptr<float>(a, j)[c] = input.ptr<float>(a, rowsNum - 1 - j)[c];
+
+        net.setInput(input);
+        Mat out;
+        ASSERT_NO_THROW(out = net.forward());
+        ASSERT_EQ(shape(out), MatShape(outShape, outShape + 3));
+        normAssert(out, ref);
+    }
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Slice, dnnBackendsAndTargets());
 
 typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_BatchNorm;
