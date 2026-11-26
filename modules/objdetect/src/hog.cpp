@@ -1147,6 +1147,8 @@ void HOGCache::normalizeBlockHistogram(float* _hist) const
 
 Size HOGCache::windowsInImage(const Size& imageSize, const Size& winStride) const
 {
+    if (imageSize.width < winSize.width || imageSize.height < winSize.height)
+        return Size(0, 0);
     return Size((imageSize.width - winSize.width)/winStride.width + 1,
         (imageSize.height - winSize.height)/winStride.height + 1);
 }
@@ -1475,6 +1477,12 @@ void HOGDescriptor::compute(InputArray _img, std::vector<float>& descriptors,
     padding.width = (int)alignSize(std::max(padding.width, 0), cacheStride.width);
     padding.height = (int)alignSize(std::max(padding.height, 0), cacheStride.height);
     Size paddedImgSize(imgSize.width + padding.width*2, imgSize.height + padding.height*2);
+
+    if (!nwindows)
+    {
+        CV_CheckGE(paddedImgSize.width, winSize.width, "Image width (including padding) must be at least winSize.width");
+        CV_CheckGE(paddedImgSize.height, winSize.height, "Image height (including padding) must be at least winSize.height");
+    }
 
     CV_OCL_RUN(_img.dims() <= 2 && _img.type() == CV_8UC1 && _img.isUMat(),
         ocl_compute(_img, winStride, descriptors, HOGDescriptor::DESCR_FORMAT_COL_BY_COL, blockSize,
