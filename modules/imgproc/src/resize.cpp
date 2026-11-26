@@ -3901,9 +3901,13 @@ ResizeKernel* createResizeKernel(KernelSlot& slot, int type, Size ssize, size_t 
     if (interpolation == INTER_NEAREST_EXACT)
         return slot.emplace<NearestExactKernel>(type, ssize, dsize);
 
-    // in case of scale_x && scale_y is equal to 2
-    // INTER_AREA (fast) also is equal to INTER_LINEAR
-    if (interpolation == INTER_LINEAR && halving)
+    // At an exact 2x decimation, linear interpolation between pixel centres averages 2x2 blocks,
+    // which is what the INTER_AREA fast kernel does, as long as every block keeps a pixel inside the
+    // image (an fx/fy given next to a larger dsize can push blocks out). The modes that sample
+    // anywhere else do not average, so they keep the linear kernel.
+    const bool blocksInside = dsize.width*2 <= ssize.width + 1 && dsize.height*2 <= ssize.height + 1;
+    if (interpolation == INTER_LINEAR && halving && blocksInside &&
+        (classicCoord || params.coordMode == ResizeCoord::HALF_PIXEL))
         interpolation = INTER_AREA;
 
     // true "area" interpolation is only implemented for the case (scale_x >= 1 && scale_y >= 1).
