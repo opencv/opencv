@@ -71,52 +71,6 @@ int establishCapacity(QRCodeEncoder::EncodeMode mode, int version, int capacity)
     return result;
 }
 
-// #define UPDATE_TEST_DATA
-#ifdef UPDATE_TEST_DATA
-
-TEST(Objdetect_QRCode_Encode, generate_test_data)
-{
-    const std::string root = "qrcode/encode";
-    const std::string dataset_config = findDataFile(root + "/" + "dataset_config.json");
-    FileStorage file_config(dataset_config, FileStorage::WRITE);
-
-    file_config << "test_images" << "[";
-    size_t images_count = sizeof(encode_qrcode_images_name) / sizeof(encode_qrcode_images_name[0]);
-    for (size_t i = 0; i < images_count; i++)
-    {
-        file_config << "{:" << "image_name" << encode_qrcode_images_name[i];
-        std::string image_path = findDataFile(root + "/" + encode_qrcode_images_name[i]);
-
-        Mat src = imread(image_path, IMREAD_GRAYSCALE);
-        Mat straight_barcode;
-        EXPECT_TRUE(!src.empty()) << "Can't read image: " << image_path;
-
-        std::vector<Point2f> corners(4);
-        corners[0] = Point2f(border_width, border_width);
-        corners[1] = Point2f(qrcode.cols * 1.0f - border_width, border_width);
-        corners[2] = Point2f(qrcode.cols * 1.0f - border_width, qrcode.rows * 1.0f - border_width);
-        corners[3] = Point2f(border_width, qrcode.rows * 1.0f - border_width);
-
-        Mat resized_src;
-        resize(qrcode, resized_src, fixed_size, 0, 0, INTER_AREA);
-        float width_ratio =  resized_src.cols * 1.0f / qrcode.cols;
-        float height_ratio = resized_src.rows * 1.0f / qrcode.rows;
-        for(size_t j = 0; j < corners.size(); j++)
-        {
-            corners[j].x = corners[j].x * width_ratio;
-            corners[j].y = corners[j].y * height_ratio;
-        }
-
-        std::string decoded_info = "";
-        EXPECT_TRUE(decodeQRCode(resized_src, corners, decoded_info, straight_barcode)) << "The QR code cannot be decoded: " << image_path;
-        file_config << "info" << decoded_info;
-        file_config << "}";
-    }
-    file_config << "]";
-    file_config.release();
-}
-#else
-
 typedef testing::TestWithParam< std::string > Objdetect_QRCode_Encode;
 TEST_P(Objdetect_QRCode_Encode, regression) {
     const int pixels_error = 3;
@@ -155,8 +109,7 @@ TEST_P(Objdetect_QRCode_Encode, regression) {
                 return; // done
             }
         }
-        FAIL()  << "Not found results in config file:" << dataset_config
-                << "\nRe-run tests with enabled UPDATE_ENCODE_TEST_DATA macro to update test data.";
+        FAIL()  << "Not found results in config file:" << dataset_config;
     }
 }
 
@@ -200,8 +153,7 @@ TEST_P(Objdetect_QRCode_Encode_ECI, regression) {
                 return; // done
             }
         }
-        FAIL()  << "Not found results in config file:" << dataset_config
-                << "\nRe-run tests with enabled UPDATE_ENCODE_TEST_DATA macro to update test data.";
+        FAIL()  << "Not found results in config file:" << dataset_config;
     }
 }
 
@@ -429,8 +381,6 @@ TEST(Objdetect_QRCode_Encode_Decode_Structured_Append, regression)
         }
     }
 }
-
-#endif // UPDATE_QRCODE_TEST_DATA
 
 CV_ENUM(EncodeModes, QRCodeEncoder::EncodeMode::MODE_NUMERIC,
                      QRCodeEncoder::EncodeMode::MODE_ALPHANUMERIC,

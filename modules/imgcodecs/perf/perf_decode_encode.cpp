@@ -209,10 +209,10 @@ PERF_TEST_P(Encode, multi, testing::ValuesIn(exts_multi))
     vec.push_back(vec.back().clone());
     circle(vec.back(), Point(100, 100), 45, Scalar(0, 0, 255, 0), 2, LINE_AA);
     vector<uchar> buf;
-    EXPECT_TRUE(imwrite("test" + GetParam(), vec));
 
     TEST_CYCLE() imencode(GetParam(), vec, buf);
 
+    EXPECT_FALSE(buf.empty());
     std::cout << "  Encoded buffer size: " << buf.size()
         << " bytes, Compression ratio: " << std::fixed << std::setprecision(2)
         << (static_cast<double>(buf.size()) / (vec[0].total() * vec[0].channels())) * 100.0 << "%" << std::endl;

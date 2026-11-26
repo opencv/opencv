@@ -112,19 +112,15 @@ PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
     SANITY_CHECK(tvec, 1e-2);
 }
 
-PERF_TEST_P(PointsNum, DISABLED_SolvePnPRansac, testing::Values(5, 3*9, 7*13))
+PERF_TEST_P(PointsNum, SolvePnPRansac, testing::Values(5, 3*9, 7*13))
 {
     int count = GetParam();
 
     Mat object(1, count, CV_32FC3);
     randu(object, -100, 100);
 
-    Mat camera_mat(3, 3, CV_32FC1);
-    randu(camera_mat, 0.5, 1);
-    camera_mat.at<float>(0, 1) = 0.f;
-    camera_mat.at<float>(1, 0) = 0.f;
-    camera_mat.at<float>(2, 0) = 0.f;
-    camera_mat.at<float>(2, 1) = 0.f;
+    // same camera as solvePnP above; a random one with a focal length below 1 px lets any pose pass the RANSAC threshold
+    Mat camera_mat = Mat_<float>({3, 3}, {400.f, 0.f, 320.f, 0.f, 400.f, 240.f, 0.f, 0.f, 1.f});
 
     Mat dist_coef(1, 8, CV_32F, cv::Scalar::all(0));
 
@@ -135,20 +131,29 @@ PERF_TEST_P(PointsNum, DISABLED_SolvePnPRansac, testing::Values(5, 3*9, 7*13))
 
     Mat tvec_gold(1, 3, CV_32FC1);
     randu(tvec_gold, 0, 1);
+    tvec_gold.at<float>(2) += 500.f;  // keep the whole object in front of the camera
     projectPoints(object, rvec_gold, tvec_gold, camera_mat, dist_coef, image_vec);
 
     Mat image(1, count, CV_32FC2, &image_vec[0]);
 
     Mat rvec;
     Mat tvec;
+    bool found = false;
 
     TEST_CYCLE()
     {
-        cv::solvePnPRansac(object, image, camera_mat, dist_coef, rvec, tvec);
+        found = cv::solvePnPRansac(object, image, camera_mat, dist_coef, rvec, tvec);
     }
 
-    SANITY_CHECK(rvec, 1e-6);
-    SANITY_CHECK(tvec, 1e-6);
+    // the projections are noise free, so RANSAC must find the generating pose again
+    EXPECT_TRUE(found);
+    Mat rvec_gold64, tvec_gold64;
+    rvec_gold.reshape(1, 3).convertTo(rvec_gold64, CV_64F);
+    tvec_gold.reshape(1, 3).convertTo(tvec_gold64, CV_64F);
+    EXPECT_LE(cv::norm(rvec, rvec_gold64, NORM_INF), 1e-4);
+    EXPECT_LE(cv::norm(tvec, tvec_gold64, NORM_INF), 1e-2);
+
+    SANITY_CHECK_NOTHING();
 }
 
 } // namespace

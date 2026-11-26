@@ -71,8 +71,7 @@ void check_qr(const string& root, const string& name_current_image, const string
             return; // done
         }
     }
-    FAIL() << "Not found results for '" << name_current_image << "' image in config file:" << dataset_config <<
-              "Re-run tests with enabled UPDATE_QRCODE_TEST_DATA macro to update test data.\n";
+    FAIL() << "Not found results for '" << name_current_image << "' image in config file:" << dataset_config;
 }
 
 }
