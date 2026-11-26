@@ -661,7 +661,7 @@ non-negative. A point whose x and y weights are both zero is removed before cali
 it is not used for the initial guess and is not counted in the returned RMS or perViewErrors. Each
 view must keep at least 4 points, and with the object-releasing method of #calibrateCameraRO no
 point may be removed. Passing non-empty weights is enough to turn weighting on.
-@param lossParams Robust loss, see #CalibrationLossParams. The default is plain least squares.
+@param lossParams Robust loss, see @ref cv::CalibrationLossParams. The default is plain least squares.
 
 @return the overall RMS re-projection error. With weights or a robust loss it is still the plain,
 unweighted error over the points that were not removed, and so is perViewErrors. The standard

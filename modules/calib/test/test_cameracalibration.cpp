@@ -2542,6 +2542,52 @@ TEST_P(Calib_CalibrateCameraWeighted, nonUnitWeightsSuppressOutliers)
     EXPECT_TRUE(cv::checkRange(sw));
 }
 
+TEST_P(Calib_CalibrateCameraWeighted, weightLayouts)
+{
+    std::vector<std::vector<cv::Point3f>> objectPoints;
+    std::vector<std::vector<cv::Point2f>> imagePoints;
+    makeWeightedCalibViews(objectPoints, imagePoints);
+
+    size_t nviews = imagePoints.size();
+    std::vector<std::vector<cv::Point2f>> ref(nviews);
+    std::vector<cv::Mat> conf32f(nviews), roi64fc2(nviews), roi64f(nviews);
+    for (size_t i = 0; i < nviews; i++)
+    {
+        int ni = (int)imagePoints[i].size();
+        conf32f[i].create(ni, 1, CV_32F);
+        // -1 outside the ROI column, so a wrong stride hits the non-negative check
+        cv::Mat buf2(ni, 3, CV_64FC2, cv::Scalar::all(-1)), buf1(ni, 4, CV_64F, cv::Scalar::all(-1));
+        for (int j = 0; j < ni; j++)
+        {
+            float c = 0.5f + 0.25f * (float)(j % 5);
+            ref[i].push_back(cv::Point2f(c, c));
+            conf32f[i].at<float>(j) = c;
+            buf2.at<cv::Vec2d>(j, 1) = cv::Vec2d(c, c);
+            buf1.at<double>(j, 2) = c;
+        }
+        roi64fc2[i] = buf2.col(1);
+        roi64f[i] = buf1.col(2);
+        ASSERT_FALSE(roi64fc2[i].isContinuous());
+        ASSERT_FALSE(roi64f[i].isContinuous());
+    }
+
+    cv::Matx33d K0;
+    cv::Mat s0;
+    double rms0 = calibrateWeighted(objectPoints, imagePoints, GetParam(), ref, K0, s0);
+
+    const std::vector<cv::Mat>* layouts[] = { &conf32f, &roi64fc2, &roi64f };
+    for (int k = 0; k < 3; k++)
+    {
+        SCOPED_TRACE(k);
+        cv::Matx33d K1;
+        cv::Mat s1;
+        double rms1 = calibrateWeighted(objectPoints, imagePoints, GetParam(), *layouts[k], K1, s1);
+        EXPECT_NEAR(rms0, rms1, 1e-9);
+        EXPECT_LE(cv::norm(K0, K1, NORM_INF), 1e-6);
+        EXPECT_LE(cv::norm(s0, s1, NORM_INF), 1e-6);
+    }
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Calib_CalibrateCameraWeighted,
                         testing::Values(0, (int)cv::CALIB_DISABLE_SCHUR_COMPLEMENT));
 
