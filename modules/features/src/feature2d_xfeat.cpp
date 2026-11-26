@@ -458,7 +458,13 @@ private:
         net_.setPreferableTarget(targetId);
 
         // Check output names once and fail early.
-        const std::vector<String> modelOutNames = net_.getUnconnectedOutLayersNames();
+        std::vector<String> modelOutNames = net_.getUnconnectedOutLayersNames();
+        if (modelOutNames.empty())
+        {
+            // ORT initializes the session lazily, so output names may not be available yet.
+            net_.finalizeNet();
+            modelOutNames = net_.getUnconnectedOutLayersNames();
+        }
         if (modelOutNames.size() != kXFeatOutputNames.size())
         {
             String msg = "XFeat ONNX output count mismatch: expected " +
