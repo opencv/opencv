@@ -115,6 +115,66 @@ private:
 
 typedef std::set<std::pair<int,int> > MatchesSet;
 
+static void updateHash(uint64 &hash, const uchar *data, size_t size)
+{
+    for (size_t i = 0; i < size; ++i)
+    {
+        hash ^= data[i];
+        hash *= 1099511628211ULL;
+    }
+}
+
+static void updateHash(uint64 &hash, unsigned int value)
+{
+    for (int i = 0; i < 4; ++i)
+    {
+        const uchar byte = static_cast<uchar>(value & 0xff);
+        updateHash(hash, &byte, 1);
+        value >>= 8;
+    }
+}
+
+static void updateFeatureHash(uint64 &hash, const ImageFeatures &features)
+{
+    const Mat descriptors = features.descriptors.getMat(ACCESS_READ);
+    updateHash(hash, static_cast<unsigned int>(features.img_size.width));
+    updateHash(hash, static_cast<unsigned int>(features.img_size.height));
+    updateHash(hash, static_cast<unsigned int>(descriptors.type()));
+    updateHash(hash, static_cast<unsigned int>(descriptors.rows));
+    updateHash(hash, static_cast<unsigned int>(descriptors.cols));
+    for (int row = 0; row < descriptors.rows; ++row)
+        updateHash(hash, descriptors.ptr(row), descriptors.cols * descriptors.elemSize());
+}
+
+static uint64 getDeterministicMatcherSeed(const ImageFeatures &features1, const ImageFeatures &features2)
+{
+    uint64 hash = 14695981039346656037ULL;
+    updateFeatureHash(hash, features1);
+    updateFeatureHash(hash, features2);
+    return hash;
+}
+
+class ScopedRNGSeed
+{
+public:
+    ScopedRNGSeed(uint64 seed, bool enabled) : rng_(theRNG()), state_(rng_.state), enabled_(enabled)
+    {
+        if (enabled_)
+            rng_ = RNG(static_cast<uint64>(seed));
+    }
+
+    ~ScopedRNGSeed()
+    {
+        if (enabled_)
+            rng_.state = state_;
+    }
+
+private:
+    RNG &rng_;
+    uint64 state_;
+    bool enabled_;
+};
+
 // These two classes are aimed to find features matches only, not to
 // estimate homography
 
@@ -154,6 +214,12 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
     CV_Assert(features2.descriptors.depth() == CV_8U || features2.descriptors.depth() == CV_32F);
 
     matches_info.matches.clear();
+
+    const bool usesFlannRng = features2.descriptors.depth() == CV_8U ||
+                              features2.descriptors.depth() == CV_32F;
+    // OPENCV_FLANN_USE_STD_RAND uses a separate process-global RNG.
+    ScopedRNGSeed rngSeed(usesFlannRng ? getDeterministicMatcherSeed(features1, features2) : 0,
+                          usesFlannRng);
 
     Ptr<cv::DescriptorMatcher> matcher;
 #if 0 // TODO check this
