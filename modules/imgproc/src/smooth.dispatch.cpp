@@ -547,12 +547,6 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
             ksize.width = 1;
     }
 
-    if( ksize.width == 1 && ksize.height == 1 )
-    {
-        _src.copyTo(_dst);
-        return;
-    }
-
     if (sigma2 <= 0)
         sigma2 = sigma1;
 
@@ -569,6 +563,12 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
     CV_ACCEL_RUN(_src.isUMat(),
                  accel::run(&accel::ImgprocOps::gaussianBlur, "imgproc", _src, _dst, size, type,
                             getGaussianKernel(ksize.width, sigma1, CV_64F), getGaussianKernel(ksize.height, sigma2, CV_64F), borderType))
+
+    if( ksize.width == 1 && ksize.height == 1 )
+    {
+        _src.copyTo(_dst);
+        return;
+    }
 
     CV_OCL_RUN(useOpenCL && sdepth == CV_8U &&
             ((ksize.width == 3 && ksize.height == 3) ||
