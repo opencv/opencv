@@ -54,6 +54,12 @@ inline void GetMaxScoreIndex(const std::vector<float>& scores, const float thres
     }
 }
 
+template <typename T>
+static inline float rectOverlap(const T& a, const T& b)
+{
+    return 1.f - static_cast<float>(jaccardDistance(a, b));
+}
+
 // Do non maximum suppression given bboxes and scores.
 // Inspired by Piotr Dollar's NMS implementation in EdgeBox.
 // https://goo.gl/jV3JYS

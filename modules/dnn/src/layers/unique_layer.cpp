@@ -16,6 +16,9 @@
 namespace cv {
 namespace dnn {
 
+// elements per parallel_for_ stripe
+static const double PARALLEL_GRANULARITY = 65536;
+
 class UniqueLayerImpl CV_FINAL : public UniqueLayer
 {
 public:
@@ -279,7 +282,7 @@ private:
                         }
                     }
                 }
-            });
+            }, (double)order.size() * sliceElems / PARALLEL_GRANULARITY);
         }
 
         if (outs.size() > 1) {

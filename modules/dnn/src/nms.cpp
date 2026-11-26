@@ -14,12 +14,6 @@
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
-template <typename T>
-static inline float rectOverlap(const T& a, const T& b)
-{
-    return 1.f - static_cast<float>(jaccardDistance(a, b));
-}
-
 void NMSBoxes(const std::vector<Rect>& bboxes, const std::vector<float>& scores,
                           const float score_threshold, const float nms_threshold,
                           std::vector<int>& indices, const float eta, const int top_k)
