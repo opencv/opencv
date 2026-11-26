@@ -1964,54 +1964,54 @@ TEST(Layer_Test_ReduceMean, accuracy_input_0)
     }
 }
 
-TEST(Layer_Test_Reduce, all_axes_listed_explicitly)
+typedef testing::TestWithParam<tuple<std::vector<int>, std::string, bool, bool> >
+    Layer_Test_Reduce_all_axes;
+
+TEST_P(Layer_Test_Reduce_all_axes, all_axes_listed_explicitly)
 {
     // Listing every axis must give the same result as reducing the whole tensor.
-    const std::vector<int> shapes[] = { {3, 4}, {2, 3, 4} };
-    for (const std::vector<int>& szData : shapes)
+    const std::vector<int> szData = get<0>(GetParam());
+    const std::string op = get<1>(GetParam());
+    const int keepdims = get<2>(GetParam());
+    const int noop = get<3>(GetParam());  // noop_with_empty_axes must not apply: axes are given
+
+    const int rank = (int)szData.size();
+    Mat input(szData, CV_32FC1);
+    for (size_t i = 0; i < input.total(); i++)
+        input.ptr<float>()[i] = (float)i + 1.f;
+    const float expected = op == "MEAN" ? (float)(input.total() + 1) / 2.f : (float)input.total();
+
+    std::vector<int> axes;
+    for (int i = 0; i < rank; i++)
+        axes.push_back(i - rank);  // negative axes, in descending significance
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Reduce";
+    lp.name = "testReduceAllAxes";
+    lp.set("reduce", op);
+    lp.set("keepdims", keepdims);
+    lp.set("noop_with_empty_axes", noop);
+    lp.set("axes", DictValue::arrayInt(axes.data(), (int)axes.size()));
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInput(input);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+
+    Mat output = net.forward();
+    ASSERT_EQ(1u, output.total());
+    EXPECT_NEAR(expected, output.ptr<float>()[0], 1e-5);
+    if (keepdims)
     {
-        const int rank = (int)szData.size();
-        Mat input(szData, CV_32FC1);
-        for (size_t i = 0; i < input.total(); i++)
-            input.ptr<float>()[i] = (float)i + 1.f;
-        const float expected[2] = { (float)(input.total() + 1) / 2.f, (float)input.total() };
-        const char* const ops[2] = { "MEAN", "MAX" };
-
-        for (int op = 0; op < 2; op++)
-        {
-            for (int variant = 0; variant < 4; variant++)
-            {
-                const int keepdims = variant & 1;
-                const int noop = variant >> 1;  // noop_with_empty_axes must not apply: axes are given
-                std::vector<int> axes;
-                for (int i = 0; i < rank; i++)
-                    axes.push_back(i - rank);  // negative axes, in descending significance
-
-                Net net;
-                LayerParams lp;
-                lp.type = "Reduce";
-                lp.name = "testReduceAllAxes";
-                lp.set("reduce", ops[op]);
-                lp.set("keepdims", keepdims);
-                lp.set("noop_with_empty_axes", noop);
-                lp.set("axes", DictValue::arrayInt(axes.data(), (int)axes.size()));
-                net.addLayerToPrev(lp.name, lp.type, lp);
-                net.setInput(input);
-                net.setPreferableBackend(DNN_BACKEND_OPENCV);
-
-                Mat output = net.forward();
-                ASSERT_EQ(1u, output.total()) << ops[op] << " keepdims=" << keepdims
-                                              << " noop=" << noop;
-                EXPECT_NEAR(expected[op], output.ptr<float>()[0], 1e-5) << ops[op] << " noop=" << noop;
-                if (keepdims)
-                {
-                    EXPECT_EQ(MatShape(std::vector<int>(rank, 1)), shape(output));
-                }
-            }
-        }
+        EXPECT_EQ(MatShape(std::vector<int>(rank, 1)), shape(output));
     }
 }
 
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Reduce_all_axes, Combine(
+    Values(std::vector<int>{3, 4}, std::vector<int>{2, 3, 4}),
+    Values("MEAN", "MAX"),
+    testing::Bool(),
+    testing::Bool()
+));
 
 TEST(Layer_Test_Reduce, singleton_axes_apply_the_operation)
 {
