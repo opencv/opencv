@@ -276,22 +276,6 @@ void blobFromImagesNCHW(const std::vector<UMat>& images, UMat& blob_, const Imag
     CV_Error(Error::StsNotImplemented, "blobFromImagesNCHW is not implemented for UMat inputs");
 }
 
-// Converts the image to the blob depth and applies (image - mean) * scalefactor.
-// The image may share data with the caller's input, so the first operation writes to a new buffer.
-template<class Tmat>
-static void normalizeImage(Tmat& image, int ddepth, const Scalar& mean, const Scalar& scalefactor)
-{
-    Tmat dst;
-    if (image.depth() == CV_8U && ddepth == CV_32F)
-        image.convertTo(dst, CV_32F);
-    if (mean != Scalar())
-        subtract(dst.empty() ? image : dst, mean, dst);
-    if (scalefactor != Scalar::all(1.0))
-        multiply(dst.empty() ? image : dst, scalefactor, dst);
-    if (!dst.empty())
-        image = dst;
-}
-
 // How an image of the batch is mapped to its image in the blob: the image is resized to `rsize` as
 // resize(image, resized, Size(), inv_scale_x, inv_scale_y) does, and the resized image is placed at `offset` in the blob
 // image. A negative offset crops the resized image (DNN_PMODE_CROP_CENTER), the blob pixels it doesn't cover are padded
@@ -473,7 +457,12 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
             for (size_t i = 0; i < nimages; i++)
             {
                 Tmat& image = images[i];
-                normalizeImage(image, param.ddepth, mean, scalefactor);
+                if (image.depth() == CV_8U && param.ddepth == CV_32F)
+                    image.convertTo(image, CV_32F);
+                if (mean != Scalar())
+                    subtract(image, mean, image);
+                if (scalefactor != Scalar::all(1.0))
+                    multiply(image, scalefactor, image);
 
                 CV_Assert(image.depth() == blob_.depth());
                 nch = image.channels();
@@ -500,7 +489,12 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
             for (size_t i = 0; i < nimages; i++)
             {
                 Tmat& image = images[i];
-                normalizeImage(image, param.ddepth, mean, scalefactor);
+                if (image.depth() == CV_8U && param.ddepth == CV_32F)
+                    image.convertTo(image, CV_32F);
+                if (mean != Scalar())
+                    subtract(image, mean, image);
+                if (scalefactor != Scalar::all(1.0))
+                    multiply(image, scalefactor, image);
 
                 CV_Assert(image.depth() == blob_.depth());
                 nch = image.channels();
@@ -521,7 +515,12 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
         for (size_t i = 0; i < nimages; i++)
         {
             Tmat& image = images[i];
-            normalizeImage(image, param.ddepth, mean, scalefactor);
+            if (image.depth() == CV_8U && param.ddepth == CV_32F)
+                image.convertTo(image, CV_32F);
+            if (mean != Scalar())
+                subtract(image, mean, image);
+            if (scalefactor != Scalar::all(1.0))
+                multiply(image, scalefactor, image);
 
             CV_Assert(image.depth() == blob_.depth());
             CV_Assert(image.channels() == image0.channels());
@@ -529,7 +528,7 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
             if (nch > 2 && param.swapRB)
             {
                 Mat tmpRB;
-                cvtColor(image, tmpRB, nch == 4 ? COLOR_BGRA2RGBA : COLOR_BGR2RGB);
+                cvtColor(image, tmpRB, COLOR_BGR2RGB);
                 tmpRB.copyTo(Mat(tmpRB.rows, tmpRB.cols, subMatType, blob.ptr((int)i, 0)));
             }
             else
