@@ -251,7 +251,10 @@ void fastGemmBatch(size_t batch,
 
 bool fastGemmThinEligible(int M, int N, int K);
 size_t fastGemmThinPackBSize(int N, int K);
-void fastGemmThinPackB(int N, int K, const float* B, size_t ldb_K, size_t ldb_N, float* packed_B);
+void fastGemmThinPackB(int N, int K, const float* B, size_t ldb_K, size_t ldb_N, float* packed_B,
+                       int k0, int k1);
+// Same, but walks B in row bands so a mapped source is released as it is read.
+void fastGemmThinPackB(const Mat& B, int N, int K, size_t ldb_K, size_t ldb_N, float* packed_B);
 void fastGemmThin(int M, int N, int K, float alpha,
                   const float* A, int lda0, int lda1,
                   const float* packed_B, float beta,

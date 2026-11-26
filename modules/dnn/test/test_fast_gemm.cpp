@@ -66,10 +66,44 @@ TEST_P(DNN_FastGemmThin, MatMulAccuracy)
         << ", trans_a=" << trans_a << ", alpha=" << alpha;
 }
 
+typedef testing::TestWithParam<tuple<int, int>> DNN_FastGemmPackB;
+
+TEST_P(DNN_FastGemmPackB, BandedPackMatMul)
+{
+    const int K = get<0>(GetParam()), N = get<1>(GetParam()), M = 16;
+
+    RNG rng(0x5EED);
+    Mat B(K, N, CV_32F);  rng.fill(B, RNG::UNIFORM, -1.f, 1.f);
+    Mat A(M, K, CV_32F);  rng.fill(A, RNG::UNIFORM, -1.f, 1.f);
+
+    LayerParams lp;
+    lp.type = "MatMul";
+    lp.name = "banded_matmul";
+    lp.set("transA", false);
+    lp.set("transB", false);
+    lp.set("alpha", 1.f);
+    lp.blobs.push_back(B);
+
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInputsNames(std::vector<String>{ "A" });
+    net.setInput(A, "A");
+    Mat actual = net.forward();
+    Mat expected = referenceMatMul(A, B, false, 1.f);
+
+    EXPECT_LE(cv::norm(expected, actual, NORM_INF), 2e-5f * std::max(K, 1))
+        << "K=" << K << ", N=" << N;
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, DNN_FastGemmPackB, Combine(
+    Values(127, 128, 129, 256, 300, 512),
+    Values(7, 16, 71, 72, 320, 321)
+));
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/, DNN_FastGemmThin, Combine(
     Values(1, 2, 3, 4, 5),
     Values(16, 19, 64, 67, 80, 83),
-    Values(1, 3, 4, 7, 16, 64),
+    Values(1, 3, 4, 7, 16, 64, 128),
     Values(0, 1),
     Values(1.f, -0.5f)
 ));

@@ -1773,16 +1773,11 @@ void ONNXImporter2::parseGemm(LayerParams& layerParams, const opencv_onnx::NodeP
     CV_Assert(2 <= n_inputs && n_inputs <= 3);
 
     if (net.isConstArg(node_inputs[1]) && (n_inputs == 2 || net.isConstArg(node_inputs[2]))) {
-        Mat B = net.argTensor(node_inputs[1]);
-        layerParams.blobs.push_back(B);
-        layerParams.set("constB", true);  // weight folded into blobs[0] (enables CUDA InnerProduct)
+        layerParams.set("constB", true);
         if (n_inputs > 2) {
-            Mat bias = net.argTensor(node_inputs[2]);
-            layerParams.blobs.push_back(bias);
             layerParams.set("have_bias", true);
             layerParams.set("constC", true);
         }
-        n_inputs = 1;
     }
 
     addLayer(layerParams, node_proto, n_inputs);
@@ -1792,15 +1787,6 @@ void ONNXImporter2::parseMatMul(LayerParams& layerParams, const opencv_onnx::Nod
     int n_inputs = node_proto.input_size();
     CV_Assert(2 <= n_inputs && n_inputs <= 3);
 
-    if (net.isConstArg(node_inputs[1]) && (n_inputs == 2 || net.isConstArg(node_inputs[2]))) {
-        Mat B = net.argTensor(node_inputs[1]);
-        layerParams.blobs.push_back(B);
-        if (n_inputs > 2) {
-            Mat bias = net.argTensor(node_inputs[2]);
-            layerParams.blobs.push_back(bias);
-        }
-        n_inputs = 1;
-    }
     addLayer(layerParams, node_proto, n_inputs);
 }
 
@@ -3137,8 +3123,6 @@ void ONNXImporter2::parseAttention(LayerParams& params, const opencv_onnx::NodeP
 
     const bool has_bias = n_inputs >= 3 && !node_proto.input(2).empty();
     const bool has_mask = n_inputs >= 4 && !node_proto.input(3).empty();
-    const bool const_weight = net.isConstArg(node_inputs[1]);
-    const bool const_bias = !has_bias || net.isConstArg(node_inputs[2]);
 
     // mask_index is an int32 0/1 key padding mask, not an additive bias: lower it the same way
     // parseMultiHeadAttention does. addKeyPaddingMaskBias() calls addLayer(), which overwrites
@@ -3153,24 +3137,23 @@ void ONNXImporter2::parseAttention(LayerParams& params, const opencv_onnx::NodeP
         node_inputs[3] = mask;
     }
 
-    if (const_weight && const_bias) {
-        Mat W = net.argTensor(node_inputs[1]);
+    if (net.isConstArg(node_inputs[1])) {
+        const Mat W = net.argTensor(node_inputs[1]);
         CV_CheckEQ(W.dims, 2, "ONNXImporter2/parseAttention: weights must be 2D");
-        Mat B = has_bias ? net.argTensor(node_inputs[2])
-                         : Mat(std::vector<int>{W.size[1]}, W.type(), Scalar::all(0));
-        params.blobs.push_back(W);
-        params.blobs.push_back(B);
-        if (has_mask) {
-            node_inputs = {node_inputs[0], node_inputs[3]};
-            n_inputs = 2;
-        } else {
-            node_inputs = {node_inputs[0]};
-            n_inputs = 1;
+        // The layer needs a bias operand, and constArgs() takes the weight and bias from the
+        // operand list, so an omitted one becomes a zero constant there rather than a blob.
+        if (!has_bias) {
+            if (node_inputs.size() < 3)
+                node_inputs.resize(3);
+            node_inputs[2] = netimpl->newConstArg(
+                params.name + "/bias",
+                Mat(std::vector<int>{W.size[1]}, W.type(), Scalar::all(0)));
         }
     } else {
-        CV_CheckTrue(has_bias, "ONNXImporter2/parseAttention: dynamic weights require an explicit bias input");
-        n_inputs = has_mask ? 4 : 3;
+        CV_CheckTrue(has_bias,
+                     "ONNXImporter2/parseAttention: dynamic weights require an explicit bias input");
     }
+    n_inputs = has_mask ? 4 : 3;
 
     addLayer(params, node_proto, n_inputs);
 }
@@ -3874,6 +3857,32 @@ Net readNetFromONNX2(const std::vector<uchar>& buffer)
     return importer.parseBuffer(buffer.data(), buffer.size());
 }
 
+Mat readOnnxInitializer(const String& onnxFile, const String& tensorName)
+{
+    if (onnxFile.empty() || tensorName.empty())
+        return Mat();
+
+    std::fstream input(onnxFile.c_str(), std::ios::in | std::ios::binary);
+    if (!input)
+        return Mat();
+
+    // Nothing of the model survives loading, so this re-parses it in full: with inline
+    // initializers that costs the model's size. Introspection only, never from forward().
+    opencv_onnx::ModelProto model;
+    if (!model.ParseFromIstream(&input))
+        return Mat();
+
+    ExternalDataCache cache;
+    const opencv_onnx::GraphProto& graph = model.graph();
+    for (int i = 0; i < graph.initializer_size(); i++)
+    {
+        const opencv_onnx::TensorProto& tensor_proto = graph.initializer(i);
+        if (tensor_proto.name() == tensorName)
+            return getMatFromTensor2(tensor_proto, utils::fs::getParent(onnxFile), &cache);
+    }
+    return Mat();  // not a top-level initializer: a subgraph's, or produced by a node
+}
+
 #else  // HAVE_PROTOBUF
 
 #define DNN_PROTOBUF_UNSUPPORTED() CV_Error(Error::StsError, "DNN/ONNX: Build OpenCV with Protobuf to import ONNX models")
@@ -3888,6 +3897,10 @@ Net readNetFromONNX2(const char*, size_t) {
 
 Net readNetFromONNX2(const std::vector<uchar>&) {
     DNN_PROTOBUF_UNSUPPORTED();
+}
+
+Mat readOnnxInitializer(const String&, const String&) {
+    return Mat();
 }
 
 #endif  // HAVE_PROTOBUF

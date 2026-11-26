@@ -69,6 +69,13 @@ MappedFile::~MappedFile()
         munmap(viewBase, viewLength);
 }
 
+bool MappedFile::discardRange(uchar* base, size_t length)
+{
+    // Writes made through the mapping are discarded with the pages, hence the contract on
+    // releaseMappedPages(). MADV_FREE is not an option: it is rejected on file-backed maps.
+    return madvise(base, length, MADV_DONTNEED) == 0;
+}
+
 CV__DNN_INLINE_NS_END
 }}
 
