@@ -1387,18 +1387,20 @@ static void fast_gemm_thin_neon_block(int K, const float* A, int lda, const floa
     }
 
     const float32x4_t va = vdupq_n_f32(alpha), vb = vdupq_n_f32(beta);
-    for (int r = 0; r < MR; r++) {
-        float* cr = c + r * ldc;
-        if (cols == NV * 4) {
-            for (int v = 0; v < NV; v++) {
-                float32x4_t res = vmulq_f32(acc[r][v], va);
-                if (beta == 1.f)
-                    res = vfmaq_f32(vld1q_f32(cr + v * 4), acc[r][v], va);
-                else if (beta != 0.f)
-                    res = vfmaq_f32(vmulq_f32(vld1q_f32(cr + v * 4), vb), acc[r][v], va);
-                vst1q_f32(cr + v * 4, res);
-            }
-        } else {
+    if (cols == NV * 4) {
+        for (int i = 0; i < MR * NV; i++) {
+            const int r = i / NV, v = i % NV;
+            float* cv = c + r * ldc + v * 4;
+            float32x4_t res = vmulq_f32(acc[r][v], va);
+            if (beta == 1.f)
+                res = vfmaq_f32(vld1q_f32(cv), acc[r][v], va);
+            else if (beta != 0.f)
+                res = vfmaq_f32(vmulq_f32(vld1q_f32(cv), vb), acc[r][v], va);
+            vst1q_f32(cv, res);
+        }
+    } else {
+        for (int r = 0; r < MR; r++) {
+            float* cr = c + r * ldc;
             float t[NV * 4];
             for (int v = 0; v < NV; v++)
                 vst1q_f32(t + v * 4, acc[r][v]);
@@ -1494,15 +1496,15 @@ void fastGemmThinKernel(int M, int N, int K, float alpha, const float* A, int ld
 
     auto fn = [&](const Range& r) {
         for (int t = r.start; t < r.end; t++) {
-            const int blk_end = std::min(n_blocks, (t + 1) * blocks_per_task);
-            for (int blk = t * blocks_per_task; blk < blk_end; blk++) {
-                const int j = blk * W, cols = std::min(W, N - j);
-                if (packed)
+            const int blk0 = t * blocks_per_task, blk1 = std::min(n_blocks, blk0 + blocks_per_task);
+            if (packed) {
+                for (int blk = blk0; blk < blk1; blk++)
                     fast_gemm_thin_neon_cols(M, max_rows, W, K, A, lda0, B + (size_t)blk * W * K, W,
-                                             alpha, beta, C + j, ldc, cols);
-                else
-                    fast_gemm_thin_neon_rowmajor(M, max_rows, W, K, A, lda0, B + j, ldb,
-                                                 alpha, beta, C + j, ldc, cols);
+                                             alpha, beta, C + blk * W, ldc, std::min(W, N - blk * W));
+            } else {
+                const int j0 = blk0 * W;
+                fast_gemm_thin_neon_rowmajor(M, max_rows, W, K, A, lda0, B + j0, ldb,
+                                             alpha, beta, C + j0, ldc, std::min(blk1 * W, N) - j0);
             }
         }
     };
