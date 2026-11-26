@@ -545,18 +545,30 @@ TEST_P(Imgproc_FindContours_Modes2, binarization_equivalence)
 
     // A non-contiguous ROI view (offset within a larger Mat) must match the equivalent
     // standalone image exactly -- the padded buffer is built from the image's own pixel
-    // data, not from whatever happens to sit around it in the parent Mat.
-    Mat big0255 = Mat::zeros(sz.height + 40, sz.width + 40, CV_8UC1);
+    // data, not from whatever happens to sit around it in the parent Mat. The surrounding
+    // area is filled with a non-zero value (not left at zero): if the implementation ever
+    // read past the ROI bounds instead of synthesizing its own zero border, that would
+    // otherwise be indistinguishable from the correct result, since zero leaking into zero
+    // padding looks the same either way. Both the hierarchy path and the no-hierarchy
+    // overload are exercised on the ROI, since for RETR_LIST the latter dispatches to the
+    // separate TRUCO fast path (contours_truco.cpp), which builds its own padded buffer too.
+    Mat big0255(sz.height + 40, sz.width + 40, CV_8UC1, Scalar::all(90));
     img0255.copyTo(big0255(Rect(20, 20, sz.width, sz.height)));
     Mat roi0255 = big0255(Rect(20, 20, sz.width, sz.height));
 
-    vector<vector<Point>> cRoi;
+    vector<vector<Point>> cRoi, cNoHierRoi;
     vector<Vec4i> hRoi;
     findContours(roi0255, cRoi, hRoi, mode, method);
+    findContours(roi0255, cNoHierRoi, mode, method);
+
     ASSERT_EQ(cRef.size(), cRoi.size());
     for (size_t i = 0; i < cRef.size(); i++)
         EXPECT_EQ(cRef[i], cRoi[i]);
     EXPECT_EQ(hRef, hRoi);
+
+    ASSERT_EQ(cNoHier255.size(), cNoHierRoi.size());
+    for (size_t i = 0; i < cNoHier255.size(); i++)
+        EXPECT_EQ(cNoHier255[i], cNoHierRoi[i]);
 }
 
 }}  // namespace opencv_test
