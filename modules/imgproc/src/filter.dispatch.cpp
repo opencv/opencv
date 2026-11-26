@@ -1014,7 +1014,7 @@ bool ocl_sepFilter2D(
             kernelY.cols <= 21 && kernelX.cols <= 21 &&
             imgSize.width > optimizedSepFilterLocalWidth + anchor.x &&
             imgSize.height > optimizedSepFilterLocalHeight + anchor.y &&
-            (!(borderType & BORDER_ISOLATED) || _src.offset() == 0) &&
+            (!(borderType & BORDER_ISOLATED) || !_src.isSubmatrix()) &&
             anchor == Point(kernelX.cols >> 1, kernelY.cols >> 1),
             ocl_sepFilter2D_SinglePass(
                     _src, _dst, kernelX, kernelY, delta,
@@ -1086,7 +1086,7 @@ bool ocl_sepFilter2D_BitExact(
             kernelY.cols <= 21 && kernelX.cols <= 21 &&
             imgSize.width > optimizedSepFilterLocalWidth + anchor.x &&
             imgSize.height > optimizedSepFilterLocalHeight + anchor.y &&
-            (!(borderType & BORDER_ISOLATED) || _src.offset() == 0) &&
+            (!(borderType & BORDER_ISOLATED) || !_src.isSubmatrix()) &&
             anchor == Point(kernelX.cols >> 1, kernelY.cols >> 1),
             ocl_sepFilter2D_SinglePass(
                     _src, _dst, kernelX, kernelY, delta,

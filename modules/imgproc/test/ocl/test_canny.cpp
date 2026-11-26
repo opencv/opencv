@@ -118,13 +118,29 @@ OCL_TEST_P(Canny, AccuracyCustomGradient)
     OCL_OFF(cv::Canny(src_roi, dst_roi, low_thresh, high_thresh, aperture_size, useL2gradient));
     OCL_ON(
         UMat dx, dy;
-        Sobel(usrc_roi, dx, CV_16S, 1, 0, aperture_size, 1, 0, BORDER_REPLICATE);
-        Sobel(usrc_roi, dy, CV_16S, 0, 1, aperture_size, 1, 0, BORDER_REPLICATE);
+        const int borderType = BORDER_REPLICATE | BORDER_ISOLATED;
+        Sobel(usrc_roi, dx, CV_16S, 1, 0, aperture_size, 1, 0, borderType);
+        Sobel(usrc_roi, dy, CV_16S, 0, 1, aperture_size, 1, 0, borderType);
         cv::Canny(dx, dy, udst_roi, low_thresh, high_thresh, useL2gradient);
     );
 
     EXPECT_MAT_SIMILAR(dst_roi, udst_roi, eps);
     EXPECT_MAT_SIMILAR(dst, udst, eps);
+}
+
+OCL_TEST(Canny, IsolatedRoi)
+{
+    for (const Point& origin : {Point(0, 0), Point(12, 9)})
+    {
+        SCOPED_TRACE(origin);
+        UMat src(97, 133, CV_8UC1, Scalar::all(255));
+        UMat roi = src(Rect(origin, Size(90, 72)));
+        roi.setTo(Scalar::all(20));
+
+        UMat edges;
+        cv::Canny(roi, edges, 50, 100);
+        EXPECT_EQ(0, cv::countNonZero(edges));
+    }
 }
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgProc, Canny, testing::Combine(
