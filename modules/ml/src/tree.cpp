@@ -57,7 +57,7 @@ TreeParams::TreeParams()
     regressionAccuracy = 0.01f;
     useSurrogates = false;
     maxCategories = 10;
-    CVFolds = 10;
+    CVFolds = 0;
     use1SERule = true;
     truncatePrunedTree = true;
     priors = Mat();
@@ -242,7 +242,10 @@ const vector<int>& DTreesImpl::getActiveVars()
 
 int DTreesImpl::addTree(const vector<int>& sidx )
 {
-    size_t n = (params.getMaxDepth() > 0 ? (1 << params.getMaxDepth()) : 1024) + w->wnodes.size();
+    const int maxDepth = params.getMaxDepth();
+    // The default depth is unlimited (INT_MAX), so use a fixed initial reserve.
+    const size_t initialReserve = maxDepth > 0 && maxDepth <= 25 ? size_t(1) << maxDepth : 1024;
+    const size_t n = initialReserve + w->wnodes.size();
 
     w->wnodes.reserve(n);
     w->wsplits.reserve(n);
