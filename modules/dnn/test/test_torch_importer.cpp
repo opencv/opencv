@@ -43,6 +43,8 @@
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS
+#include <cstdio>
+#include <fstream>
 
 namespace opencv_test
 {
@@ -741,5 +743,351 @@ TEST_P(Test_Torch_layers, upsampling_nearest)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Torch_layers, dnnBackendsAndTargets());
+
+namespace torch_fixture {
+
+// Torch7 binary serialization: little-endian int32 for object tags and indices, int64 for
+// sizes, strides and offsets.
+static void putInt(std::string& out, int32_t v)
+{
+    for (int b = 0; b < 4; b++)
+        out.push_back((char)(((uint32_t)v >> (8 * b)) & 0xff));
+}
+
+static void putLong(std::string& out, int64_t v)
+{
+    for (int b = 0; b < 8; b++)
+        out.push_back((char)(((uint64_t)v >> (8 * b)) & 0xff));
+}
+
+static void putString(std::string& out, const std::string& text)
+{
+    putInt(out, (int32_t)text.size());
+    out += text;
+}
+
+enum { TYPE_STRING = 2, TYPE_TABLE = 3, TYPE_TORCH = 4 };
+
+static void putObject(std::string& out, int index, const std::string& className)
+{
+    putInt(out, TYPE_TORCH);
+    putInt(out, index);
+    putString(out, "V 1");
+    putString(out, className);
+}
+
+static void putTensorHeader(std::string& out, const std::vector<int64_t>& sizes,
+                            const std::vector<int64_t>& strides, int64_t offset1)
+{
+    putInt(out, (int32_t)sizes.size());
+    for (size_t i = 0; i < sizes.size(); i++)
+        putLong(out, sizes[i]);
+    for (size_t i = 0; i < strides.size(); i++)
+        putLong(out, strides[i]);
+    putLong(out, offset1);
+}
+
+// Element i of every storage holds the value sampleValue(i) (or i for a plain float tensor).
+static float sampleValue(int i) { return 0.25f * (float)((i % 7) + 1); }
+
+static void putFloatBits(std::string& out, float v)
+{
+    uint32_t bits;
+    std::memcpy(&bits, &v, sizeof(bits));
+    putInt(out, (int32_t)bits);
+}
+
+static void putDoubleBits(std::string& out, double v)
+{
+    uint64_t bits;
+    std::memcpy(&bits, &v, sizeof(bits));
+    putLong(out, (int64_t)bits);
+}
+
+// A torch.FloatTensor whose FloatStorage holds 0, 1, ..., storageElems - 1.
+static std::string floatTensor(const std::vector<int64_t>& sizes, const std::vector<int64_t>& strides,
+                               int64_t offset1, int storageElems)
+{
+    std::string out;
+    putObject(out, 1, "torch.FloatTensor");
+    putTensorHeader(out, sizes, strides, offset1);
+    putObject(out, 2, "torch.FloatStorage");
+    putLong(out, storageElems);
+    for (int i = 0; i < storageElems; i++)
+        putFloatBits(out, (float)i);
+    return out;
+}
+
+// A torch.FloatTensor whose ndims field is written directly and followed by nothing else.
+static std::string tensorWithRawNdims(int32_t ndims)
+{
+    std::string out;
+    putObject(out, 1, "torch.FloatTensor");
+    putInt(out, ndims);
+    return out;
+}
+
+enum StorageKind { BYTE_STORAGE, FLOAT_STORAGE, DOUBLE_STORAGE, LONG_STORAGE };
+
+static std::string tensorClass(StorageKind k)
+{
+    static const char* names[] = {"torch.ByteTensor", "torch.FloatTensor", "torch.DoubleTensor", "torch.LongTensor"};
+    return names[k];
+}
+
+static std::string storageClass(StorageKind k)
+{
+    static const char* names[] = {"torch.ByteStorage", "torch.FloatStorage", "torch.DoubleStorage", "torch.LongStorage"};
+    return names[k];
+}
+
+// nn.Linear whose bias (offset 1) and weight (`weightOffset1`) tensors share one storage. The
+// bias tensor owns the storage (object 4); the weight tensor refers back to object
+// `weightStorageIndex`, which is the storage unless the fixture deliberately points elsewhere.
+static std::string linearSharedStorage(StorageKind biasKind, StorageKind weightKind, StorageKind storageKind,
+                                       int count, int storageElems, int64_t weightOffset1,
+                                       bool constantValues, int weightStorageIndex = 4)
+{
+    std::string out;
+    putObject(out, 1, "nn.Linear");
+    putInt(out, TYPE_TABLE);
+    putInt(out, 2);
+    putInt(out, 2);
+
+    putInt(out, TYPE_STRING);
+    putString(out, "bias");
+    putObject(out, 3, tensorClass(biasKind));
+    putTensorHeader(out, {count}, {1}, 1);
+    putObject(out, 4, storageClass(storageKind));
+    putLong(out, storageElems);
+    for (int i = 0; i < storageElems; i++)
+    {
+        const int v = constantValues ? 1 : (i % 7) + 1;
+        switch (storageKind)
+        {
+        case BYTE_STORAGE: out.push_back((char)v); break;
+        case FLOAT_STORAGE: putFloatBits(out, sampleValue(i)); break;
+        case DOUBLE_STORAGE: putDoubleBits(out, (double)sampleValue(i)); break;
+        case LONG_STORAGE: putLong(out, v); break;
+        }
+    }
+
+    putInt(out, TYPE_STRING);
+    putString(out, "weight");
+    putObject(out, 5, tensorClass(weightKind));
+    putTensorHeader(out, {count, 1}, {1, 1}, weightOffset1);
+    putInt(out, TYPE_TORCH);
+    putInt(out, weightStorageIndex);
+    return out;
+}
+
+// Writes the serialized bytes to a temporary file for the duration of one call.
+struct TempFile
+{
+    std::string path;
+    explicit TempFile(const std::string& bytes) : path(cv::tempfile(".t7"))
+    {
+        std::ofstream f(path.c_str(), std::ios::binary);
+        f.write(bytes.data(), (std::streamsize)bytes.size());
+        f.close();
+    }
+    ~TempFile() { std::remove(path.c_str()); }
+};
+
+}  // namespace torch_fixture
+
+static void expectTorchBlobRejected(const std::string& bytes, const char* reason)
+{
+    SCOPED_TRACE(reason);
+    torch_fixture::TempFile file(bytes);
+    try
+    {
+        (void)readTorchBlob(file.path, true);
+        FAIL() << "Torch blob was accepted";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_NE(std::string(e.what()).find(reason), std::string::npos) << e.what();
+    }
+}
+
+static void expectTorchModelRejected(const std::string& bytes, const char* reason)
+{
+    SCOPED_TRACE(reason);
+    torch_fixture::TempFile file(bytes);
+    try
+    {
+        (void)readNetFromTorch(file.path);
+        FAIL() << "Torch model with an inconsistent tensor was accepted";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_NE(std::string(e.what()).find(reason), std::string::npos) << e.what();
+    }
+}
+
+// Reads a float tensor view and compares each logical element with the storage element it names.
+static void expectTorchView(const std::string& bytes, const std::vector<int>& sizes,
+                            const std::vector<int>& steps, int offset0)
+{
+    torch_fixture::TempFile file(bytes);
+    Mat blob;
+    ASSERT_NO_THROW(blob = readTorchBlob(file.path, true));
+    ASSERT_EQ(blob.dims, (int)sizes.size());
+    size_t total = 1;
+    for (size_t i = 0; i < sizes.size(); i++)
+    {
+        ASSERT_EQ(blob.size[(int)i], sizes[i]);
+        total *= (size_t)sizes[i];
+    }
+    ASSERT_EQ(blob.total(), total);
+    ASSERT_TRUE(blob.isContinuous());
+
+    std::vector<int> index(sizes.size(), 0);
+    for (size_t linear = 0; linear < total; linear++)
+    {
+        int at = offset0;
+        for (size_t d = 0; d < sizes.size(); d++)
+            at += index[d] * steps[d];
+        EXPECT_EQ(blob.ptr<float>()[linear], (float)at) << "element " << linear;
+        for (int d = (int)sizes.size() - 1; d >= 0; d--)
+        {
+            if (++index[d] < sizes[d])
+                break;
+            index[d] = 0;
+        }
+    }
+}
+
+TEST(Test_Torch, readTorchBlob_tensor_views_match_logical_elements)
+{
+    using namespace torch_fixture;
+    expectTorchView(floatTensor({1, 16}, {16, 1}, 1, 16), {1, 16}, {16, 1}, 0);
+    expectTorchView(floatTensor({2, 3, 4}, {12, 4, 1}, 1, 24), {2, 3, 4}, {12, 4, 1}, 0);
+    expectTorchView(floatTensor({2, 3, 4}, {12, 4, 1}, 6, 29), {2, 3, 4}, {12, 4, 1}, 5);
+    // sizes [2,3], strides [4,1] over an 8-element storage: element (i, j) is storage[4*i + j].
+    expectTorchView(floatTensor({2, 3}, {4, 1}, 1, 8), {2, 3}, {4, 1}, 0);
+    // a dimension of size 1 is never stepped over, so its stride is free
+    expectTorchView(floatTensor({1, 3, 1, 4}, {100, 4, 7, 1}, 3, 14), {1, 3, 1, 4}, {100, 4, 7, 1}, 2);
+    expectTorchView(floatTensor({3, 2}, {1, 3}, 1, 6), {3, 2}, {1, 3}, 0);
+    expectTorchView(floatTensor({2, 3, 4}, {1, 2, 6}, 2, 25), {2, 3, 4}, {1, 2, 6}, 1);
+    expectTorchView(floatTensor({2, 3}, {5, 1}, 4, 11), {2, 3}, {5, 1}, 3);
+    expectTorchView(floatTensor({4, 1, 3}, {1, 12, 4}, 1, 12), {4, 1, 3}, {1, 12, 4}, 0);
+    // sizes [2,2], strides [1,1] over a 3-element storage: both rows share storage[1]
+    expectTorchView(floatTensor({2, 2}, {1, 1}, 1, 3), {2, 2}, {1, 1}, 0);
+}
+
+TEST(Test_Torch, readTorchBlob_empty_tensor_offset_bound)
+{
+    using namespace torch_fixture;
+    // [0,2] at 1-based offset 5 over 4 floats: the offset equals the storage size, which is allowed
+    {
+        TempFile file(floatTensor({0, 2}, {2, 1}, 5, 4));
+        Mat blob;
+        ASSERT_NO_THROW(blob = readTorchBlob(file.path, true));
+        EXPECT_EQ(blob.total(), (size_t)0);
+    }
+    expectTorchBlobRejected(floatTensor({0, 2}, {2, 1}, 6, 4), "tensor storage offset out of bounds");
+}
+
+TEST(Test_Torch, readTorchBlob_rejects_invalid_tensor_metadata)
+{
+    using namespace torch_fixture;
+    expectTorchBlobRejected(tensorWithRawNdims(-1), "invalid tensor dimensionality");
+    expectTorchBlobRejected(tensorWithRawNdims(33), "invalid tensor dimensionality");
+    expectTorchBlobRejected(floatTensor({-1, 2}, {2, 1}, 1, 4), "invalid tensor dimension size");
+    expectTorchBlobRejected(floatTensor({(int64_t)1 << 31, 1}, {1, 1}, 1, 4), "invalid tensor dimension size");
+    expectTorchBlobRejected(floatTensor({4, 4}, {0, 1}, 1, 4), "non-positive tensor stride");
+    expectTorchBlobRejected(floatTensor({2, 2}, {-1, 1}, 3, 4), "non-positive tensor stride");
+    expectTorchBlobRejected(floatTensor({16, 1}, {(int64_t)3 << 60, 1}, 1, 8), "strided span overflow");
+    expectTorchBlobRejected(floatTensor({1, 64}, {1, 1}, 1, 16), "exceed backing storage size");
+    expectTorchBlobRejected(floatTensor({1, 8}, {7, 1}, 10, 16), "exceed backing storage size");
+}
+
+TEST(Test_Torch, readTorchBlob_validates_storage_offset_before_use)
+{
+    using namespace torch_fixture;
+    const int validOffsets[] = {1, 5, 9, 13};
+    for (size_t k = 0; k < sizeof(validOffsets) / sizeof(validOffsets[0]); k++)
+    {
+        SCOPED_TRACE(validOffsets[k]);
+        TempFile file(floatTensor({4}, {1}, validOffsets[k], 16));
+        Mat blob;
+        ASSERT_NO_THROW(blob = readTorchBlob(file.path, true));
+        ASSERT_EQ(blob.total(), (size_t)4);
+        for (int i = 0; i < 4; i++)
+            EXPECT_EQ(blob.ptr<float>()[i], (float)(validOffsets[k] - 1 + i));
+    }
+
+    const int64_t nonPositive[] = {0, -1, std::numeric_limits<int64_t>::min(),
+                                   std::numeric_limits<int64_t>::min() + 1};
+    for (size_t k = 0; k < sizeof(nonPositive) / sizeof(nonPositive[0]); k++)
+        expectTorchBlobRejected(floatTensor({4}, {1}, nonPositive[k], 16), "storage offset must be positive");
+
+    // 17 is one element past the storage; the next values have the low 32 bits of a valid offset
+    const int64_t beyondStorage[] = {17, 0x100000001LL, 0x100000005LL, 0x7FFFFFFFLL + 2,
+                                     std::numeric_limits<int64_t>::max()};
+    for (size_t k = 0; k < sizeof(beyondStorage) / sizeof(beyondStorage[0]); k++)
+        expectTorchBlobRejected(floatTensor({4}, {1}, beyondStorage[k], 16), "exceed backing storage size");
+}
+
+TEST(Test_Torch, tensor_reuses_storage_of_the_same_type)
+{
+    // Each nn.Linear has bias [32] at 1-based offset 1 and weight [32,1] at 1-based offset 33 sharing
+    // a single 64-element storage.
+    using namespace torch_fixture;
+    const int count = 32, total = 64;
+    const StorageKind kinds[] = {FLOAT_STORAGE, DOUBLE_STORAGE, LONG_STORAGE};
+    for (size_t k = 0; k < 3; k++)
+    {
+        SCOPED_TRACE((int)kinds[k]);
+        TempFile file(linearSharedStorage(kinds[k], kinds[k], kinds[k], count, total, count + 1, false));
+        Net net;
+        ASSERT_NO_THROW(net = readNetFromTorch(file.path));
+        net.setInput(Mat(1, 1, CV_32F, Scalar(2.0f)));
+        Mat out;
+        ASSERT_NO_THROW(out = net.forward());
+        ASSERT_EQ(out.total(), (size_t)count);
+        for (int i = 0; i < count; i++)
+        {
+            const float scale = kinds[k] == LONG_STORAGE ? 4.0f : 1.0f;  // integers 1..7 versus 0.25 * (1..7)
+            const float biasVal = scale * 0.25f * (float)((i % 7) + 1);
+            const float weightVal = scale * 0.25f * (float)(((count + i) % 7) + 1);
+            EXPECT_EQ(out.at<float>(i), 2.0f * weightVal + biasVal);
+        }
+    }
+}
+
+TEST(Test_Torch, tensor_type_must_match_reused_storage)
+{
+    using namespace torch_fixture;
+    const char* mismatch = "tensor type does not match the type of its storage";
+    const int n = 64;
+    expectTorchModelRejected(linearSharedStorage(BYTE_STORAGE, FLOAT_STORAGE, BYTE_STORAGE, n, n, 1, true), mismatch);
+    expectTorchModelRejected(linearSharedStorage(LONG_STORAGE, FLOAT_STORAGE, LONG_STORAGE, n, n, 1, true), mismatch);
+    expectTorchModelRejected(linearSharedStorage(FLOAT_STORAGE, LONG_STORAGE, FLOAT_STORAGE, n, n, 1, false), mismatch);
+    expectTorchModelRejected(linearSharedStorage(DOUBLE_STORAGE, LONG_STORAGE, DOUBLE_STORAGE, n, n, 1, false), mismatch);
+    expectTorchModelRejected(linearSharedStorage(LONG_STORAGE, DOUBLE_STORAGE, LONG_STORAGE, n, n, 1, true), mismatch);
+}
+
+// The first tensor reads a FloatStorage (4-byte elements); a second DoubleTensor then reuses that storage. Reading
+// it with 8-byte elements would copy twice the storage size, so the already-read path must compare the types too.
+TEST(Test_Torch, double_tensor_must_not_reuse_float_storage)
+{
+    using namespace torch_fixture;
+    const char* mismatch = "tensor type does not match the type of its storage";
+    const int n = 64;
+    expectTorchModelRejected(linearSharedStorage(FLOAT_STORAGE, DOUBLE_STORAGE, FLOAT_STORAGE, n, n, 1, false), mismatch);
+    expectTorchModelRejected(linearSharedStorage(DOUBLE_STORAGE, FLOAT_STORAGE, DOUBLE_STORAGE, n, n, 1, false), mismatch);
+}
+
+TEST(Test_Torch, tensor_storage_index_must_refer_to_a_storage)
+{
+    using namespace torch_fixture;
+    const int n = 64;
+    // the weight tensor names object 3, which is the bias tensor
+    expectTorchModelRejected(linearSharedStorage(FLOAT_STORAGE, FLOAT_STORAGE, FLOAT_STORAGE, n, n, 1, false, 3),
+                             "is not a storage");
+}
 
 }

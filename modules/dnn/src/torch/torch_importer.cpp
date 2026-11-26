@@ -117,6 +117,7 @@ struct TorchImporter
     cv::Ptr<THFile> file;
     std::set<int> readedIndexes;
     std::map<int, Mat> storages;
+    std::map<int, int> storageTypes;  // serialized Torch type of every storage; a LongStorage and a DoubleStorage are both held as a CV_64F Mat
     std::map<int, Mat> tensors;
     // Stack with numbers of unconnected layers per scope (Sequential, ConcatTable etc.)
     std::vector<int> numUnconnectedLayers;
@@ -160,7 +161,7 @@ struct TorchImporter
         return THFile_readIntScalar(file);
     }
 
-    inline long readLong()
+    inline int64 readLong()
     {
         return THFile_readLongScalar(file);
     }
@@ -254,7 +255,7 @@ struct TorchImporter
 
     void readTorchStorage(int index, int type = -1)
     {
-        long size = readLong();
+        int64 size = readLong();
         // size is read as a 64-bit value but Mat::create() takes int columns, so a
         // value above INT_MAX is truncated for the allocation while the THFile_read*Raw
         // calls below still consume the full 64-bit count, overflowing the buffer.
@@ -302,6 +303,7 @@ struct TorchImporter
             break;
         }
 
+        storageTypes.insert(std::make_pair(index, type));
         storages.insert(std::make_pair(index, storageMat));
     }
 
@@ -399,11 +401,16 @@ struct TorchImporter
     void readTorchTensor(int indexTensor, int typeTensor)
     {
         int ndims = readInt();
+        CV_Check(ndims, ndims >= 0 && ndims <= CV_MAX_DIM, "DNN/Torch: invalid tensor dimensionality");
         AutoBuffer<int64, 4> sizes(ndims);
         AutoBuffer<int64, 4> steps(ndims);
         THFile_readLongRaw(file, sizes.data(), ndims);
         THFile_readLongRaw(file, steps.data(), ndims);
-        long offset = readLong() - 1;
+        // The serialized offset is 1-based. Reject it before subtracting 1, which would overflow for INT64_MIN.
+        const int64 storageOffset = readLong();
+        if (storageOffset <= 0)
+            CV_Error(Error::StsOutOfRange, "DNN/Torch: storage offset must be positive");
+        const int64 offset = storageOffset - 1;
 
         //read Storage
         int typeidx = readInt();
@@ -425,24 +432,101 @@ struct TorchImporter
             typeTensor = storages[indexStorage].type();
             readedIndexes.insert(indexStorage);
         }
+        else
+        {
+            // The storage was read earlier, possibly through a tensor of another class. A LongStorage and
+            // a DoubleStorage are both held as a CV_64F Mat, so the serialized Torch type of the storage
+            // is preserved in storageTypes and compared with this tensor's serialized type.
+            std::map<int, int>::const_iterator storageTypeIt = storageTypes.find(indexStorage);
+            if (storageTypeIt == storageTypes.end())
+                CV_Error(Error::StsParseError, "DNN/Torch: tensor refers to an object that is not a storage");
+            if (storageTypeIt->second != typeTensor)
+                CV_Error(Error::StsBadArg, "DNN/Torch: tensor type does not match the type of its storage");
+            typeTensor = storages[indexStorage].type();  // the Mat type of the storage (a LongStorage gives CV_64F)
+        }
 
-        //small check
-        size_t requireElems = (size_t)offset + (size_t)steps[0] * (size_t)sizes[0];
         size_t storageElems = storages[indexStorage].total();
-        if (requireElems > storageElems)
-            CV_Error(Error::StsBadSize, "Storage has insufficient number of elements for requested Tensor");
 
         //convert sizes
         AutoBuffer<int, 4> isizes(ndims);
-        AutoBuffer<size_t, 4> ssteps(ndims);
+        const size_t elemSize = CV_ELEM_SIZE(typeTensor);
+        bool hasZeroDim = (ndims == 0);
         for (int i = ndims - 1; i >= 0; i--)
         {
+            if (sizes[i] < 0 || sizes[i] > (int64)std::numeric_limits<int>::max())
+                CV_Error(Error::StsOutOfRange, "DNN/Torch: invalid tensor dimension size");
+            if (steps[i] <= 0)
+                CV_Error(Error::StsOutOfRange, "DNN/Torch: non-positive tensor stride");
+            if (sizes[i] == 0)
+                hasZeroDim = true;
             isizes[i] = (int)sizes[i];
-            ssteps[i] = (size_t)steps[i] * CV_ELEM_SIZE(typeTensor);
         }
 
-        //allocate Blob
-        Mat srcMat(ndims, isizes.data(), typeTensor , storages[indexStorage].ptr() + offset*CV_ELEM_SIZE(typeTensor), ssteps.data());
+        // A tensor spans offset + sum_i (sizes[i]-1)*steps[i] elements of the storage.
+        const uint64_t storageTotal = (uint64_t)storageElems;
+        const uint64_t uoffset = (uint64_t)offset;
+        if (hasZeroDim)
+        {
+            if (uoffset > storageTotal)
+                CV_Error(Error::StsBadSize, "DNN/Torch: tensor storage offset out of bounds");
+        }
+        else
+        {
+            uint64_t maxElemIndex = uoffset;
+            for (int i = 0; i < ndims; ++i)
+            {
+                const uint64_t dimSpan = (uint64_t)(sizes[i] - 1);
+                const uint64_t stride = (uint64_t)steps[i];
+                if (dimSpan != 0 && stride > (std::numeric_limits<uint64_t>::max() - maxElemIndex) / dimSpan)
+                    CV_Error(Error::StsOutOfRange, "DNN/Torch: tensor strided span overflow");
+                maxElemIndex += dimSpan * stride;
+            }
+            if (maxElemIndex >= storageTotal)
+                CV_Error(Error::StsBadSize, "DNN/Torch: tensor shape and strides exceed backing storage size");
+        }
+
+        // cv::Mat always assumes a contiguous innermost dimension, so a Torch view can be wrapped only when it is
+        // row-major contiguous. A dimension of size 1 is never stepped over, so its stride is free.
+        bool isContiguous = !hasZeroDim;
+        uint64_t expectedStep = 1;
+        for (int i = ndims - 1; i >= 0 && isContiguous; --i)
+        {
+            if (sizes[i] == 1)
+                continue;
+            if ((uint64_t)steps[i] != expectedStep)
+                isContiguous = false;
+            else
+                expectedStep *= (uint64_t)sizes[i];
+        }
+
+        Mat srcMat;
+        const size_t byteOffset = (size_t)uoffset * elemSize;
+        if (isContiguous)
+        {
+            // Zero-copy header over the storage; convertTo() below makes the copy.
+            srcMat = Mat(ndims, isizes.data(), typeTensor, storages[indexStorage].data + byteOffset);
+        }
+        else
+        {
+            // Padded, overlapping or transposed views (and empty ones): gather every logical element explicitly.
+            srcMat.create(ndims, isizes.data(), typeTensor);
+            const uchar* storageData = storages[indexStorage].ptr();
+            uchar* srcData = srcMat.ptr();
+            for (size_t linearIndex = 0; linearIndex < srcMat.total(); ++linearIndex)
+            {
+                size_t remaining = linearIndex;
+                uint64_t storageIndex = uoffset;
+                for (int i = ndims - 1; i >= 0; --i)
+                {
+                    const size_t coordinate = remaining % (size_t)isizes[i];
+                    remaining /= (size_t)isizes[i];
+                    storageIndex += (uint64_t)coordinate * (uint64_t)steps[i];
+                }
+                std::memcpy(srcData + linearIndex * elemSize,
+                            storageData + (size_t)storageIndex * elemSize, elemSize);
+            }
+        }
+
         int dstType = CV_32F;
 
         Mat blob;

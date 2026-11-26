@@ -60,6 +60,7 @@ template <typename T>
 static T getScalarFromMat(Mat m)
 {
     CV_Assert(m.total() == 1);
+    CV_CheckTypeEQ(m.type(), cv::traits::Type<T>::value, "DNN/ONNX: scalar Mat type mismatch");
     return m.at<T>(0);
 }
 
@@ -3379,6 +3380,7 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
     }
 
     Mat scaleMat = getBlob(node_proto, 1);
+    CV_CheckTypeEQ(scaleMat.type(), CV_32F, "DNN/ONNX: scale tensor type must be CV_32F");
     if(scaleMat.total() > 1) is1D = true;
 
     Mat zpMat;
@@ -3497,6 +3499,7 @@ void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeP
     Mat weights = getBlob(node_proto, 3);
     int outCn = weights.size[0];
     Mat w_scale = getBlob(node_proto, 4);
+    CV_CheckTypeEQ(w_scale.type(), CV_32F, "DNN/ONNX: scale tensor type must be CV_32F");
     CV_Assert(w_scale.total() == 1 || w_scale.total() == outCn);
     bool per_channel = w_scale.total() == outCn;
     Mat wt_sc = (w_scale.total() == outCn) ? w_scale : Mat(1, outCn, CV_32F, Scalar(w_scale.at<float>(0)));
@@ -3546,6 +3549,7 @@ void ONNXImporter::parseQMatMul(LayerParams& layerParams, const opencv_onnx::Nod
     int secondInpDims = weights.dims;
 
     Mat w_scale = getBlob(node_proto, 4);
+    CV_CheckTypeEQ(w_scale.type(), CV_32F, "DNN/ONNX: scale tensor type must be CV_32F");
     CV_Assert(w_scale.total() == 1 || w_scale.total() == outCn);
     bool per_channel = w_scale.total() == outCn ? true : false;
     Mat wt_sc = (w_scale.total() == outCn) ? w_scale : Mat(1, outCn, CV_32F, Scalar(w_scale.at<float>(0)));
@@ -3607,6 +3611,7 @@ void ONNXImporter::parseQGemm(LayerParams& layerParams, const opencv_onnx::NodeP
     int secondInpDims = weights.dims;
 
     Mat w_scale = getBlob(node_proto, 4);
+    CV_CheckTypeEQ(w_scale.type(), CV_32F, "DNN/ONNX: scale tensor type must be CV_32F");
     CV_Assert(w_scale.total() == 1 || w_scale.total() == outCn);
     bool per_channel = w_scale.total() == outCn;
     Mat wt_sc = (w_scale.total() == outCn) ? w_scale : Mat(1, outCn, CV_32F, Scalar(w_scale.at<float>(0)));
