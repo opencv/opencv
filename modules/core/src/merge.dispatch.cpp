@@ -210,6 +210,9 @@ void merge(const Mat* mv, size_t n, OutputArray _dst)
 
 static bool ocl_merge( InputArrayOfArrays _mv, OutputArray _dst )
 {
+    if (cv::oclHasForeignBuffer(_mv) || cv::oclHasForeignBuffer(_dst))
+        return false;
+
     std::vector<UMat> src, ksrc;
     _mv.getUMatVector(src);
     CV_Assert(!src.empty());
@@ -275,6 +278,9 @@ void merge(InputArrayOfArrays _mv, OutputArray _dst)
     CV_OCL_RUN(_mv.isUMatVector() && _dst.isUMat(),
                ocl_merge(_mv, _dst))
 
+    std::vector<UMat> keepU;
+    if (_mv.isUMatVector())
+        _mv.getUMatVector(keepU);
     std::vector<Mat> mv;
     _mv.getMatVector(mv);
     merge(!mv.empty() ? &mv[0] : 0, mv.size(), _dst);

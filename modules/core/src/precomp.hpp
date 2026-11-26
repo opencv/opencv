@@ -564,6 +564,11 @@ CV_EXPORTS void releaseTlsStorageThread();
 
 int cv_snprintf(char* buf, int len, const char* fmt, ...);
 int cv_vsnprintf(char* buf, int len, const char* fmt, va_list args);
+
+#ifdef HAVE_OPENCL
+//! True when arr holds a non-OpenCL / pinned-foreign UMat or a mapped Mat view backed by device memory (ACCEL_MEMORY, CUDA, or handle != 0).
+bool oclHasForeignBuffer(InputArray arr);
+#endif
 }
 
 #endif  // BUILD_PLUGIN

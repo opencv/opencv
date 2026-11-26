@@ -3742,6 +3742,25 @@ static bool isForeignBuffer(const UMatData* u)
     return u && u->currAllocator != getOpenCLAllocator();
 }
 
+static bool isForeignUMat(const UMat& m)
+{
+    return isForeignBuffer(m.u) || (m.allocator != NULL && m.allocator != getOpenCLAllocator());
+}
+
+static bool isForeignMappedMat(const UMatData* u)
+{
+    if (!u)
+        return false;
+    if ((u->flags & UMatData::ACCEL_MEMORY) != 0)
+        return true;
+    if (u->currAllocator == getOpenCLAllocator())
+        return false;
+    const MatAllocator* cudaAlloc = cv::cuda::getCudaAllocator();
+    if (cudaAlloc && u->currAllocator == cudaAlloc)
+        return true;
+    return u->handle != 0;
+}
+
 int Kernel::set(int i, const KernelArg& arg)
 {
     if( !p || !p->handle )
@@ -7697,5 +7716,55 @@ uint64 Timer::durationNS() const
 }
 
 }} // namespace
+
+bool cv::oclHasForeignBuffer(InputArray arr)
+{
+    switch (arr.kind())
+    {
+    case _InputArray::UMAT:
+    {
+        const UMat* m = static_cast<const UMat*>(arr.getObj());
+        return m && ocl::isForeignUMat(*m);
+    }
+    case _InputArray::STD_VECTOR_UMAT:
+    {
+        const std::vector<UMat>* v = static_cast<const std::vector<UMat>*>(arr.getObj());
+        if (!v)
+            return false;
+        for (size_t i = 0; i < v->size(); i++)
+            if (ocl::isForeignUMat((*v)[i]))
+                return true;
+        return false;
+    }
+    case _InputArray::MAT:
+    {
+        const Mat* m = static_cast<const Mat*>(arr.getObj());
+        return m && ocl::isForeignMappedMat(m->u);
+    }
+    case _InputArray::STD_VECTOR_MAT:
+    {
+        const std::vector<Mat>* v = static_cast<const std::vector<Mat>*>(arr.getObj());
+        if (!v)
+            return false;
+        for (size_t i = 0; i < v->size(); i++)
+            if (ocl::isForeignMappedMat((*v)[i].u))
+                return true;
+        return false;
+    }
+    case _InputArray::STD_ARRAY_MAT:
+    {
+        const Mat* v = static_cast<const Mat*>(arr.getObj());
+        const int n = arr.getSz().height;
+        if (!v)
+            return false;
+        for (int i = 0; i < n; i++)
+            if (ocl::isForeignMappedMat(v[i].u))
+                return true;
+        return false;
+    }
+    default:
+        return false;
+    }
+}
 
 #endif // HAVE_OPENCL

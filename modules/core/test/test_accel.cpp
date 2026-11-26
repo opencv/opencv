@@ -919,6 +919,116 @@ TEST_F(Core_Accel, opencl_image_declines_device_memory)
     cv::ocl::setUseOpenCL(prev);
 }
 
+struct ScopedUseOpenCL
+{
+    bool prev;
+    explicit ScopedUseOpenCL(bool enable) : prev(cv::ocl::useOpenCL()) { cv::ocl::setUseOpenCL(enable); }
+    ~ScopedUseOpenCL() { cv::ocl::setUseOpenCL(prev); }
+    ScopedUseOpenCL(const ScopedUseOpenCL&) = delete;
+    ScopedUseOpenCL& operator=(const ScopedUseOpenCL&) = delete;
+};
+
+TEST_F(Core_Accel, opencl_fallback_does_not_clobber_outputs)
+{
+    if (!cv::ocl::haveOpenCL())
+        throw SkipTestException("OpenCL is not available");
+
+    ScopedUseOpenCL oclGuard(true);
+    if (!cv::ocl::useOpenCL())
+        throw SkipTestException("OpenCL is not active");
+
+    const accel::Device d = emuDevice(EMU_DISCRETE);
+
+    // 1. In-place convertTo with depth change: ocl_convertTo must not overwrite u before declining.
+    {
+        const Mat src = randomMat(Size(37, 29), CV_8UC3);
+        UMat u = src.upload(d);
+        u.convertTo(u, CV_32F, 2.0, -5.0);
+        Mat expected;
+        src.convertTo(expected, CV_32F, 2.0, -5.0);
+        EXPECT_EQ(0, cvtest::norm(expected, toHost(u), NORM_INF)) << "in-place convertTo";
+    }
+
+    // 2. In-place convertScaleAbs (CV_32F -> CV_8U).
+    {
+        const Mat src = randomMat(Size(37, 29), CV_32FC1);
+        UMat u = src.upload(d);
+        cv::convertScaleAbs(u, u, 1.5, -10.0);
+        Mat expected;
+        cv::convertScaleAbs(src, expected, 1.5, -10.0);
+        EXPECT_EQ(0, cvtest::norm(expected, toHost(u), NORM_INF)) << "in-place convertScaleAbs";
+    }
+
+    // 3. In-place add with depth promotion (CV_8U -> CV_32F).
+    {
+        const Mat a = randomMat(Size(33, 25), CV_8UC1), b = randomMat(Size(33, 25), CV_8UC1);
+        UMat ua = a.upload(d), ub = b.upload(d);
+        cv::add(ua, ub, ua, noArray(), CV_32F);
+        Mat expected;
+        cv::add(a, b, expected, noArray(), CV_32F);
+        EXPECT_EQ(0, cvtest::norm(expected, toHost(ua), NORM_INF)) << "in-place add with dtype";
+    }
+
+    // 4. In-place compare (CV_32F -> CV_8U).
+    {
+        const Mat a = randomMat(Size(31, 23), CV_32FC1), b = randomMat(Size(31, 23), CV_32FC1);
+        UMat ua = a.upload(d), ub = b.upload(d);
+        cv::compare(ua, ub, ua, CMP_GT);
+        Mat expected;
+        cv::compare(a, b, expected, CMP_GT);
+        EXPECT_EQ(0, cvtest::norm(expected, toHost(ua), NORM_INF)) << "in-place compare";
+    }
+
+    // 5. Aliased merge(planes, planes[0]) and split(planes[0], planes).
+    {
+        std::vector<Mat> hPlanes(3);
+        std::vector<UMat> dPlanes(3);
+        for (int i = 0; i < 3; i++)
+        {
+            hPlanes[i] = randomMat(Size(29, 19), CV_8UC1);
+            dPlanes[i] = hPlanes[i].upload(d);
+        }
+        cv::merge(dPlanes, dPlanes[0]);
+        Mat expectedMerged;
+        cv::merge(hPlanes, expectedMerged);
+        EXPECT_EQ(0, cvtest::norm(expectedMerged, toHost(dPlanes[0]), NORM_INF)) << "aliased merge";
+
+        std::vector<UMat> dSplit(1);
+        dSplit[0] = expectedMerged.upload(d);
+        cv::split(dSplit[0], dSplit);
+        ASSERT_EQ(3u, dSplit.size());
+        for (int i = 0; i < 3; i++)
+            EXPECT_EQ(0, cvtest::norm(hPlanes[i], toHost(dSplit[i]), NORM_INF)) << "aliased split " << i;
+    }
+}
+
+TEST_F(Core_Accel, merge_and_split_inplace_aliasing_umats)
+{
+    const int devices[] = { EMU_DISCRETE, EMU_SHARED };
+    for (int di = 0; di < 2; di++)
+    {
+        const accel::Device d = emuDevice(devices[di]);
+        std::vector<Mat> hPlanes(3);
+        std::vector<UMat> dPlanes(3);
+        for (int i = 0; i < 3; i++)
+        {
+            hPlanes[i] = randomMat(Size(25, 17), CV_16UC1);
+            dPlanes[i] = hPlanes[i].upload(d);
+        }
+        cv::merge(dPlanes, dPlanes[0]);
+        Mat expectedMerged;
+        cv::merge(hPlanes, expectedMerged);
+        EXPECT_EQ(0, cvtest::norm(expectedMerged, toHost(dPlanes[0]), NORM_INF));
+
+        std::vector<UMat> dSplit(1);
+        dSplit[0] = expectedMerged.upload(d);
+        cv::split(dSplit[0], dSplit);
+        ASSERT_EQ(3u, dSplit.size());
+        for (int i = 0; i < 3; i++)
+            EXPECT_EQ(0, cvtest::norm(hPlanes[i], toHost(dSplit[i]), NORM_INF));
+    }
+}
+
 TEST_F(Core_Accel, each_thread_has_its_own_stream)
 {
     const accel::Device d = emuDevice(EMU_DISCRETE);

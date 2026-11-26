@@ -30,6 +30,9 @@ BinaryFunc getConvertScaleFunc(int sdepth, int ddepth)
 
 static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, double beta )
 {
+    if (cv::oclHasForeignBuffer(_src) || cv::oclHasForeignBuffer(_dst))
+        return false;
+
     const ocl::Device & d = ocl::Device::getDefault();
 
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
@@ -91,6 +94,9 @@ void convertScaleAbs(InputArray _src, OutputArray _dst, double alpha, double bet
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_convertScaleAbs(_src, _dst, alpha, beta))
 
+    UMat ukeep;
+    if (_dst.isUMat() && _dst.getObj() && _dst.getObj() == _src.getObj())
+        ukeep = _dst.getUMat();
     Mat src = _src.getMat();
     int cn = src.channels();
     double scale[] = {alpha, beta};
