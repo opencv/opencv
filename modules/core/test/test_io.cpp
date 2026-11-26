@@ -2255,6 +2255,7 @@ TEST(Core_InputOutput, filestorage_read_uppercase_exponent)
         EXPECT_EQ(1e5, c);
     }
 }
+
 TEST(Core_InputOutput, filestorage_yaml_escape_string)
 {
     const String value1 = "O'Reilly\x01";
@@ -2264,7 +2265,8 @@ TEST(Core_InputOutput, filestorage_yaml_escape_string)
     writer << "text2" << value2;
     const String yaml = writer.releaseAndGetString();
 
-    EXPECT_NE(String::npos, yaml.find("text1: \"O\\'Reilly\\x01\""));
+    EXPECT_NE(String::npos, yaml.find("text1: \"O'Reilly\\x01\""));
+    EXPECT_EQ(String::npos, yaml.find("\\'"));
     EXPECT_NE(String::npos, yaml.find("text2: \"hex_\\x10_\\x1f_\xab_end\""));
 
     FileStorage reader(yaml, FileStorage::READ | FileStorage::MEMORY);
@@ -2274,10 +2276,43 @@ TEST(Core_InputOutput, filestorage_yaml_escape_string)
     EXPECT_EQ(value1, restored1);
     EXPECT_EQ(value2, restored2);
 
-    const String yaml_octal = "%YAML:1.0\n---\noct: \"\\101\\060!\"\n";
-    FileStorage reader_oct(yaml_octal, FileStorage::READ | FileStorage::MEMORY);
-    String restored_oct;
-    reader_oct["oct"] >> restored_oct;
-    EXPECT_EQ(String("A0!"), restored_oct);
+    const String yaml_escapes =
+        "%YAML:1.0\n---\n"
+        "oct: \"\\101\\060\\377!\"\n"
+        "nul: \"a\\0b\"\n"
+        "legacy_sq: \"O\\'Reilly\"\n"
+        "ctrl: \"\\a\\b\\t\\n\\v\\f\\r\\e\\ \\\"\\/\\\\\"\n"
+        "named: \"\\N\\_\\L\\P\"\n"
+        "bmp: \"\\u65E5\"\n"
+        "supp: \"\\U0001F600\"\n"
+        "surr: \"\\uD83D\\uDE00\"\n";
+    FileStorage reader_esc(yaml_escapes, FileStorage::READ | FileStorage::MEMORY);
+    EXPECT_EQ(String("A0\xff" "!"), (String)reader_esc["oct"]);
+    EXPECT_EQ(std::string("a\0b", 3), (String)reader_esc["nul"]);
+    EXPECT_EQ(String("O'Reilly"), (String)reader_esc["legacy_sq"]);
+    EXPECT_EQ(String("\a\b\t\n\v\f\r\x1b" " \"/\\"), (String)reader_esc["ctrl"]);
+    EXPECT_EQ(String("\xc2\x85\xc2\xa0\xe2\x80\xa8\xe2\x80\xa9"), (String)reader_esc["named"]);
+    EXPECT_EQ(String("\xe6\x97\xa5"), (String)reader_esc["bmp"]);
+    EXPECT_EQ(String("\xf0\x9f\x98\x80"), (String)reader_esc["supp"]);
+    EXPECT_EQ(String("\xf0\x9f\x98\x80"), (String)reader_esc["surr"]);
+
+    const char* bad_inputs[] = {
+        "%YAML:1.0\n---\nv: \"\\x-1Z\"\n",
+        "%YAML:1.0\n---\nv: \"\\x 1Z\"\n",
+        "%YAML:1.0\n---\nv: \"\\x1Z\"\n",
+        "%YAML:1.0\n---\nv: \"\\xZZ\"\n",
+        "%YAML:1.0\n---\nv: \"\\777\"\n",
+        "%YAML:1.0\n---\nv: \"\\400\"\n",
+        "%YAML:1.0\n---\nv: \"\\q\"\n",
+        "%YAML:1.0\n---\nv: \"\\u123Z\"\n",
+        "%YAML:1.0\n---\nv: \"\\uD800\"\n",
+        "%YAML:1.0\n---\nv: \"\\uDC00\"\n",
+        "%YAML:1.0\n---\nv: \"\\U00110000\"\n",
+    };
+    for (const char* bad : bad_inputs)
+    {
+        SCOPED_TRACE(bad);
+        EXPECT_THROW(FileStorage(bad, FileStorage::READ | FileStorage::MEMORY), cv::Exception);
+    }
 }
 }} // namespace
