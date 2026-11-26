@@ -53,7 +53,7 @@ static inline void computeIsInfMask(const T* src, uchar* dst, const size_t count
     }
     else
     {
-        CV_Error_(Error::StsError, ("IsInf: Unsupported mode"));
+        std::fill(dst, dst + count, (uchar)0);
     }
 }
 
