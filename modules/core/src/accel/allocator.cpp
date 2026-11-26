@@ -11,6 +11,8 @@
 #include "../umatrix.hpp"
 #include "accel_impl.hpp"
 
+#include <atomic>
+
 namespace cv { namespace accel { namespace detail {
 
 namespace {
@@ -18,6 +20,67 @@ namespace {
 inline Device::Impl* deviceOf(const UMatData* u)
 {
     return static_cast<Device::Impl*>(u->allocatorContext.get());
+}
+
+/* On an integrated GPU a kernel reading shared memory that the CPU wrote, and still caches, runs up to three
+   times as slow, read after read, and flushing the lines costs about two such reads. So, as in renting before
+   buying, the device reads twice at that cost and the caches are flushed before its third read.
+   UMatData::allocatorFlags_ of shared memory counts the device's reads since the CPU's write
+   (beforeDeviceAccess()). Lines the CPU only read slow the device less and often not past its first read. */
+enum { CPU_CACHED = 1, DEVICE_READ = 2, READS_BEFORE_FLUSH = 2 };
+
+/* Copies @p n bytes into shared memory with stores that bypass the CPU caches, which is also faster than
+   memcpy; false when the bytes went through the caches. */
+bool copyPastCaches(uchar* dst, const uchar* src, size_t n)
+{
+#if CV_SIMD
+    const size_t V = (size_t)VTraits<v_uint8>::vlanes();
+    if (n >= 256)
+    {
+        const size_t head = std::min(n, (V - (size_t)dst % V) % V);
+        memcpy(dst, src, head);
+        size_t i = head;
+        for (; i + V <= n; i += V)
+            v_store_aligned_nocache(dst + i, vx_load(src + i));
+        memcpy(dst + i, src + i, n - i);
+        vx_cleanup();
+        return true;
+    }
+#endif
+    memcpy(dst, src, n);
+    return false;
+}
+
+#if CV_SSE2
+// writes back and drops the lines of @p n bytes at @p p from the CPU caches, in stripes: lines that several cores
+// cache go about twice as fast
+class FlushStripes CV_FINAL : public ParallelLoopBody
+{
+public:
+    FlushStripes(const uchar* p, size_t n, size_t stripe) : p_(p), n_(n), stripe_(stripe) {}
+    void operator()(const Range& r) const CV_OVERRIDE
+    {
+        const uchar* end = p_ + std::min(n_, (size_t)r.end * stripe_);
+        for (const uchar* q = (const uchar*)((size_t)(p_ + r.start * stripe_) & ~(size_t)63); q < end; q += 64)
+            _mm_clflush(q);
+        _mm_mfence();
+    }
+private:
+    const uchar* p_;
+    size_t n_, stripe_;
+};
+#endif
+
+//! drops @p n bytes at @p p from the CPU caches; nothing where there is no instruction for it
+void flushCpuCaches(const uchar* p, size_t n)
+{
+#if CV_SSE2
+    const int stripes = n >= ((size_t)1 << 20) ? 8 : 1;
+    const size_t stripe = ((n + stripes - 1) / stripes + 63) & ~(size_t)63;
+    parallel_for_(Range(0, (int)((n + stripe - 1) / stripe)), FlushStripes(p, n, stripe), stripes);
+#else
+    CV_UNUSED(p); CV_UNUSED(n);
+#endif
 }
 
 //! a header that keeps @p u alive, for Stream::retain()
@@ -136,6 +199,25 @@ void BackendAllocator::deallocate(UMatData* u) const
     delete u;
 }
 
+void beforeDeviceAccess(UMatData* u, AccessFlag access, bool wholeBuffer)
+{
+    UMatDataAutoLock lock(u);
+    if (!(u->allocatorFlags_ & CPU_CACHED))
+        return;
+    if (!(access & ACCESS_READ))
+    {
+        if (wholeBuffer)
+            u->allocatorFlags_ = 0;     // the device's writes drop the lines from the CPU caches
+    }
+    else if (u->allocatorFlags_ / DEVICE_READ < READS_BEFORE_FLUSH)
+        u->allocatorFlags_ += DEVICE_READ;
+    else
+    {
+        flushCpuCaches(u->data, u->size);
+        u->allocatorFlags_ = 0;
+    }
+}
+
 void BackendAllocator::map(UMatData* u, AccessFlag accessFlags) const
 {
     CV_Assert(u && u->handle);
@@ -146,6 +228,8 @@ void BackendAllocator::map(UMatData* u, AccessFlag accessFlags) const
     {
         s.synchronize();    // the CPU uses the device's own bytes
         s.releaseFinished();
+        if (!!(accessFlags & ACCESS_WRITE))
+            u->allocatorFlags_ = CPU_CACHED;
         return;
     }
     if (!u->data)
@@ -218,12 +302,23 @@ void BackendAllocator::upload(UMatData* u, const void* src, int dims, const size
         // shared memory, or the host copy Mat views use; unmap() uploads it
         if (!u->copyOnMap())
             s.synchronize();
+        const bool shared = !u->copyOnMap();
+        bool cached = false;
         forEachPlane(dims, sz, 0, srcstep, dstofs, dststep,
                      [&](size_t so, size_t dof, size_t sp, size_t dp, size_t w, size_t rows) {
             for (size_t r = 0; r < rows; r++)
-                memcpy(u->data + dof + r * dp, (const uchar*)src + so + r * sp, w);
+                if (shared)
+                    cached |= !copyPastCaches(u->data + dof + r * dp, (const uchar*)src + so + r * sp, w);
+                else
+                    memcpy(u->data + dof + r * dp, (const uchar*)src + so + r * sp, w);
         });
-        if (u->copyOnMap())
+        if (shared)
+        {
+            std::atomic_thread_fence(std::memory_order_seq_cst);   // the streaming stores land before later GPU work
+            if (cached)
+                u->allocatorFlags_ = CPU_CACHED;
+        }
+        else
             u->markDeviceCopyObsolete(true);
         return;
     }

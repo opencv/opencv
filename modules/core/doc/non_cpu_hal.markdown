@@ -92,7 +92,10 @@ is not downloaded.
 
 Memory the CPU addresses (an integrated GPU's, when the backend says so with
 `Backend::hostAddress()`) is used in place: `getMat()` waits for the thread's device work and
-returns the device's own bytes.
+returns the device's own bytes. On an integrated GPU a kernel that reads lines the CPU still caches
+runs up to three times as slow, read after read. Uploads therefore write this memory past the CPU
+caches. What the CPU writes through a Mat view is flushed from its caches before the device's third
+read, because a flush costs about two such reads, so data read once or twice is cheaper left alone.
 
 Writing a backend
 -----------------

@@ -69,6 +69,10 @@ public:
 //! the calling thread's stream on @p dev, created on first use
 Stream& threadStream(Device::Impl* dev);
 
+/** @brief UMat::handle() calls it before device work takes @p access to shared memory @p u that the CPU wrote;
+@p wholeBuffer when that work sees all of it. Flushes the CPU caches before the device's third read. */
+void beforeDeviceAccess(UMatData* u, AccessFlag access, bool wholeBuffer);
+
 }}} // namespace cv::accel::detail
 
 #endif // OPENCV_CORE_SRC_ACCEL_IMPL_HPP

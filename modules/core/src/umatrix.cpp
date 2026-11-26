@@ -1288,6 +1288,8 @@ void* UMat::handle(AccessFlag accessFlags) const
     {
         u->currAllocator->unmap(u);
     }
+    if ((u->flags & UMatData::ACCEL_MEMORY) && u->allocatorFlags_ != 0)
+        accel::detail::beforeDeviceAccess(u, accessFlags, offset == 0 && isContinuous() && total() * elemSize() == u->size);
 
     if (!!(accessFlags & ACCESS_WRITE))
         u->markHostCopyObsolete(true);
