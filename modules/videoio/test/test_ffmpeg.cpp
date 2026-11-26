@@ -1191,6 +1191,138 @@ TEST(videoio_ffmpeg, seek_with_negative_dts)
 
 // The test requires FFmpeg wrapper rebuild on Windows
 #ifndef _WIN32
+// MPEG-TS has no seek index and FFmpeg searches it by DTS. With B-frames the first key frame's DTS
+// is lower than the stream start_time (a PTS), so seeking to the first GOP used to skip it.
+// related issue: https://github.com/opencv/opencv/issues/9053
+TEST(videoio_ffmpeg, seek_mpegts_bframes)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    const string filename = tempfile("test_seek_bframes.ts");
+    const Size sz(160, 120);
+    const int gop = 12;  // VideoWriter defaults for MPEG-2: GOP of 12 frames with B-frames
+    const int nframes = 3 * gop;
+    {
+        VideoWriter writer(filename, CAP_FFMPEG, VideoWriter::fourcc('m', 'p', 'g', '2'), 25, sz);
+        if (!writer.isOpened())
+            throw SkipTestException("MPEG-2 / MPEG-TS writer is not supported");
+        for (int i = 0; i < nframes; i++)
+        {
+            Mat img(sz, CV_8UC3, Scalar::all(0));
+            putText(img, cv::format("%d", i), Point(20, 90), FONT_HERSHEY_SIMPLEX, 2.5, Scalar(255, 255, 255), 5);
+            writer.write(img);
+        }
+    }
+
+    std::vector<Mat> frames;
+    {
+        VideoCapture cap(filename, CAP_FFMPEG);
+        ASSERT_TRUE(cap.isOpened());
+        Mat img;
+        while (cap.read(img))
+            frames.push_back(img.clone());
+    }
+    ASSERT_EQ(nframes, (int)frames.size());
+
+    for (int target : {0, 1, gop - 1, gop, gop + 1, 2 * gop, 2 * gop + 1})
+    {
+        SCOPED_TRACE(cv::format("target=%d", target));
+        VideoCapture cap(filename, CAP_FFMPEG);
+        ASSERT_TRUE(cap.isOpened());
+        Mat img;
+        ASSERT_TRUE(cap.read(img));
+        ASSERT_TRUE(cap.set(CAP_PROP_POS_FRAMES, target));
+        EXPECT_EQ(target, (int)cap.get(CAP_PROP_POS_FRAMES));
+        ASSERT_TRUE(cap.read(img));
+        EXPECT_EQ(0, cvtest::norm(img, frames[target], NORM_INF));
+    }
+
+    // raw mode (CAP_PROP_FORMAT=-1) goes through the same seek: a rewind to frame 0 must return the first packet
+    std::vector<Mat> packets;
+    {
+        VideoCapture cap(filename, CAP_FFMPEG, { CAP_PROP_FORMAT, -1 });
+        ASSERT_TRUE(cap.isOpened());
+        Mat pkt;
+        while (cap.read(pkt))
+            packets.push_back(pkt.clone());
+    }
+    ASSERT_EQ(nframes, (int)packets.size());
+    for (int readsBefore : {0, 1, gop + 1})
+    {
+        SCOPED_TRACE(cv::format("raw, packets read before rewind=%d", readsBefore));
+        VideoCapture cap(filename, CAP_FFMPEG, { CAP_PROP_FORMAT, -1 });
+        ASSERT_TRUE(cap.isOpened());
+        Mat pkt;
+        for (int i = 0; i < readsBefore; i++)
+            ASSERT_TRUE(cap.read(pkt));
+        ASSERT_TRUE(cap.set(CAP_PROP_POS_FRAMES, 0));
+        ASSERT_TRUE(cap.read(pkt));
+        ASSERT_EQ(packets[0].total(), pkt.total());
+        EXPECT_EQ(0, cvtest::norm(pkt, packets[0], NORM_INF));
+    }
+    remove(filename.c_str());
+}
+#endif
+
+// In raw mode (CAP_PROP_FORMAT=-1) a seek lands on the nearest preceding key frame packet.
+// Requesting a key frame of an H.264 stream with B-frames must return that key frame, not the previous GOP.
+TEST(videoio_ffmpeg, seek_raw_mode_bframes_keyframe)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    const string filename = tempfile("test_seek_raw_bframes.mp4");
+    const Size sz(160, 120);
+    const int nframes = 300;  // libx264 defaults: B-frames, key frame interval 250
+    {
+        VideoWriter writer(filename, CAP_FFMPEG, VideoWriter::fourcc('a', 'v', 'c', '1'), 25, sz);
+        if (!writer.isOpened())
+            throw SkipTestException("H.264 / MP4 writer is not supported");
+        for (int i = 0; i < nframes; i++)
+        {
+            Mat img(sz, CV_8UC3, Scalar::all(0));
+            putText(img, cv::format("%d", i), Point(10, 90), FONT_HERSHEY_SIMPLEX, 2.0, Scalar(255, 255, 255), 5);
+            writer.write(img);
+        }
+    }
+
+    std::vector<Mat> packets;
+    std::vector<int> keyPackets;  // indices of key frame packets
+    {
+        VideoCapture cap(filename, CAP_FFMPEG, { CAP_PROP_FORMAT, -1 });
+        if (!cap.isOpened())
+            throw SkipTestException("Raw stream reading is not supported");
+        Mat pkt;
+        while (cap.read(pkt))
+        {
+            if (cap.get(CAP_PROP_LRF_HAS_KEY_FRAME) != 0)
+                keyPackets.push_back((int)packets.size());
+            packets.push_back(pkt.clone());
+        }
+    }
+    ASSERT_EQ(nframes, (int)packets.size());
+    if (keyPackets.size() < 2)
+        throw SkipTestException("The encoder produced a single GOP");
+
+    const int key = keyPackets[1];  // closed GOP: decode index of the key frame equals its display index
+    for (int target : {0, key, key + 1})
+    {
+        SCOPED_TRACE(cv::format("target=%d", target));
+        const Mat& expected = packets[target == 0 ? 0 : key];
+        VideoCapture cap(filename, CAP_FFMPEG, { CAP_PROP_FORMAT, -1 });
+        ASSERT_TRUE(cap.isOpened());
+        ASSERT_TRUE(cap.set(CAP_PROP_POS_FRAMES, target));
+        Mat pkt;
+        ASSERT_TRUE(cap.read(pkt));
+        ASSERT_EQ(expected.total(), pkt.total());
+        EXPECT_EQ(0, cvtest::norm(pkt, expected, NORM_INF));
+    }
+    remove(filename.c_str());
+}
+
+// The test requires FFmpeg wrapper rebuild on Windows
+#ifndef _WIN32
 // MJPEG stream whose chroma subsampling changes mid-stream at constant
 // frame size must not reuse a conversion context built for the previous frame.
 // related issue: https://github.com/opencv/opencv/issues/29699

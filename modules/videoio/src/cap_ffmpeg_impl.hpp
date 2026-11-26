@@ -577,6 +577,9 @@ struct CvCapture_FFMPEG
     int64_t ts_offset_avtb = 0;
     bool    ts_offset_decided = false;
 
+    /// DTS of the first demuxed video packet (stream time_base), the target of a seek to the beginning
+    int64_t first_video_dts = AV_NOPTS_VALUE_;
+
     AVIOContext     * avio_context;
 
     AVPacket          packet;
@@ -642,6 +645,7 @@ void CvCapture_FFMPEG::init()
     dts_delay_in_fps_time_base = 0;
     ts_offset_avtb = 0;
     ts_offset_decided = false;
+    first_video_dts = AV_NOPTS_VALUE_;
     first_frame_number = -1;
     memset( &rgb_picture, 0, sizeof(rgb_picture) );
     memset( &frame, 0, sizeof(frame) );
@@ -1694,6 +1698,9 @@ bool CvCapture_FFMPEG::grabFrame()
             packet.stream_index = video_stream;
         }
 
+        if (ret >= 0 && packet.stream_index == video_stream && first_video_dts == AV_NOPTS_VALUE_)
+            first_video_dts = packet.dts;
+
         if( packet.stream_index != video_stream )
         {
             _opencv_ffmpeg_av_packet_unref (&packet);
@@ -2359,6 +2366,12 @@ void CvCapture_FFMPEG::seek(int64_t _frame_number)
         } else {
             time_stamp += ts_norm;
         }
+
+        // The target of frame 0 is the stream start_time, which is a PTS. Demuxers without a seek index
+        // (e.g. MPEG-TS) search by DTS, and with B-frames the DTS of the first key frame is lower than
+        // its PTS, so seeking to start_time lands after that key frame. Seek to the first packet's DTS instead.
+        if (_frame_number_temp == 0 && first_video_dts != AV_NOPTS_VALUE_)
+            time_stamp = std::min(time_stamp, first_video_dts);
 
         if (get_total_frames() > 1) av_seek_frame(ic, video_stream, time_stamp, AVSEEK_FLAG_BACKWARD);
         if(!rawMode)
