@@ -1829,6 +1829,22 @@ INSTANTIATE_TEST_CASE_P(Core_MinMaxLoc, ElemWiseTest, ::testing::Values(ElemWise
 INSTANTIATE_TEST_CASE_P(Core_reduceArgMinMax, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new reduceArgMinMaxOp)));
 INSTANTIATE_TEST_CASE_P(Core_CartToPolarToCart, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new CartToPolarToCartOp)));
 
+TEST(Core_ReduceSum, wideAccumulatorFor8u)
+{
+    const int length = INT_MAX / UCHAR_MAX + 1;
+    const int64 expected = static_cast<int64>(length) * UCHAR_MAX;
+    for (int dim = 0; dim < 2; ++dim)
+    {
+        SCOPED_TRACE(dim);
+        const Mat src(dim == 0 ? length : 1, dim == 0 ? 1 : length, CV_8U, Scalar::all(UCHAR_MAX));
+        Mat dst;
+        cv::reduce(src, dst, dim, REDUCE_SUM, CV_32F);
+        EXPECT_EQ(static_cast<float>(expected), dst.at<float>(0, 0));
+        cv::reduce(src, dst, dim, REDUCE_SUM, CV_64F);
+        EXPECT_EQ(static_cast<double>(expected), dst.at<double>(0, 0));
+    }
+}
+
 // Mixed Type Arithmetic Operations
 
 typedef std::tuple<ElemWiseOpPtr, std::tuple<cvtest::MatDepth, cvtest::MatDepth>, int> SomeType;
