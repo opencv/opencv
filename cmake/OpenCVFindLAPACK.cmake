@@ -289,6 +289,7 @@ if(WITH_LAPACK)
       SKIP_BUILD
       SKIP_FIND)
     set(HAVE_LAPACK 1)
+    set(HAVE_LAPACK_BUILTIN 1)
   endif()
 
   set(LAPACK_INCLUDE_DIR ${LAPACK_INCLUDE_DIR} CACHE PATH   "Path to BLAS include dir" FORCE)

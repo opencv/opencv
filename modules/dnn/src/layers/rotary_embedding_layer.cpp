@@ -3,7 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
-#include "cpu_kernels/fast_gemm.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 #include "cpu_kernels/softmax.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
