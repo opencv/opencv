@@ -3189,6 +3189,13 @@ INSTANTIATE_TEST_CASE_P(/**/, ImgProc_BayerEdgeAware_SubMatrix,
         testing::Values((int)CV_8U, (int)CV_16U),
         testing::Values(Size(23, 19), Size(16, 14))));
 
+INSTANTIATE_TEST_CASE_P(VNG, ImgProc_BayerEdgeAware_SubMatrix,
+    testing::Combine(
+        testing::Values((int)COLOR_BayerBG2BGR_VNG, (int)COLOR_BayerGB2BGR_VNG,
+                        (int)COLOR_BayerRG2BGR_VNG, (int)COLOR_BayerGR2BGR_VNG),
+        testing::Values((int)CV_8U),
+        testing::Values(Size(23, 19), Size(16, 14))));
+
 TEST(ImgProc_Bayer2RGBA, accuracy)
 {
     cvtest::TS* ts = cvtest::TS::ptr();
