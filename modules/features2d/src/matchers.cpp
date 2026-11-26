@@ -933,7 +933,7 @@ void BFMatcher::knnMatchImpl( InputArray _queryDescriptors, std::vector<std::vec
     Size trainDescSize = trainDescCollection.empty() ? utrainDescCollection[0].size() : trainDescCollection[0].size();
     int trainDescOffset = trainDescCollection.empty() ? (int)utrainDescCollection[0].offset : 0;
 
-    if ( ocl::isOpenCLActivated() && _queryDescriptors.isUMat() && _queryDescriptors.dims()<=2 && trainDescVectorSize == 1 &&
+    if ( ocl::isOpenCLActivated() && normType != NORM_HAMMING && _queryDescriptors.isUMat() && _queryDescriptors.dims()<=2 && trainDescVectorSize == 1 &&
         _queryDescriptors.type() == CV_32FC1 && _queryDescriptors.offset() == 0 && trainDescOffset == 0 &&
         trainDescSize.width == _queryDescriptors.size().width && masks.size() == 1 && masks[0].total() == 0 )
     {
@@ -1075,7 +1075,7 @@ void BFMatcher::radiusMatchImpl( InputArray _queryDescriptors, std::vector<std::
     Size trainDescSize = trainDescCollection.empty() ? utrainDescCollection[0].size() : trainDescCollection[0].size();
     int trainDescOffset = trainDescCollection.empty() ? (int)utrainDescCollection[0].offset : 0;
 
-    if ( ocl::isOpenCLActivated() && _queryDescriptors.isUMat() && _queryDescriptors.dims()<=2 && trainDescVectorSize == 1 &&
+    if ( ocl::isOpenCLActivated() && normType != NORM_HAMMING && _queryDescriptors.isUMat() && _queryDescriptors.dims()<=2 && trainDescVectorSize == 1 &&
         _queryDescriptors.type() == CV_32FC1 && _queryDescriptors.offset() == 0 && trainDescOffset == 0 &&
         trainDescSize.width == _queryDescriptors.size().width && masks.size() == 1 && masks[0].total() == 0 )
     {

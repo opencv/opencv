@@ -204,6 +204,27 @@ OCL_TEST_P(BruteForceMatcher, RadiusMatch_Single)
     ASSERT_EQ(0, badCount);
 }
 
+OCL_TEST(BruteForceMatcher, HammingFloat_SameAsMat)
+{
+    Mat query = (Mat_<float>(1, 4) << 1.9f, -2.9f, 3.9f, 4.9f);
+    Mat train = (Mat_<float>(2, 4) <<
+        1.1f, -2.1f, 3.1f, 4.1f,
+        0.0f, -1.0f, 7.0f, 4.0f);
+    UMat uquery, utrain;
+    query.copyTo(uquery);
+    train.copyTo(utrain);
+
+    BFMatcher matcher(NORM_HAMMING, false), ccMatcher(NORM_HAMMING, true);
+    std::vector<DMatch> matches;
+    std::vector<std::vector<DMatch> > knnMatches;
+
+    EXPECT_THROW(matcher.match(query, train, matches), cv::Exception);
+    EXPECT_THROW(matcher.match(uquery, utrain, matches), cv::Exception);
+    EXPECT_THROW(matcher.knnMatch(uquery, utrain, knnMatches, 2), cv::Exception);
+    EXPECT_THROW(matcher.radiusMatch(uquery, utrain, knnMatches, 10.f), cv::Exception);
+    EXPECT_THROW(ccMatcher.match(uquery, utrain, matches), cv::Exception);
+}
+
 OCL_INSTANTIATE_TEST_CASE_P(Matcher, BruteForceMatcher, Combine( Values((int)NORM_L1, (int)NORM_L2),
                                                                 Values(57, 64, 83, 128, 179, 256, 304) ) );
 

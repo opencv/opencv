@@ -195,6 +195,7 @@ __kernel void BruteForceMatch_Match(
     const int queryOffset = min(queryIdx, query_rows - 1) * step;
     __global TN *query_vec = (__global TN *)(query + queryOffset);
     query_cols /= kercn;
+    train_cols /= kercn;
 
     __local float sharebuffer[SHARED_MEM_SZ];
     __local value_type *s_query = (__local value_type *)sharebuffer;
@@ -398,6 +399,7 @@ __kernel void BruteForceMatch_knnMatch(
     const int queryOffset = min(queryIdx, query_rows - 1) * step;
     __global TN *query_vec = (__global TN *)(query + queryOffset);
     query_cols /= kercn;
+    train_cols /= kercn;
 
     __local float sharebuffer[SHARED_MEM_SZ];
     __local value_type *s_query = (__local value_type *)sharebuffer;
@@ -583,6 +585,7 @@ __kernel void BruteForceMatch_CrossCheckMatch(
     const int queryOffset = min(queryIdx, query_rows - 1) * step;
     __global TN *query_vec = (__global TN *)(query + queryOffset);
     query_cols /= kercn;
+    train_cols /= kercn;
 
     __local float sharebuffer[SHARED_MEM_SZ];
     __local value_type *s_query = (__local value_type *)sharebuffer;
