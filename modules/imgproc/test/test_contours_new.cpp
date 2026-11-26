@@ -543,15 +543,10 @@ TEST_P(Imgproc_FindContours_Modes2, binarization_equivalence)
     for (size_t i = 0; i < cNoHier255.size(); i++)
         EXPECT_EQ(cNoHier255[i], cNoHier01[i]);
 
-    // A non-contiguous ROI view (offset within a larger Mat) must match the equivalent
-    // standalone image exactly -- the padded buffer is built from the image's own pixel
-    // data, not from whatever happens to sit around it in the parent Mat. The surrounding
-    // area is filled with a non-zero value (not left at zero): if the implementation ever
-    // read past the ROI bounds instead of synthesizing its own zero border, that would
-    // otherwise be indistinguishable from the correct result, since zero leaking into zero
-    // padding looks the same either way. Both the hierarchy path and the no-hierarchy
-    // overload are exercised on the ROI, since for RETR_LIST the latter dispatches to the
-    // separate TRUCO fast path (contours_truco.cpp), which builds its own padded buffer too.
+    // ROI check. Area outside the ROI is non zero so a leak past the ROI edge
+    // would actually change the result instead of matching a zero border by luck.
+    // Also runs the no hierarchy call here since RETR_LIST hits the separate
+    // TRUCO path for that case.
     Mat big0255(sz.height + 40, sz.width + 40, CV_8UC1, Scalar::all(90));
     img0255.copyTo(big0255(Rect(20, 20, sz.width, sz.height)));
     Mat roi0255 = big0255(Rect(20, 20, sz.width, sz.height));
