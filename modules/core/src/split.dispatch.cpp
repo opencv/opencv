@@ -184,6 +184,18 @@ void split(const Mat& src, Mat* mv)
 
 static bool ocl_split( InputArray _m, OutputArrayOfArrays _mv )
 {
+    if (_m.empty() || cv::oclHasForeignBuffer(_m) || cv::oclHasForeignBuffer(_mv))
+        return false;
+
+    if (_m.isUMat() && _mv.isUMatVector() && _m.getObj() && _mv.getObj())
+    {
+        const std::vector<UMat>& v = *reinterpret_cast<const std::vector<UMat>*>(_mv.getObj());
+        const UMat* mp = reinterpret_cast<const UMat*>(_m.getObj());
+        for (size_t i = 0; i < v.size(); ++i)
+            if (&v[i] == mp)
+                return false;
+    }
+
     int type = _m.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
             rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
 
@@ -204,6 +216,7 @@ static bool ocl_split( InputArray _m, OutputArrayOfArrays _mv )
         return false;
 
     Size size = _m.size();
+    UMat src = _m.getUMat();
     _mv.create(cn, 1, depth);
     for (int i = 0; i < cn; ++i)
         _mv.create(size, depth, i);
@@ -211,7 +224,7 @@ static bool ocl_split( InputArray _m, OutputArrayOfArrays _mv )
     std::vector<UMat> dst;
     _mv.getUMatVector(dst);
 
-    int argidx = k.set(0, ocl::KernelArg::ReadOnly(_m.getUMat()));
+    int argidx = k.set(0, ocl::KernelArg::ReadOnly(src));
     for (int i = 0; i < cn; ++i)
         argidx = k.set(argidx, ocl::KernelArg::WriteOnlyNoSize(dst[i]));
     k.set(argidx, rowsPerWI);
@@ -229,6 +242,9 @@ void split(InputArray _m, OutputArrayOfArrays _mv)
     CV_OCL_RUN(_m.dims() <= 2 && _mv.isUMatVector(),
                ocl_split(_m, _mv))
 
+    UMat keepSrc;
+    if (_m.isUMat())
+        keepSrc = _m.getUMat();
     Mat m = _m.getMat();
     if( m.empty() )
     {
