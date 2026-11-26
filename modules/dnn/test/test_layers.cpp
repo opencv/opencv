@@ -4829,6 +4829,127 @@ TEST(Test_GatherND, EmptyIndicesDoNotCrash)
     }
 }
 
+// GatherND on data of shape [3, 4, 2] with the given (row, col) index pairs.
+static void runGatherND(const Mat& data, const std::vector<int>& idx, int indicesType, std::vector<Mat>& outputs)
+{
+    Mat indices((int)idx.size() / 2, 2, CV_32S, (void*)idx.data());
+    indices.convertTo(indices, indicesType);
+    LayerParams lp;
+    lp.type = "GatherND";
+    lp.name = "gathernd";
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs{data, indices};
+    runLayer(layer, inputs, outputs);
+}
+
+typedef testing::TestWithParam<int> Test_GatherND_IndexType;
+
+// ONNX allows negative indices, counted from the end of each indexed axis.
+TEST_P(Test_GatherND_IndexType, NegativeIndices)
+{
+    Mat data({3, 4, 2}, CV_32F);
+    randu(data, -1, 1);
+    std::vector<Mat> outputs;
+    runGatherND(data, {-1, -1, 0, -3, -2, 0}, GetParam(), outputs);
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    ASSERT_EQ(shape(outputs[0]), MatShape({3, 2}));
+    const int rows[][2] = {{2, 3}, {0, 1}, {1, 0}};
+    for (int i = 0; i < 3; i++)
+        for (int c = 0; c < 2; c++)
+            EXPECT_EQ(outputs[0].at<float>(i, c), data.at<float>(rows[i][0], rows[i][1], c)) << "row " << i;
+}
+
+// Indices >= dim or < -dim are rejected.
+TEST_P(Test_GatherND_IndexType, OutOfRange)
+{
+    Mat data({3, 4, 2}, CV_32F, Scalar(0));
+    for (const std::vector<int>& idx : std::vector<std::vector<int>>{{3, 0}, {0, 4}, {-4, 0}, {0, -5}})
+    {
+        std::vector<Mat> outputs;
+        EXPECT_ANY_THROW(runGatherND(data, idx, GetParam(), outputs)) << idx[0] << ", " << idx[1];
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_GatherND_IndexType, testing::Values(CV_32S, CV_64S));
+
+// Many short slices with batch_dims, enough to be split across threads.
+TEST(Test_GatherND, BatchDimsManySlices)
+{
+    const int B = 2, N = 37, C = 5, Q = 3000;
+    Mat data({B, N, N, C}, CV_32F);
+    randu(data, -1, 1);
+    Mat indices({B, Q, 2}, CV_64S);
+    RNG& rng = theRNG();
+    for (size_t i = 0; i < indices.total(); i++)
+        indices.ptr<int64_t>()[i] = (int64_t)rng.uniform(-N, N);
+
+    LayerParams lp;
+    lp.type = "GatherND";
+    lp.name = "gathernd_batch_dims";
+    lp.set("batch_dims", 1);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs{data, indices};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    ASSERT_EQ(shape(outputs[0]), MatShape({B, Q, C}));
+    for (int b = 0; b < B; b++)
+        for (int q = 0; q < Q; q++)
+        {
+            int64_t i0 = indices.at<int64_t>(b, q, 0), i1 = indices.at<int64_t>(b, q, 1);
+            i0 += i0 < 0 ? N : 0;
+            i1 += i1 < 0 ? N : 0;
+            for (int c = 0; c < C; c++)
+            {
+                const int at[] = {b, (int)i0, (int)i1, c};
+                ASSERT_EQ(outputs[0].at<float>(b, q, c), data.at<float>(at)) << b << " " << q << " " << c;
+            }
+        }
+}
+
+// Last-axis Softmax, row lengths around the vector widths.
+typedef testing::TestWithParam<std::vector<int> > Layer_Test_Softmax_LastAxis;
+TEST_P(Layer_Test_Softmax_LastAxis, Accuracy)
+{
+    const std::vector<int>& s = GetParam();
+    Mat input((int)s.size(), s.data(), CV_32F);
+    randn(input, 0.0, 4.0);
+    const int n = s.back();
+    const size_t rows = input.total() / n;
+    Mat ref(input.size, CV_32F);
+    for (size_t r = 0; r < rows; r++)
+    {
+        const float* x = input.ptr<float>() + r * n;
+        float* y = ref.ptr<float>() + r * n;
+        double mx = x[0], sum = 0;
+        for (int j = 1; j < n; j++)
+            mx = std::max(mx, (double)x[j]);
+        for (int j = 0; j < n; j++)
+            sum += std::exp(x[j] - mx);
+        for (int j = 0; j < n; j++)
+            y[j] = (float)(std::exp(x[j] - mx) / sum);
+    }
+
+    LayerParams lp;
+    lp.type = "Softmax";
+    lp.name = "softmax_last_axis";
+    lp.set("axis", -1);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs{input};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    ASSERT_EQ(shape(outputs[0]), shape(ref));
+    normAssert(ref, outputs[0], cv::format("shape with last axis %d", n).c_str(), 1e-6, 1e-5);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Softmax_LastAxis, testing::Values(
+    std::vector<int>{1, 1}, std::vector<int>{3, 7}, std::vector<int>{5, 16}, std::vector<int>{4, 33},
+    std::vector<int>{2, 3, 197}, std::vector<int>{1, 4, 64, 129}));
+
 static Ptr<Layer> createCropAndResize(int width, int height)
 {
     LayerParams lp;
