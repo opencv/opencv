@@ -633,6 +633,115 @@ TEST(Imgproc_minEnclosingTriangle, regression_mat_with_diff_channels)
 
 //==============================================================================
 
+TEST(Imgproc_FitLine, l2_3d_translated_exact_line)
+{
+    const Point3f step(1, 2, 3);
+    const Vec3d expected(1, 2, 3);
+    for (int shift : {0, 10000, 100000, -100000, 1000000})
+    {
+        SCOPED_TRACE(shift);
+        const Point3f origin(static_cast<float>(shift), static_cast<float>(-2 * shift),
+                             static_cast<float>(shift));
+        std::vector<Point3f> points;
+        for (int i = -2; i <= 2; ++i)
+            points.push_back(origin + step * static_cast<float>(i));
+
+        Vec6f line;
+        fitLine(points, line, DIST_L2, 0, 0, 0);
+        const Vec3d direction(line[0], line[1], line[2]);
+        EXPECT_NEAR(1.0, cv::norm(direction), 1e-6);
+        EXPECT_LT(cv::norm(direction.cross(expected)) / cv::norm(expected), 1e-6);
+        EXPECT_EQ(origin, Point3f(line[3], line[4], line[5]));
+    }
+}
+
+TEST(Imgproc_FitLine, l2_3d_constant_large_coordinates)
+{
+    // The two large coordinates are exactly representable and have zero variance.
+    const float x = 2088812937216.0f, y = 1623506288640.0f;
+    std::vector<Point3f> points;
+    for (int i = 0; i < 41; ++i)
+        for (int z = -2; z <= 2; ++z)
+            points.emplace_back(x, y, static_cast<float>(z));
+
+    Vec6f line;
+    fitLine(points, line, DIST_L2, 0, 0, 0);
+    EXPECT_NEAR(0.0f, line[0], 1e-6f);
+    EXPECT_NEAR(0.0f, line[1], 1e-6f);
+    EXPECT_NEAR(1.0f, std::abs(line[2]), 1e-6f);
+    EXPECT_EQ(Point3f(x, y, 0), Point3f(line[3], line[4], line[5]));
+}
+
+TEST(Imgproc_FitLine, l2_3d_tiny_exact_line)
+{
+    const float scale = std::ldexp(1.0f, -75);
+    std::vector<Point3f> points;
+    for (int i = -2; i <= 2; ++i)
+    {
+        const float t = i * scale;
+        points.emplace_back(t, 2 * t, 3 * t);
+    }
+
+    Vec6f line;
+    fitLine(points, line, DIST_L2, 0, 0, 0);
+    const Vec3d direction(line[0], line[1], line[2]);
+    const Vec3d expected(1, 2, 3);
+    EXPECT_NEAR(1.0, cv::norm(direction), 1e-6);
+    EXPECT_LT(cv::norm(direction.cross(expected)) / cv::norm(expected), 1e-6);
+}
+
+TEST(Imgproc_FitLine, l2_3d_repeated_translated_points)
+{
+    const Point3f origin(1000000, -2000000, 1000000);
+    const Point3f step(3, 5, 7);
+    const Vec3d expected(step.x, step.y, step.z);
+    // Repeated points at two distinct locations dominate the fit.
+    std::vector<Point3f> points(256, origin);
+    points.insert(points.end(), 256, origin + step);
+    points.push_back(origin + step * 2.0f);
+    for (int order = 0; order < 2; ++order)
+    {
+        SCOPED_TRACE(order);
+        Vec6f line;
+        fitLine(points, line, DIST_L2, 0, 0, 0);
+        const Vec3d direction(line[0], line[1], line[2]);
+        EXPECT_NEAR(1.0, cv::norm(direction), 1e-6);
+        EXPECT_LT(cv::norm(direction.cross(expected)) / cv::norm(expected), 1e-6);
+        std::reverse(points.begin(), points.end());
+    }
+}
+
+TEST(Imgproc_FitLine, translated_direction_all_distances)
+{
+    std::vector<Point2f> points2d;
+    std::vector<Point3f> points3d;
+    // More than ten points exercises the robust fit's weighted subset initialization.
+    for (int i = -5; i <= 5; ++i)
+    {
+        const Point2f p(static_cast<float>(1000000 + i), static_cast<float>(-2000000 + 2 * i));
+        points2d.push_back(p);
+        points3d.emplace_back(p.x, p.y, static_cast<float>(1000000 + 3 * i));
+    }
+
+    const Point2d expected2d(1, 2);
+    const Vec3d expected3d(1, 2, 3);
+    for (int dist : {DIST_L2, DIST_L1, DIST_L12, DIST_FAIR, DIST_WELSCH, DIST_HUBER})
+    {
+        SCOPED_TRACE(dist);
+        Vec4f line2d;
+        fitLine(points2d, line2d, dist, 0, 0, 0);
+        const Point2d direction2d(line2d[0], line2d[1]);
+        EXPECT_LT(std::abs(direction2d.cross(expected2d)) /
+                  (cv::norm(direction2d) * cv::norm(expected2d)), 1e-6) << "2D";
+
+        Vec6f line3d;
+        fitLine(points3d, line3d, dist, 0, 0, 0);
+        const Vec3d direction3d(line3d[0], line3d[1], line3d[2]);
+        EXPECT_LT(cv::norm(direction3d.cross(expected3d)) /
+                  (cv::norm(direction3d) * cv::norm(expected3d)), 1e-6) << "3D";
+    }
+}
+
 typedef testing::TestWithParam<tuple<int, int>> fitLine_Modes;
 
 TEST_P(fitLine_Modes, accuracy)
