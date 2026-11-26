@@ -8840,7 +8840,8 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             if constexpr (!std::is_same_v<T, double>)
             {
-                if (bicubicLoadsReachEnd(rows[3] + 3*channels, channels, srcEnd))
+                // Float samples are loaded at their exact width and never need the guard.
+                if (!std::is_same_v<T, float> && bicubicLoadsReachEnd(rows[3] + 3*channels, channels, srcEnd))
                     channel = bicubicInterpolateVectors<T, true>(rows, wx, wy, channels, dst);
                 else
                     channel = bicubicInterpolateVectors<T, false>(rows, wx, wy, channels, dst);
