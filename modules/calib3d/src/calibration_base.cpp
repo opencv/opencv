@@ -1617,9 +1617,6 @@ cv::Mat cv::getOptimalNewCameraMatrix( InputArray _cameraMatrix, InputArray _dis
                                       (double)((inner.y - cy0)*s + cy),
                                       (double)(inner.width*s),
                                       (double)(inner.height*s));
-            Rect r(cvCeil(inner.x), cvCeil(inner.y), cvFloor(inner.width), cvFloor(inner.height));
-            r &= Rect(0, 0, newImgSize.width, newImgSize.height);
-            *validPixROI = r;
         }
     }
     else
@@ -1649,10 +1646,21 @@ cv::Mat cv::getOptimalNewCameraMatrix( InputArray _cameraMatrix, InputArray _dis
         if( validPixROI )
         {
             getUndistortRectangles( _cameraMatrix, _distCoeffs, Mat(), M, imgSize, inner, outer );
-            Rect r = inner;
-            r &= Rect(0, 0, newImgSize.width, newImgSize.height);
-            *validPixROI = r;
         }
+    }
+    if( validPixROI )
+    {
+        // Account for CV_64F floating-point roundoff in the projection/unprojection of boundary
+        // pixel centers when edges land on exact integer coordinates (e.g., alpha == 0 or zero distortion).
+        const double epsX = 64 * DBL_EPSILON * std::max({1.0, (double)newImgSize.width, std::abs(M.at<double>(0, 2)),
+                                                         std::abs(inner.x), std::abs(inner.x + inner.width)});
+        const double epsY = 64 * DBL_EPSILON * std::max({1.0, (double)newImgSize.height, std::abs(M.at<double>(1, 2)),
+                                                         std::abs(inner.y), std::abs(inner.y + inner.height)});
+        const Point p1(cvCeil(inner.x - epsX), cvCeil(inner.y - epsY));
+        const Point p2(cvFloor(inner.x + inner.width + epsX), cvFloor(inner.y + inner.height + epsY));
+        Rect r = (p2.x >= p1.x && p2.y >= p1.y) ? Rect(p1, p2 + Point(1, 1)) : Rect();
+        r &= Rect(0, 0, newImgSize.width, newImgSize.height);
+        *validPixROI = r;
     }
     M.convertTo(M, cameraMatrix.type());
 
