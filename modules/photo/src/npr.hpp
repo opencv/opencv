@@ -73,31 +73,34 @@ class Domain_Filter
 void Domain_Filter::diffx(const Mat &img, Mat &temp)
 {
     int channel = img.channels();
+    int h = img.size().height;
+    int w = img.size().width;
 
-    for(int i = 0; i < img.size().height; i++)
-        for(int j = 0; j < img.size().width-1; j++)
-        {
-            for(int c =0; c < channel; c++)
-            {
-                temp.at<float>(i,j*channel+c) =
-                    img.at<float>(i,(j+1)*channel+c) - img.at<float>(i,j*channel+c);
-            }
-        }
+    for(int i = 0; i < h; i++)
+    {
+        const float* src = img.ptr<float>(i);
+        float* dst = temp.ptr<float>(i);
+        for(int j = 0; j < w-1; j++)
+            for(int c = 0; c < channel; c++)
+                dst[j*channel+c] = src[(j+1)*channel+c] - src[j*channel+c];
+    }
 }
 
 void Domain_Filter::diffy(const Mat &img, Mat &temp)
 {
     int channel = img.channels();
+    int h = img.size().height;
+    int w = img.size().width;
 
-    for(int i = 0; i < img.size().height-1; i++)
-        for(int j = 0; j < img.size().width; j++)
-        {
-            for(int c =0; c < channel; c++)
-            {
-                temp.at<float>(i,j*channel+c) =
-                    img.at<float>((i+1),j*channel+c) - img.at<float>(i,j*channel+c);
-            }
-        }
+    for(int i = 0; i < h-1; i++)
+    {
+        const float* src0 = img.ptr<float>(i);
+        const float* src1 = img.ptr<float>(i+1);
+        float* dst = temp.ptr<float>(i);
+        for(int j = 0; j < w; j++)
+            for(int c = 0; c < channel; c++)
+                dst[j*channel+c] = src1[j*channel+c] - src0[j*channel+c];
+    }
 }
 
 void Domain_Filter::getGradientx( const Mat &img, Mat &gx)
@@ -107,12 +110,13 @@ void Domain_Filter::getGradientx( const Mat &img, Mat &gx)
     int channel = img.channels();
 
     for(int i=0;i<h;i++)
+    {
+        const float* src = img.ptr<float>(i);
+        float* dst = gx.ptr<float>(i);
         for(int j=0;j<w;j++)
             for(int c=0;c<channel;++c)
-            {
-                gx.at<float>(i,j*channel+c) =
-                    img.at<float>(i,(j+1)*channel+c) - img.at<float>(i,j*channel+c);
-            }
+                dst[j*channel+c] = src[(j+1)*channel+c] - src[j*channel+c];
+    }
 }
 
 void Domain_Filter::getGradienty( const Mat &img, Mat &gy)
@@ -122,13 +126,14 @@ void Domain_Filter::getGradienty( const Mat &img, Mat &gy)
     int channel = img.channels();
 
     for(int i=0;i<h;i++)
+    {
+        const float* src0 = img.ptr<float>(i);
+        const float* src1 = img.ptr<float>(i+1);
+        float* dst = gy.ptr<float>(i);
         for(int j=0;j<w;j++)
             for(int c=0;c<channel;++c)
-            {
-                gy.at<float>(i,j*channel+c) =
-                    img.at<float>(i+1,j*channel+c) - img.at<float>(i,j*channel+c);
-
-            }
+                dst[j*channel+c] = src1[j*channel+c] - src0[j*channel+c];
+    }
 }
 
 void Domain_Filter::find_magnitude(Mat &img, Mat &mag)
@@ -178,37 +183,33 @@ void Domain_Filter::compute_Rfilter(Mat &output, Mat &hz, float sigma_h)
     float a = (float) exp((-1.0 * sqrt(2.0)) / sigma_h);
 
     Mat temp = Mat(h,w,CV_32FC3);
-
     output.copyTo(temp);
-    Mat V = Mat(h,w,CV_32FC1);
 
-    for(int i=0;i<h;i++)
-        for(int j=0;j<w;j++)
-            V.at<float>(i,j) = std::pow(a,hz.at<float>(i,j));
-
-   for(int i=0; i<h; i++)
-    {
-        for(int j =1; j < w; j++)
+    parallel_for_(Range(0, h), [&](const Range& range) {
+        std::vector<float> Vrow(w);
+        for(int i = range.start; i < range.end; i++)
         {
-            for(int c = 0; c<channel; c++)
+            const float* hzRow = hz.ptr<float>(i);
+            float* tRow = temp.ptr<float>(i);
+
+            for(int j = 0; j < w; j++)
+                Vrow[j] = std::pow(a, hzRow[j]);
+
+            for(int j = 1; j < w; j++)
             {
-                temp.at<float>(i,j*channel+c) = temp.at<float>(i,j*channel+c) +
-                    (temp.at<float>(i,(j-1)*channel+c) - temp.at<float>(i,j*channel+c)) * V.at<float>(i,j);
+                float v = Vrow[j];
+                for(int c = 0; c < channel; c++)
+                    tRow[j*channel+c] += (tRow[(j-1)*channel+c] - tRow[j*channel+c]) * v;
+            }
+
+            for(int j = w-2; j >= 0; j--)
+            {
+                float v = Vrow[j+1];
+                for(int c = 0; c < channel; c++)
+                    tRow[j*channel+c] += (tRow[(j+1)*channel+c] - tRow[j*channel+c]) * v;
             }
         }
-    }
-
-    for(int i=0; i<h; i++)
-    {
-        for(int j =w-2; j >= 0; j--)
-        {
-            for(int c = 0; c<channel; c++)
-            {
-                temp.at<float>(i,j*channel+c) = temp.at<float>(i,j*channel+c) +
-                    (temp.at<float>(i,(j+1)*channel+c) - temp.at<float>(i,j*channel+c))*V.at<float>(i,j+1);
-            }
-        }
-    }
+    });
 
     temp.copyTo(output);
 }
@@ -226,84 +227,89 @@ void Domain_Filter::compute_boxfilter(Mat &output, Mat &hz, Mat &psketch, float 
     lower_idx = Mat::zeros(h,w,CV_32FC1);
     upper_idx = Mat::zeros(h,w,CV_32FC1);
 
-    Mat domain_row = Mat::zeros(1,w+1,CV_32FC1);
+    std::vector<float> domain_row_buf(w+1);
+    std::vector<float> lower_pos_row(w);
+    std::vector<float> upper_pos_row(w);
+    std::vector<float> temp_lower_idx(w);
+    std::vector<float> temp_upper_idx(w);
 
     for(int i=0;i<h;i++)
     {
-        for(int j=0;j<w;j++)
-            domain_row.at<float>(0,j) = hz.at<float>(i,j);
-        domain_row.at<float>(0,w) = (float) myinf;
+        const float* hzRow = hz.ptr<float>(i);
+        const float* lpRow = lower_pos.ptr<float>(i);
+        const float* upRow = upper_pos.ptr<float>(i);
+        float* liRow = lower_idx.ptr<float>(i);
+        float* uiRow = upper_idx.ptr<float>(i);
 
-        Mat lower_pos_row = Mat::zeros(1,w,CV_32FC1);
-        Mat upper_pos_row = Mat::zeros(1,w,CV_32FC1);
+        for(int j=0;j<w;j++)
+            domain_row_buf[j] = hzRow[j];
+        domain_row_buf[w] = (float) myinf;
 
         for(int j=0;j<w;j++)
         {
-            lower_pos_row.at<float>(0,j) = lower_pos.at<float>(i,j);
-            upper_pos_row.at<float>(0,j) = upper_pos.at<float>(i,j);
+            lower_pos_row[j] = lpRow[j];
+            upper_pos_row[j] = upRow[j];
         }
 
-        Mat temp_lower_idx = Mat::zeros(1,w,CV_32FC1);
-        Mat temp_upper_idx = Mat::zeros(1,w,CV_32FC1);
+        std::fill(temp_lower_idx.begin(), temp_lower_idx.end(), 0.0f);
+        std::fill(temp_upper_idx.begin(), temp_upper_idx.end(), 0.0f);
 
         for(int j=0;j<w;j++)
         {
-            if(domain_row.at<float>(0,j) > lower_pos_row.at<float>(0,0))
+            if(domain_row_buf[j] > lower_pos_row[0])
             {
-                temp_lower_idx.at<float>(0,0) = (float) j;
+                temp_lower_idx[0] = (float) j;
                 break;
             }
         }
         for(int j=0;j<w;j++)
         {
-            if(domain_row.at<float>(0,j) > upper_pos_row.at<float>(0,0))
+            if(domain_row_buf[j] > upper_pos_row[0])
             {
-                temp_upper_idx.at<float>(0,0) = (float) j;
+                temp_upper_idx[0] = (float) j;
                 break;
             }
         }
 
-        int temp = 0;
+        int temp_val = 0;
         for(int j=1;j<w;j++)
         {
             int count=0;
-            for(int k=(int) temp_lower_idx.at<float>(0,j-1);k<w+1;k++)
+            for(int k=(int) temp_lower_idx[j-1];k<w+1;k++)
             {
-                if(domain_row.at<float>(0,k) > lower_pos_row.at<float>(0,j))
+                if(domain_row_buf[k] > lower_pos_row[j])
                 {
-                    temp = count;
+                    temp_val = count;
                     break;
                 }
                 count++;
             }
 
-            temp_lower_idx.at<float>(0,j) = temp_lower_idx.at<float>(0,j-1) + temp;
+            temp_lower_idx[j] = temp_lower_idx[j-1] + temp_val;
 
             count = 0;
-            for(int k=(int) temp_upper_idx.at<float>(0,j-1);k<w+1;k++)
+            for(int k=(int) temp_upper_idx[j-1];k<w+1;k++)
             {
-
-
-                if(domain_row.at<float>(0,k) > upper_pos_row.at<float>(0,j))
+                if(domain_row_buf[k] > upper_pos_row[j])
                 {
-                    temp = count;
+                    temp_val = count;
                     break;
                 }
                 count++;
             }
 
-            temp_upper_idx.at<float>(0,j) = temp_upper_idx.at<float>(0,j-1) + temp;
+            temp_upper_idx[j] = temp_upper_idx[j-1] + temp_val;
         }
 
         for(int j=0;j<w;j++)
         {
-            lower_idx.at<float>(i,j) = temp_lower_idx.at<float>(0,j) + 1;
-            upper_idx.at<float>(i,j) = temp_upper_idx.at<float>(0,j) + 1;
+            liRow[j] = temp_lower_idx[j] + 1;
+            uiRow[j] = temp_upper_idx[j] + 1;
         }
-
     }
     psketch = upper_idx - lower_idx;
 }
+
 void Domain_Filter::compute_NCfilter(Mat &output, Mat &hz, Mat &psketch, float radius)
 {
     int h = output.rows;
@@ -316,33 +322,60 @@ void Domain_Filter::compute_NCfilter(Mat &output, Mat &hz, Mat &psketch, float r
 
     for(int i = 0; i < h; i++)
     {
-        box_filter.at<float>(i,1*channel+0) = output.at<float>(i,0*channel+0);
-        box_filter.at<float>(i,1*channel+1) = output.at<float>(i,0*channel+1);
-        box_filter.at<float>(i,1*channel+2) = output.at<float>(i,0*channel+2);
+        const float* outRow = output.ptr<float>(i);
+        float* bfRow = box_filter.ptr<float>(i);
+        bfRow[1*channel+0] = outRow[0*channel+0];
+        bfRow[1*channel+1] = outRow[0*channel+1];
+        bfRow[1*channel+2] = outRow[0*channel+2];
         for(int j = 2; j < w+1; j++)
-        {
             for(int c=0;c<channel;c++)
-                box_filter.at<float>(i,j*channel+c) = output.at<float>(i,(j-1)*channel+c) + box_filter.at<float>(i,(j-1)*channel+c);
-        }
+                bfRow[j*channel+c] = outRow[(j-1)*channel+c] + bfRow[(j-1)*channel+c];
     }
 
     Mat final = Mat::zeros(h,w,CV_32FC3);
 
     // Compute the box filter using a summed area table.
-    for(int i=0;i<h;i++)
+    int hw1 = h * (w+1);
+    for(int c=0;c<channel;c++)
     {
-        for(int j=0;j<w;j++)
+        int channel_offset = c * hw1;
+
+        for(int i=0;i<h;i++)
         {
-            const int q = (int) upper_idx.at<float>(i,j) - 1;
-            const int q1 = (int) lower_idx.at<float>(i,j) - 1;
-            const float denom = upper_idx.at<float>(i,j) - lower_idx.at<float>(i,j);
-            for(int c=0;c<channel;c++)
-                final.at<float>(i,j*channel+c) = (box_filter.at<float>(i,q*channel+c) - box_filter.at<float>(i,q1*channel+c)) / denom;
+            const float* liRow  = lower_idx.ptr<float>(i);
+            const float* uiRow  = upper_idx.ptr<float>(i);
+            float* finRow = final.ptr<float>(i);
+            int row_idx = i + 1;
+
+            for(int j=0;j<w;j++)
+            {
+                int aval = channel_offset + ((int)liRow[j] - 1) * h + row_idx;
+                int bval = channel_offset + ((int)uiRow[j] - 1) * h + row_idx;
+
+                int r   = bval / hw1;
+                int rem = bval - r * hw1;
+                int q   = rem / h;
+                int p   = rem - q * h;
+                if(q==0) { p=h; q=w; r=r-1; }
+                if(p==0) { p=h; q=q-1; }
+
+                int r1   = aval / hw1;
+                int rem1 = aval - r1 * hw1;
+                int q1   = rem1 / h;
+                int p1   = rem1 - q1 * h;
+                if(p1==0) { p1=h; q1=q1-1; }
+
+                const float* bfp  = box_filter.ptr<float>(p-1);
+                const float* bfp1 = box_filter.ptr<float>(p1-1);
+                float denom = uiRow[j] - liRow[j];
+                finRow[j*channel+2-c] = (bfp[q*channel+(2-r)] - bfp1[q1*channel+(2-r1)]) / denom;
+            }
         }
     }
 
     final.copyTo(output);
 }
+
 void Domain_Filter::init(const Mat &img, int flags, float sigma_s, float sigma_r)
 {
     int h = img.size().height;
@@ -363,20 +396,22 @@ void Domain_Filter::init(const Mat &img, int flags, float sigma_s, float sigma_r
     //////////////////////// Compute the l1-norm distance of neighbor pixels ////////////////////////////////////////////////
 
     for(int i = 0; i < h; i++)
-        for(int j = 0,k=1; j < w-1; j++,k++)
+    {
+        const float* dxRow   = derivx.ptr<float>(i);
+        float* dstxRow = distx.ptr<float>(i);
+        for(int j = 0, k = 1; j < w-1; j++, k++)
             for(int c = 0; c < channel; c++)
-            {
-                distx.at<float>(i,k) =
-                    distx.at<float>(i,k) + abs(derivx.at<float>(i,j*channel+c));
-            }
+                dstxRow[k] += std::abs(dxRow[j*channel+c]);
+    }
 
-    for(int i = 0,k=1; i < h-1; i++,k++)
+    for(int i = 0, k = 1; i < h-1; i++, k++)
+    {
+        const float* dyRow = derivy.ptr<float>(i);
+        float* dstyRow = disty.ptr<float>(k);
         for(int j = 0; j < w; j++)
             for(int c = 0; c < channel; c++)
-            {
-                disty.at<float>(k,j) =
-                    disty.at<float>(k,j) + abs(derivy.at<float>(i,j*channel+c));
-            }
+                dstyRow[j] += std::abs(dyRow[j*channel+c]);
+    }
 
     ////////////////////// Compute the derivatives of the horizontal and vertical domain transforms. /////////////////////////////
 
@@ -399,29 +434,33 @@ void Domain_Filter::init(const Mat &img, int flags, float sigma_s, float sigma_r
 
     if(flags == 2)
     {
-
         ct_H = Mat(h,w,CV_32FC1);
         ct_V = Mat(h,w,CV_32FC1);
 
         for(int i = 0; i < h; i++)
         {
-            ct_H.at<float>(i,0) = horiz.at<float>(i,0);
+            const float* hRow  = horiz.ptr<float>(i);
+            float* ctRow = ct_H.ptr<float>(i);
+            ctRow[0] = hRow[0];
             for(int j = 1; j < w; j++)
-            {
-                ct_H.at<float>(i,j) = horiz.at<float>(i,j) + ct_H.at<float>(i,j-1);
-            }
+                ctRow[j] = hRow[j] + ctRow[j-1];
         }
 
-        for(int j = 0; j < w; j++)
         {
-            ct_V.at<float>(0,j) = vert.at<float>(0,j);
+            const float* v0 = vert.ptr<float>(0);
+            float* c0 = ct_V.ptr<float>(0);
+            for(int j = 0; j < w; j++)
+                c0[j] = v0[j];
             for(int i = 1; i < h; i++)
             {
-                ct_V.at<float>(i,j) = vert.at<float>(i,j) + ct_V.at<float>(i-1,j);
+                const float* vRow = vert.ptr<float>(i);
+                const float* prevRow = ct_V.ptr<float>(i-1);
+                float* ctRow = ct_V.ptr<float>(i);
+                for(int j = 0; j < w; j++)
+                    ctRow[j] = vRow[j] + prevRow[j];
             }
         }
     }
-
 }
 
 void Domain_Filter::filter(const Mat &img, Mat &res, float sigma_s = 60, float sigma_r = 0.4, int flags = 1)
@@ -448,12 +487,10 @@ void Domain_Filter::filter(const Mat &img, Mat &res, float sigma_s = 60, float s
             compute_Rfilter(O_t, vert_t, sigma_h);
 
             O = O_t.t();
-
         }
     }
     else if(flags == 2)
     {
-
         Mat vert_t = ct_V.t();
         Mat temp = Mat(h,w,CV_32FC1);
         Mat temp1 = Mat(w,h,CV_32FC1);
@@ -481,7 +518,6 @@ void Domain_Filter::filter(const Mat &img, Mat &res, float sigma_s = 60, float s
 
 void Domain_Filter::pencil_sketch(const Mat &img, Mat &sketch, Mat &color_res, float sigma_s, float sigma_r, float shade_factor)
 {
-
     int no_of_iter = 3;
     init(img,2,sigma_s,sigma_r);
     int h = img.size().height;
@@ -524,8 +560,13 @@ void Domain_Filter::pencil_sketch(const Mat &img, Mat &sketch, Mat &color_res, f
         peny_t = peny.t();
 
         for(int k=0;k<h;k++)
+        {
+            const float* pxRow = penx.ptr<float>(k);
+            const float* pyRow = peny_t.ptr<float>(k);
+            float* prRow = pen_res.ptr<float>(k);
             for(int j=0;j<w;j++)
-                pen_res.at<float>(k,j) = (shade_factor * (penx.at<float>(k,j) + peny_t.at<float>(k,j)));
+                prRow[j] = shade_factor * (pxRow[j] + pyRow[j]);
+        }
 
         if(i==0)
         {
@@ -535,6 +576,5 @@ void Domain_Filter::pencil_sketch(const Mat &img, Mat &sketch, Mat &color_res, f
             merge(YUV_channel,color_sketch);
             cvtColor(color_sketch,color_res,COLOR_YCrCb2BGR);
         }
-
     }
 }
