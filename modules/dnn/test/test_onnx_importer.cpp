@@ -2052,6 +2052,13 @@ TEST_P(Test_ONNX_layers, Quantized_Convolution)
     }
 }
 
+TEST_P(Test_ONNX_layers, Quantized_Convolution_1d_asymmetric_pads)
+{
+    // 1D QLinearConv with pads=[2, 0]. The int8 conv rejects asymmetric
+    // pads, so the importer routes them through a PaddingInt8 layer.
+    testONNXModels("quantized_conv1d_asymmetric_pads");
+}
+
 TEST_P(Test_ONNX_layers, Quantized_MatMul)
 {
     testONNXModels("quantized_matmul_uint8_weights", npy, 0.005, 0.007);
