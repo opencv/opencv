@@ -3372,6 +3372,32 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
     return k;
 }
 
+static int computeResizeAreaUpTab(int ssize, int dsize, int cn, double scale,
+                                  double inv_scale, DecimateAlpha* tab)
+{
+    int k = 0;
+    for (int dx = 0; dx < dsize; dx++)
+    {
+        int sx = cvFloor(dx * scale);
+        float fx = (float)((dx + 1) - (sx + 1) * inv_scale);
+        fx = fx <= 0 ? 0.f : fx - cvFloor(fx);
+        if (sx >= ssize - 1)
+            fx = 0.f, sx = ssize - 1;
+
+        tab[k].di = dx * cn;
+        tab[k].si = sx * cn;
+        tab[k++].alpha = 1.f - fx;
+
+        if (fx > 0.f)
+        {
+            tab[k].di = dx * cn;
+            tab[k].si = (sx + 1) * cn;
+            tab[k++].alpha = fx;
+        }
+    }
+    return k;
+}
+
 #ifdef HAVE_OPENCL
 static void ocl_computeResizeAreaTabs(int ssize, int dsize, double scale, int * const map_tab,
                                       float * const alpha_tab, int * const ofs_tab)
@@ -3855,6 +3881,49 @@ void resize(int src_type,
 
             int xtab_size = computeResizeAreaTab(src_width, dsize.width, cn, scale_x, xtab);
             int ytab_size = computeResizeAreaTab(src_height, dsize.height, 1, scale_y, ytab);
+
+            AutoBuffer<int> _tabofs(dsize.height + 1);
+            int* tabofs = _tabofs.data();
+            for( k = 0, dy = 0; k < ytab_size; k++ )
+            {
+                if( k == 0 || ytab[k].di != ytab[k-1].di )
+                {
+                    CV_Assert( ytab[k].di == dy );
+                    tabofs[dy++] = k;
+                }
+            }
+            tabofs[dy] = ytab_size;
+
+            func( src, dst, xtab, xtab_size, ytab, ytab_size, tabofs );
+            return;
+        }
+
+        // For mixed scaling, use area weights on the shrinking axis and the
+        // fallback's two-tap weights on the enlarging axis.
+        if( interpolation == INTER_AREA &&
+            (scale_x > 1 || scale_y > 1) )
+        {
+            ResizeAreaFunc func = area_tab[depth];
+            CV_Assert( func != 0 );
+
+            AutoBuffer<DecimateAlpha> _xtab(std::max(src_width * 2, dsize.width * 2));
+            AutoBuffer<DecimateAlpha> _ytab(std::max(src_height * 2, dsize.height * 2));
+            DecimateAlpha* xtab = _xtab.data();
+            DecimateAlpha* ytab = _ytab.data();
+
+            int xtab_size;
+            if( scale_x >= 1 )
+                xtab_size = computeResizeAreaTab(src_width, dsize.width, cn, scale_x, xtab);
+            else
+                xtab_size = computeResizeAreaUpTab(
+                    src_width, dsize.width, cn, scale_x, inv_scale_x, xtab);
+
+            int ytab_size;
+            if( scale_y >= 1 )
+                ytab_size = computeResizeAreaTab(src_height, dsize.height, 1, scale_y, ytab);
+            else
+                ytab_size = computeResizeAreaUpTab(
+                    src_height, dsize.height, 1, scale_y, inv_scale_y, ytab);
 
             AutoBuffer<int> _tabofs(dsize.height + 1);
             int* tabofs = _tabofs.data();
