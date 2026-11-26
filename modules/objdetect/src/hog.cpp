@@ -1555,6 +1555,9 @@ void HOGDescriptor::detect(InputArray _img,
     padding.height = (int)alignSize(std::max(padding.height, 0), cacheStride.height);
     Size paddedImgSize(img.cols + padding.width*2, img.rows + padding.height*2);
 
+    if( !nwindows && (paddedImgSize.width < winSize.width || paddedImgSize.height < winSize.height) )
+        return;
+
     HOGCache cache(this, img, padding, padding, nwindows == 0, cacheStride);
 
     if( !nwindows )

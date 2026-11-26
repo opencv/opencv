@@ -1402,6 +1402,9 @@ TEST(Objdetect_HOGDescriptor, issue_23989_small_image)
     ASSERT_NO_THROW(hog.detect(small_both, hits, weights));
     EXPECT_TRUE(hits.empty());
     EXPECT_TRUE(weights.empty());
+    ASSERT_NO_THROW(hog.detect(small_both, hits, weights, 0.0, Size(2, 2)));
+    EXPECT_TRUE(hits.empty());
+    EXPECT_TRUE(weights.empty());
 
     Mat off_by_one = Mat::zeros(hog.winSize.height - 1, hog.winSize.width, CV_8UC1);
     EXPECT_THROW(hog.compute(off_by_one, descriptors), cv::Exception);
