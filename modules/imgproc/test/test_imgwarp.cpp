@@ -2163,5 +2163,40 @@ INSTANTIATE_TEST_CASE_P(/**/, Imgproc_GetRectSubPix_Border, testing::Values(
     testing::make_tuple(CV_8U, CV_8U), testing::make_tuple(CV_8U, CV_32F), testing::make_tuple(CV_32F, CV_32F)));
 
 
+typedef testing::TestWithParam<tuple<int, int, int>> Imgproc_WarpHalfCubic;
+
+TEST_P(Imgproc_WarpHalfCubic, matches_float32)
+{
+    const int channels = get<0>(GetParam());
+    const int border = get<1>(GetParam());
+    const int mapWidth = get<2>(GetParam());
+    RNG rng(channels*131 + border*17 + mapWidth);
+    Mat wide(23, 29, CV_32FC(channels)), src, reference;
+    rng.fill(wide, RNG::UNIFORM, 0., 1.);
+    wide.convertTo(src, CV_16F);
+    src.convertTo(reference, CV_32F);
+    Mat mapx(7, mapWidth, CV_32F), mapy(7, mapWidth, CV_32F);
+    // Maps reach beyond the image so that inlier, mixed and outlier batches all occur.
+    rng.fill(mapx, RNG::UNIFORM, -6., 35.);
+    rng.fill(mapy, RNG::UNIFORM, -6., 29.);
+    Mat actual(mapx.size(), src.type()), expected(mapx.size(), reference.type());
+    rng.fill(expected, RNG::UNIFORM, 0., 1.);
+    expected.convertTo(actual, CV_16F);
+    actual.convertTo(expected, CV_32F);
+    const Scalar fill(0.25, 0.5, 0.75, 1.);
+    remap(src, actual, mapx, mapy, INTER_CUBIC, border, fill);
+    remap(reference, expected, mapx, mapy, INTER_CUBIC, border, fill);
+    Mat actual32f;
+    actual.convertTo(actual32f, CV_32F);
+    EXPECT_LE(cvtest::norm(actual32f, expected, NORM_INF), 1e-3);
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_WarpHalfCubic, testing::Combine(
+    testing::Values(1, 4),
+    testing::Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101,
+                    BORDER_WRAP, BORDER_TRANSPARENT),
+    testing::Values(1, 3, 19)));
+
+
 }} // namespace
 /* End of file. */

@@ -7262,9 +7262,11 @@ static void bicubicRef(const float* srcx, const float* srcy, int len,
     float A = params ? *params : defaultA;
 
     constexpr int BPP = int(NCHANNELS*sizeof(dst[0]));
-    using buftype = std::conditional_t<std::is_floating_point_v<chtype>, chtype, int>;
+    using buftype = std::conditional_t<std::is_floating_point_v<chtype> || std::is_same_v<chtype, hfloat>,
+                                       std::conditional_t<std::is_same_v<chtype, hfloat>, float, chtype>, int>;
     using acctype = std::conditional_t<std::is_same_v<chtype, double>, double, float>;
-    using pixtype = std::conditional_t<NCHANNELS == 1, chtype, Vec<chtype, NCHANNELS>>;
+    using pixtype = std::conditional_t<NCHANNELS == 1, chtype,
+                                       Vec<std::conditional_t<std::is_same_v<chtype, hfloat>, ushort, chtype>, NCHANNELS>>;
 
     pixtype bval = borderVal ? *(pixtype*)borderVal : pixtype();
 
@@ -8124,7 +8126,8 @@ bicubicVec(const float* srcx, const float* srcy, int len,
     constexpr float defaultA = -0.75f;
     float A = params ? *params : defaultA;
 
-    using pixtype = std::conditional_t<NCHANNELS == 1, chtype, Vec<chtype, NCHANNELS>>;
+    using pixtype = std::conditional_t<NCHANNELS == 1, chtype,
+                                       Vec<std::conditional_t<std::is_same_v<chtype, hfloat>, ushort, chtype>, NCHANNELS>>;
     using buftype = typename VTraits<vecbuftype>::lane_type;
 
     constexpr int BPP = int(NCHANNELS*sizeof(dst[0]));
@@ -8183,6 +8186,11 @@ bicubicVec(const float* srcx, const float* srcy, int len,
                     BICUBIC_C1_PROCESS_ROW(1, FETCH_INLIERS_32FC1);
                     BICUBIC_C1_PROCESS_ROW(2, FETCH_INLIERS_32FC1);
                     BICUBIC_C1_PROCESS_ROW(3, FETCH_INLIERS_32FC1);
+                } else if constexpr (std::is_same_v<chtype, hfloat>) {
+                    BICUBIC_C1_PROCESS_ROW(0, FETCH_INLIERS_C1_DEFAULT);
+                    BICUBIC_C1_PROCESS_ROW(1, FETCH_INLIERS_C1_DEFAULT);
+                    BICUBIC_C1_PROCESS_ROW(2, FETCH_INLIERS_C1_DEFAULT);
+                    BICUBIC_C1_PROCESS_ROW(3, FETCH_INLIERS_C1_DEFAULT);
                 }
             } else if constexpr (NCHANNELS == 3) {
                 vecbuftype R0, R1, R2, R3, G0, G1, G2, G3, B0, B1, B2, B3;
@@ -8221,6 +8229,11 @@ bicubicVec(const float* srcx, const float* srcy, int len,
                     BICUBIC_C4_PROCESS_ROW(1, FETCH_INLIERS_32FC4);
                     BICUBIC_C4_PROCESS_ROW(2, FETCH_INLIERS_32FC4);
                     BICUBIC_C4_PROCESS_ROW(3, FETCH_INLIERS_32FC4);
+                } else if constexpr (std::is_same_v<chtype, hfloat>) {
+                    BICUBIC_C4_PROCESS_ROW(0, FETCH_INLIERS_C4_DEFAULT);
+                    BICUBIC_C4_PROCESS_ROW(1, FETCH_INLIERS_C4_DEFAULT);
+                    BICUBIC_C4_PROCESS_ROW(2, FETCH_INLIERS_C4_DEFAULT);
+                    BICUBIC_C4_PROCESS_ROW(3, FETCH_INLIERS_C4_DEFAULT);
                 }
             }
         } else if (code < 0) {
@@ -8268,6 +8281,21 @@ bicubicVec(const float* srcx, const float* srcy, int len,
         }
 
         // store the result
+        if constexpr (std::is_same_v<chtype, hfloat>) {
+            float fbuf[BATCH*NCHANNELS];
+            if constexpr (NCHANNELS == 1)
+                v_store(fbuf, acc_r);
+            else
+                v_store_interleave(fbuf, acc_r, acc_g, acc_b, acc_a);
+            if (i + BATCH <= savestorelen) {
+                for (int k = 0; k < BATCH*NCHANNELS; k += BATCH)
+                    v_pack_store(dst + k, vx_load(fbuf + k));
+            } else {
+                for (int k = 0; k < dlen*NCHANNELS; k++)
+                    dst[k] = hfloat(fbuf[k]);
+            }
+            continue;
+        }
         chtype outbuf[BATCH*NCHANNELS*4];
         if constexpr (NCHANNELS == 1) {
             if constexpr (std::is_same_v<chtype, uint8_t>) {
@@ -8602,6 +8630,28 @@ bicubic32fC4(const float* srcx, const float* srcy, int len,
                                 dst, params, borderType, borderVal);
 #endif
 }
+
+#if CV_SIMD
+static void
+bicubic16fC1(const float* srcx, const float* srcy, int len,
+             const void* src, size_t srcstep, Size size,
+             hfloat* dst, const float* params,
+             int borderType, hfloat* borderVal)
+{
+    bicubicVec<hfloat, 1, v_float32, v_float32>(srcx, srcy, len, src, srcstep, size,
+                                                dst, params, borderType, borderVal);
+}
+
+static void
+bicubic16fC4(const float* srcx, const float* srcy, int len,
+             const void* src, size_t srcstep, Size size,
+             hfloat* dst, const float* params,
+             int borderType, hfloat* borderVal)
+{
+    bicubicVec<hfloat, 4, v_float32, v_float32>(srcx, srcy, len, src, srcstep, size,
+                                                dst, params, borderType, borderVal);
+}
+#endif
 
 static void
 bicubic64fC1(const float* srcx, const float* srcy, int len,
@@ -9431,6 +9481,12 @@ ImgWarpFunc getBicubicWarpFunc_(int type)
 #if CV_FP16 && ((CV_AVX2 && CV_SIMD_WIDTH == 32) || (CV_NEON && CV_SIMD128 && CV_SIMD_WIDTH == 16))
     if (type == CV_16FC3)
         return bicubicWarpHalfRGBBlocks;
+#endif
+#if CV_SIMD
+    if (type == CV_16FC1)
+        return bicubicWarpWrap<hfloat, bicubic16fC1>;
+    if (type == CV_16FC4)
+        return bicubicWarpWrap<hfloat, bicubic16fC4>;
 #endif
     if (CV_MAT_DEPTH(type) == CV_16F)
         return bicubicWarpChannels<hfloat>;
