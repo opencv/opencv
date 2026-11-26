@@ -581,8 +581,9 @@ void FilterEngine__apply(FilterEngine& this_, const Mat& src, Mat& dst, const Si
         int tileSize = (src.total() < (size_t)nthreads * 128 * 128 * 4) ? 64 : 128;
         int totalTiles = ((dst.cols + tileSize - 1) / tileSize) * ((dst.rows + tileSize - 1) / tileSize);
 
+        // Tiles must reach a thread in contiguous runs, not scattered across the image.
         TiledFilterInvoker invoker(this_, src_copy, dst, tileSize);
-        parallel_for_(Range(0, totalTiles), invoker);
+        parallel_for_(Range(0, totalTiles), invoker, nthreads);
         return;
     }
 
