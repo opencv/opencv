@@ -130,7 +130,7 @@ def main():
                 frame_obj_points = pattern_points
         elif pattern_type == 'charucoboard':
             corners, charucoIds, _, _ = charuco_detector.detectBoard(img)
-            if (len(corners) > 0):
+            if corners is not None and len(corners) > 0:
                 frame_obj_points, frame_img_points = board.matchImagePoints(corners, charucoIds)
                 found = True
             else:
@@ -143,7 +143,7 @@ def main():
             vis = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
             if pattern_type == 'chessboard':
                 cv.drawChessboardCorners(vis, pattern_size, corners, found)
-            elif pattern_type == 'charucoboard':
+            elif pattern_type == 'charucoboard' and found:
                 cv.aruco.drawDetectedCornersCharuco(vis, corners, charucoIds=charucoIds)
             _path, name, _ext = splitfn(fn)
             outfile = os.path.join(debug_dir, name + '_board.png')
@@ -169,6 +169,10 @@ def main():
     for (corners, pattern_points) in chessboards:
         img_points.append(corners)
         obj_points.append(pattern_points)
+
+    if not img_points:
+        print("No calibration patterns found")
+        return
 
     # calculate camera distortion
     rms, camera_matrix, dist_coefs, _rvecs, _tvecs = cv.calibrateCamera(obj_points, img_points, (w, h), None, None)
