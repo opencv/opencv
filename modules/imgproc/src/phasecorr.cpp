@@ -162,12 +162,18 @@ static void magSpectrums( InputArray _src, OutputArray _dst)
 void divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, int flags, bool conjB)
 {
     Mat srcA = _srcA.getMat(), srcB = _srcB.getMat();
+    if (srcA.empty() && srcB.empty())
+    {
+        _dst.release();
+        return;
+    }
     int depth = srcA.depth(), cn = srcA.channels(), type = srcA.type();
     int rows = srcA.rows, cols = srcA.cols;
     int j, k;
 
     CV_Assert( type == srcB.type() && srcA.size() == srcB.size() );
     CV_Assert( type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2 );
+    CV_Assert( !srcA.empty() && !srcB.empty() );
 
     _dst.create( srcA.rows, srcA.cols, type );
     Mat dst = _dst.getMat();

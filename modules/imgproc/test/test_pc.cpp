@@ -573,4 +573,24 @@ void CV_DivSpectrumsTest::run_func()
 
 TEST(Imgproc_DivSpectrums, accuracy) { CV_DivSpectrumsTest test; test.safe_run(); }
 
+TEST(Imgproc_DivSpectrums, empty_input)
+{
+    const Mat spec = Mat::ones(4, 4, CV_32FC1);
+    Mat dst(2, 2, CV_32FC1);
+
+    // both inputs empty: no work, empty destination
+    ASSERT_NO_THROW(divSpectrums(Mat(), Mat(), dst, 0));
+    EXPECT_TRUE(dst.empty());
+    dst.create(2, 2, CV_32FC1);
+    ASSERT_NO_THROW(divSpectrums(Mat(0, 4, CV_32F), Mat(0, 4, CV_32F), dst, 0));
+    EXPECT_TRUE(dst.empty());
+    dst.create(2, 2, CV_32FC1);
+    ASSERT_NO_THROW(divSpectrums(Mat(4, 0, CV_32F), Mat(4, 0, CV_32F), dst, DFT_ROWS));
+    EXPECT_TRUE(dst.empty());
+
+    // only one input empty: size mismatch
+    EXPECT_THROW(divSpectrums(Mat(), spec, dst, 0), cv::Exception);
+    EXPECT_THROW(divSpectrums(spec, Mat(), dst, 0), cv::Exception);
+}
+
 }} // namespace
