@@ -85,7 +85,7 @@ static double computeReprojectionMSE(const Mat &obj_points_, const Mat &img_poin
     if (img_points.rows != tmpImagePoints.rows)
         img_points = img_points.t();
     subtract (tmpImagePoints, img_points, tmpImagePoints);
-    return norm(tmpImagePoints, NORM_L2SQR) / tmpImagePoints.rows;
+    return norm(tmpImagePoints, NORM_L2SQR) / tmpImagePoints.total();
 }
 
 static bool maximumSpanningTree (int NUM_CAMERAS, int NUM_FRAMES, const std::vector<std::vector<bool>> &detection_mask,
@@ -634,7 +634,9 @@ double calibrateMultiview(
     const Mat obj_pts_0 = objPoints.getMat(0);
     CV_Assert((obj_pts_0.type() == CV_32F && (obj_pts_0.rows == 3 || obj_pts_0.cols == 3)) ||
               (obj_pts_0.type() == CV_32FC3 && (obj_pts_0.rows == 1 || obj_pts_0.cols == 1)));
-    const bool obj_points_in_rows = obj_pts_0.cols == 3;
+    const bool obj_points_in_rows = obj_pts_0.channels() == 3
+        ? obj_pts_0.cols == 1
+        : obj_pts_0.cols == 3;
     const int NUM_CAMERAS = (int)detection_mask_.rows, NUM_FRAMES = (int)detection_mask_.cols;
     CV_Assert((NUM_CAMERAS > 1) && (NUM_FRAMES > 0));
     const int NUM_PATTERN_PTS = obj_points_in_rows ? obj_pts_0.rows : obj_pts_0.cols;
@@ -666,11 +668,11 @@ double calibrateMultiview(
     // process input and count all visible frames and points
 
     std::vector<std::vector<bool>> detection_mask_mat(NUM_CAMERAS, std::vector<bool>(NUM_FRAMES));
-    const auto * const detection_mask_ptr = detection_mask_.data;
     for (int c = 0; c < NUM_CAMERAS; c++) {
+        const uchar* detection_mask_ptr = detection_mask_.ptr<uchar>(c);
         int num_visible_frames = 0;
         for (int f = 0; f < NUM_FRAMES; f++) {
-            detection_mask_mat[c][f] = detection_mask_ptr[c*NUM_FRAMES + f] != 0;
+            detection_mask_mat[c][f] = detection_mask_ptr[f] != 0;
             if (detection_mask_mat[c][f]) {
                 num_visible_frames++;
                 valid_frames[f] = true; // if frame is visible by at least one camera then count is as a valid one
@@ -957,7 +959,8 @@ double calibrateMultiview(
             if (detection_mask_mat[c][f]) {
                 const Mat rvec0 = rvecs_mat_vec ? rvecs0.getMat(f) : rvecs0_.row(f).t();
                 const Mat tvec0 = tvecs_mat_vec ? tvecs0.getMat(f) : tvecs0_.row(f).t();
-                const double err2 = multiview::computeReprojectionMSE(objPoints.getMat(f), imagePoints[c][f], Ks_vec[c],
+                const double err2 = multiview::computeReprojectionMSE(objPoints_norm[f] * scale_3d_pts,
+                        imagePoints[c][f], Ks_vec[c],
                         distortions_vec[c], rvec0, tvec0, rvec, tvec, models_mat.at<uchar>(c));
                 (*errs_ptr++) = sqrt(err2);
                 sum_errors += err2;

@@ -85,6 +85,7 @@ performing mathematical computations, and managing memory efficiently within the
     @defgroup core_directx DirectX interoperability
     @defgroup core_eigen Eigen support
     @defgroup core_opencl OpenCL support
+    @defgroup core_accel Accelerators (non-CPU HAL)
     @defgroup core_va_intel Intel VA-API/OpenCL (CL-VA) interoperability
     @defgroup core_hal Hardware Acceleration Layer
     @{
@@ -331,7 +332,7 @@ result of an incorrect sign in the case of overflow.
 @param src1 first input array or a scalar.
 @param src2 second input array or a scalar.
 @param dst output array of the same size and the same number of channels as the input array.
-@param mask optional operation mask; this is CV_8U, CV8S or CV_Bool single channel array that specifies elements
+@param mask optional operation mask; this is CV_8U, CV_8S or CV_Bool single channel array that specifies elements
 of the output array to be changed.
 @param dtype optional depth of the output array
 @sa  add, addWeighted, scaleAdd, Mat::convertTo
@@ -434,6 +435,8 @@ The function can be replaced with a matrix expression:
 @endcode
 @note Saturation is not applied when the output array has the depth CV_32S. You may even get
 result of an incorrect sign in the case of overflow.
+@note CV_Bool inputs are not supported. Convert them to another depth first,
+for example with Mat::convertTo.
 @param src1 first input array.
 @param alpha weight of the first array elements.
 @param src2 second input array of the same size and channel number as src1.
@@ -485,7 +488,9 @@ The function LUT fills the output array with values from the look-up table. Indi
 are taken from the input array. That is, the function processes each element of src as follows:
 \f[\texttt{dst} (I)  \leftarrow \texttt{lut(src(I) + d)}\f]
 where
-\f[d =  \forkthree{0}{if \(\texttt{src}\) has depth \(\texttt{CV_8U}\) or \(\texttt{CV_16U}\)}{128}{if \(\texttt{src}\) has depth \(\texttt{CV_8S}\)}{32768}{if \(\texttt{src}\) has depth \(\texttt{CV_16S}\)}\f]
+\f[d =  \forkthree{0}{if \(\texttt{src(I)} \ge 0\)}{256}{if \(\texttt{src}\) has depth \(\texttt{CV_8S}\) and \(\texttt{src(I)} < 0\)}{65536}{if \(\texttt{src}\) has depth \(\texttt{CV_16S}\) and \(\texttt{src(I)} < 0\)}\f]
+In other words, CV_8S and CV_16S values are read as the unsigned numbers with the same bits, so
+negative values index the upper half of the table (for example, -1 maps to entry 255 for CV_8S).
 @param src input array of 8-bit or 16-bit integer elements.
 @param lut look-up table of 256 elements (if src has depth CV_8U or CV_8S) or 65536 elements(if src has depth CV_16U or CV_16S); in case of multi-channel input array, the table should
 either have a single channel (in this case the same table is used for all channels) or the same
@@ -590,7 +595,7 @@ independently for each channel, and return it:
 When all the mask elements are 0's, the function returns Scalar::all(0)
 @param src input array that should have from 1 to 4 channels so that the result can be stored in
 Scalar_ .
-@param mask optional operation mask ot type CV_8U, CV_8S or CV_Bool.
+@param mask optional operation mask of type CV_8U, CV_8S or CV_Bool.
 @sa  countNonZero, meanStdDev, norm, minMaxLoc
 */
 CV_EXPORTS_W Scalar mean(InputArray src, InputArray mask = noArray());
@@ -665,7 +670,7 @@ The type of norm to calculate is specified using #NormTypes.
 @param src1 first input array.
 @param src2 second input array of the same size and the same type as src1.
 @param normType type of the norm (see #NormTypes).
-@param mask optional operation mask; it must have the same size as src1 and type CV_8UC1, CV_8S1 or CV_BoolC1.
+@param mask optional operation mask; it must have the same size as src1 and type CV_8UC1, CV_8SC1 or CV_BoolC1.
 */
 CV_EXPORTS_W double norm(InputArray src1, InputArray src2,
                          int normType = NORM_L2, InputArray mask = noArray());
@@ -799,6 +804,7 @@ In Python, multi-channel input is not supported at all due to a limitation in th
 binding generation process (there is no way to set minLoc and maxLoc to NULL). A
 workaround is to operate on each channel individually or to use NumPy to achieve the same
 functionality.
+@note NaN handling is left unspecified, see patchNaNs() and finiteMask().
 @param src input single-channel array.
 @param minVal pointer to the returned minimum value; NULL is used if not required.
 @param maxVal pointer to the returned maximum value; NULL is used if not required.
@@ -856,6 +862,7 @@ a single-row or single-column matrix. In OpenCV (following MATLAB) each array ha
 dimensions, i.e. single-column matrix is Mx1 matrix (and therefore minIdx/maxIdx will be
 (i1,0)/(i2,0)) and single-row matrix is 1xN matrix (and therefore minIdx/maxIdx will be
 (0,j1)/(0,j2)).
+@note NaN handling is left unspecified, see patchNaNs() and finiteMask().
 @param src input single-channel array.
 @param minVal pointer to the returned minimum value; NULL is used if not required.
 @param maxVal pointer to the returned maximum value; NULL is used if not required.
@@ -888,6 +895,7 @@ obtained. For example, the function can be used to compute horizontal and vertic
 raster image. In case of #REDUCE_MAX and #REDUCE_MIN, the output image should have the same type as the source one.
 In case of #REDUCE_SUM, #REDUCE_SUM2 and #REDUCE_AVG, the output may have a larger element bit-depth to preserve accuracy.
 And multi-channel arrays are also supported in these two reduction modes.
+On the CPU, CV_16F inputs use the n-dimensional reduction kernels (see cv::ReduceParams).
 
 The following code demonstrates its usage for a single channel matrix.
 @snippet snippets/core_reduce.cpp example
@@ -1591,6 +1599,8 @@ specified 1D, 2D, 3D, ... box and 0 otherwise.
 
 When the lower and/or upper boundary parameters are scalars, the indexes
 (I) at lowerb and upperb in the above formulas should be omitted.
+@note CV_Bool and CV_8F inputs are not supported. Convert them to another depth first,
+for example with Mat::convertTo.
 @param src first input array.
 @param lowerb inclusive lower boundary array or a scalar.
 @param upperb inclusive upper boundary array or a scalar.
@@ -1620,7 +1630,7 @@ equivalent matrix expressions:
 @endcode
 @param src1 first input array or a scalar; when it is an array, it must have a single channel.
 @param src2 second input array or a scalar; when it is an array, it must have a single channel.
-@param dst output array of type ref CV_8U that has the same size and the same number of channels as
+@param dst output array of type CV_8U that has the same size and the same number of channels as
     the input arrays.
 @param cmpop a flag, that specifies correspondence between the arrays (cv::CmpTypes)
 @sa checkRange, min, max, threshold
@@ -1842,7 +1852,7 @@ CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val = 0);
 /** @brief Generates a mask of finite float values, i.e. not NaNs nor Infs.
 
 An element is set to 255 (all 1-bits) if all channels are finite.
-@param src Input matrix, should contain float or double elements of 1 to 4 channels
+@param src Input matrix, should contain CV_16F, CV_16BF, CV_32F or CV_64F elements of 1 to 4 channels
 @param mask Output matrix of the same size as input of type CV_8UC1
 */
 CV_EXPORTS_W void finiteMask(InputArray src, OutputArray mask);
@@ -1889,8 +1899,8 @@ if aTa=true, and
 otherwise. The function is used to calculate the covariance matrix. With
 zero delta, it can be used as a faster substitute for general matrix
 product A\*B when B=A'
-@param src input single-channel matrix. Note that unlike gemm, the
-function can multiply not only floating-point matrices.
+@param src input single-channel matrix of depth CV_8U, CV_16U, CV_16S, CV_32F
+or CV_64F.
 @param dst output square matrix.
 @param aTa Flag specifying the multiplication ordering. See the
 description below.
@@ -1898,13 +1908,14 @@ description below.
 multiplication. When the matrix is empty ( delta=noArray() ), it is
 assumed to be zero, that is, nothing is subtracted. If it has the same
 size as src, it is simply subtracted. Otherwise, it is "repeated" (see
-repeat ) to cover the full src and then subtracted. Type of the delta
-matrix, when it is not empty, must be the same as the type of created
-output matrix. See the dtype parameter description below.
+repeat ) to cover the full src and then subtracted. When delta is not
+empty, it is converted to the type of the output matrix, and a CV_64F
+delta makes the output CV_64F. See the dtype parameter description below.
 @param scale Optional scale factor for the matrix product.
-@param dtype Optional type of the output matrix. When it is negative,
-the output matrix will have the same type as src . Otherwise, it will be
-type=CV_MAT_DEPTH(dtype) that should be either CV_32F or CV_64F .
+@param dtype Optional depth of the output matrix, either CV_32F or CV_64F.
+When it is negative, the depth of src is used instead. The output is CV_64F
+if this depth or the depth of delta is CV_64F, and CV_32F otherwise, so an
+integer src gives a CV_32F output by default.
 @sa calcCovarMatrix, gemm, repeat, reduce
 */
 CV_EXPORTS_W void mulTransposed( InputArray src, OutputArray dst, bool aTa,
@@ -2207,7 +2218,9 @@ the set of input vectors.
 @param covar output covariance matrix of the type ctype and square size.
 @param mean input or output (depending on the flags) array as the average value of the input vectors.
 @param flags operation flags as a combination of #CovarFlags
-@param ctype type of the matrixl; it equals 'CV_64F' by default.
+@param ctype depth of the output covariance matrix, CV_32F or CV_64F (the
+default). When it is negative, the depth of the samples is used instead. A
+non-empty CV_64F mean also makes the output CV_64F.
 @sa PCA, mulTransposed, Mahalanobis
 @todo InputArrayOfArrays
 */
@@ -2220,7 +2233,10 @@ CV_EXPORTS void calcCovarMatrix( const Mat* samples, int nsamples, Mat& covar, M
 @param covar output covariance matrix of the type ctype and square size.
 @param mean input or output (depending on the flags) array as the average value of the input vectors.
 @param flags operation flags as a combination of #CovarFlags
-@param ctype type of the matrixl; it equals 'CV_64F' by default.
+@param ctype depth of the output covariance matrix, CV_32F or CV_64F (the
+default). When it is negative, the depth of the samples is used instead. A
+non-empty CV_64F mean also makes the output CV_64F (for a single samples
+matrix, only with #COVAR_USE_AVG).
 */
 CV_EXPORTS_W void calcCovarMatrix( InputArray samples, OutputArray covar,
                                    InputOutputArray mean, int flags, int ctype = CV_64F);

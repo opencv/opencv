@@ -5,6 +5,10 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/concat.hpp"
+#endif
 
 namespace cv
 {
@@ -29,8 +33,33 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_ || inputs.empty())
+                return false;
+            // getTypes() requires one type for all inputs; an intermediate arg has no type until the first forward
+            const int t = netimpl_->argData(inputs[0]).type;
+            return t < 0 || isCudaNodeType(t);
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_,
+                              InputArrayOfArrays,
+                              InputArrayOfArrays outputs_arr) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        // the output carries the real rank and type; an empty input may be left unallocated
+        const std::size_t axis_ = (std::size_t)normalize_axis(axis, outputs_arr.shape(0).dims);
+        if (outputs_arr.depth(0) == CV_Bool)
+            return make_cuda_node_bool<cuda4dnn::ConcatOp>(std::move(context->stream), axis_, false);
+        return make_cuda_node_with_type<cuda4dnn::ConcatOp>(preferableTarget, outputs_arr.type(0),
+                                                            std::move(context->stream), axis_, false);
+    }
+#endif
 
     MatShape getOutShape(const std::vector<MatShape>& inpShapes) const
     {

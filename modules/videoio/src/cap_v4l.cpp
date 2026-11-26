@@ -1456,7 +1456,11 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
     case V4L2_PIX_FMT_MJPEG:
     case V4L2_PIX_FMT_JPEG:
         CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): decoding JPEG frame: size=" << currentBuffer.bytesused);
-        cv::imdecode(Mat(1, currentBuffer.bytesused, CV_8U, start), IMREAD_COLOR, &frame);
+        if (cv::imdecode(Mat(1, currentBuffer.bytesused, CV_8U, start), IMREAD_COLOR, &frame).empty())
+        {
+            CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): can't decode JPEG frame: size=" << currentBuffer.bytesused);
+            frame.release();
+        }
         return;
 #endif
     case V4L2_PIX_FMT_YUYV:
@@ -2148,7 +2152,7 @@ bool CvCaptureCAM_V4L::retrieveFrame(int, OutputArray ret)
 
     bufferIndex = -1;
     frame.copyTo(ret);
-    return true;
+    return !frame.empty();
 }
 
 Ptr<IVideoCapture> create_V4L_capture_cam(int index)

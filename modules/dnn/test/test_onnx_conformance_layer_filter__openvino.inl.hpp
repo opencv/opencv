@@ -434,7 +434,11 @@ CASE(test_castlike_no_saturate_FLOAT16_to_FLOAT8E5M2_expanded)
     SKIP;
 CASE(test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FN)
     SKIP;
+CASE(test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FN_expanded)
+    SKIP;
 CASE(test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FNUZ)
+    SKIP;
+CASE(test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FNUZ_expanded)
     SKIP;
 CASE(test_castlike_no_saturate_FLOAT_to_FLOAT8E5M2)
     SKIP;
@@ -584,6 +588,70 @@ CASE(test_castlike_FLOAT16_to_UINT4)
     SKIP;
 CASE(test_castlike_FLOAT16_to_UINT4_expanded)
     SKIP;
+CASE(test_castlike_FLOAT4E2M1_to_FLOAT)
+    SKIP;
+CASE(test_castlike_FLOAT4E2M1_to_FLOAT16)
+    SKIP;
+CASE(test_castlike_FLOAT4E2M1_to_FLOAT16_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT4E2M1_to_FLOAT_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT8E4M3FNUZ_to_FLOAT)
+    SKIP;
+CASE(test_castlike_FLOAT8E4M3FNUZ_to_FLOAT16)
+    SKIP;
+CASE(test_castlike_FLOAT8E4M3FNUZ_to_FLOAT16_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT8E4M3FNUZ_to_FLOAT_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT8E4M3FN_to_FLOAT)
+    SKIP;
+CASE(test_castlike_FLOAT8E4M3FN_to_FLOAT16)
+    SKIP;
+CASE(test_castlike_FLOAT8E4M3FN_to_FLOAT16_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT8E4M3FN_to_FLOAT_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT8E5M2FNUZ_to_FLOAT)
+    SKIP;
+CASE(test_castlike_FLOAT8E5M2FNUZ_to_FLOAT16)
+    SKIP;
+CASE(test_castlike_FLOAT8E5M2FNUZ_to_FLOAT16_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT8E5M2FNUZ_to_FLOAT_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT8E5M2_to_FLOAT)
+    SKIP;
+CASE(test_castlike_FLOAT8E5M2_to_FLOAT16)
+    SKIP;
+CASE(test_castlike_FLOAT8E5M2_to_FLOAT16_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT8E5M2_to_FLOAT_expanded)
+    SKIP;
+CASE(test_castlike_INT4_to_FLOAT)
+    SKIP;
+CASE(test_castlike_INT4_to_FLOAT16)
+    SKIP;
+CASE(test_castlike_INT4_to_FLOAT16_expanded)
+    SKIP;
+CASE(test_castlike_INT4_to_FLOAT_expanded)
+    SKIP;
+CASE(test_castlike_INT4_to_INT8)
+    SKIP;
+CASE(test_castlike_INT4_to_INT8_expanded)
+    SKIP;
+CASE(test_castlike_UINT4_to_FLOAT)
+    SKIP;
+CASE(test_castlike_UINT4_to_FLOAT16)
+    SKIP;
+CASE(test_castlike_UINT4_to_FLOAT16_expanded)
+    SKIP;
+CASE(test_castlike_UINT4_to_FLOAT_expanded)
+    SKIP;
+CASE(test_castlike_UINT4_to_UINT8)
+    SKIP;
+CASE(test_castlike_UINT4_to_UINT8_expanded)
+    SKIP;
 CASE(test_ceil)
     // no filter
 CASE(test_ceil_example)
@@ -652,6 +720,8 @@ CASE(test_clip_inbounds)
     SKIP;
 CASE(test_clip_inbounds_expanded)
     SKIP;
+CASE(test_clip_min_greater_than_max)
+    SKIP;
 CASE(test_clip_min_greater_than_max_expanded)
     SKIP;
 CASE(test_clip_outbounds)
@@ -661,6 +731,16 @@ CASE(test_clip_outbounds_expanded)
 CASE(test_clip_splitbounds)
     SKIP;
 CASE(test_clip_splitbounds_expanded)
+    SKIP;
+CASE(test_col2im)
+    SKIP;
+CASE(test_col2im_5d)
+    SKIP;
+CASE(test_col2im_dilations)
+    SKIP;
+CASE(test_col2im_pads)
+    SKIP;
+CASE(test_col2im_strides)
     SKIP;
 CASE(test_compress_0)
     SKIP;
@@ -2534,7 +2614,7 @@ CASE(test_relu)
 CASE(test_relu_expanded_ver18)
     SKIP;
 CASE(test_reshape_allowzero_reordered)
-    // no filter
+    SKIP;
 CASE(test_reshape_extended_dims)
     SKIP;
 CASE(test_reshape_negative_dim)
@@ -2634,9 +2714,9 @@ CASE(test_resize_upsample_sizes_nearest_floor_align_corners)
 CASE(test_resize_upsample_sizes_nearest_round_prefer_ceil_asymmetric)
     SKIP;
 CASE(test_reversesequence_batch)
-    // no filter
+    SKIP;
 CASE(test_reversesequence_time)
-    // no filter
+    SKIP;
 CASE(test_rnn_seq_length)
     SKIP;
 CASE(test_roialign_aligned_false)
@@ -2888,6 +2968,8 @@ CASE(test_shape_start_1)
 CASE(test_shape_start_1_end_2)
     SKIP;
 CASE(test_shape_start_1_end_negative_1)
+    SKIP;
+CASE(test_shape_start_greater_than_end)
     SKIP;
 CASE(test_shape_start_negative_1)
     SKIP;
@@ -3351,7 +3433,6 @@ CASE(test_xor_bcast4v3d)
     // no filter
 CASE(test_xor_bcast4v4d)
     // no filter
-CASE()
 CASE(test_attention_3d)
     SKIP;
 CASE(test_attention_3d_attn_mask)

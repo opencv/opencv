@@ -162,4 +162,4 @@ Additional Resources
 -#  [Python Optimization Techniques](http://wiki.python.org/moin/PythonSpeed/PerformanceTips)
 2.  Scipy Lecture Notes - [Advanced
     Numpy](http://scipy-lectures.github.io/advanced/advanced_numpy/index.html#advanced-numpy)
-3.  [Timing and Profiling in IPython](http://pynash.org/2013/03/06/timing-and-profiling/)
+3.  [IPython timeit magic](https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-timeit)

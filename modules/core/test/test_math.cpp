@@ -1947,6 +1947,39 @@ TEST(Core_SolveCubic, regression_27748)
     }
 }
 
+TEST(Core_SolveCubic, regression_30790)
+{
+    {
+        const std::vector<double> coeffs{1., -2., -15., 36.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 2);
+        EXPECT_NEAR(roots[0], -4., 1e-8);
+        EXPECT_NEAR(roots[1], 3., 1e-8);
+    }
+
+    {
+        const std::vector<double> coeffs{1., 13., 56., 80.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 2);
+        EXPECT_NEAR(roots[0], -5., 1e-8);
+        EXPECT_NEAR(roots[1], -4., 1e-8);
+    }
+
+    {
+        const std::vector<double> coeffs{2., -4., -30., 72.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 2);
+        EXPECT_NEAR(roots[0], -4., 1e-8);
+        EXPECT_NEAR(roots[1], 3., 1e-8);
+    }
+}
+
 TEST(Core_SolvePoly, regression_5599)
 {
     // x^4 - x^2 = 0, roots: 1, -1, 0, 0
@@ -2196,6 +2229,31 @@ TEST(Core_CheckRange_INT_MAX, accuracy)
     cv::Mat m(3, 3, CV_32SC1, cv::Scalar(INT_MAX));
     ASSERT_FALSE( cv::checkRange(m, true, 0, 0, INT_MAX) );
     ASSERT_TRUE( cv::checkRange(m) );
+}
+
+TEST(Core_MagnitudePhase, nd_input)
+{
+    const int sz[] = {2, 3, 4};
+    for (int depth : {CV_32F, CV_64F})
+    {
+        SCOPED_TRACE(depth);
+        Mat x(3, sz, depth), y(3, sz, depth);
+        randu(x, -10, 10);
+        randu(y, -10, 10);
+        Mat x2d = x.reshape(1, 6), y2d = y.reshape(1, 6);
+
+        Mat mag, mag2d;
+        ASSERT_NO_THROW(magnitude(x, y, mag));
+        magnitude(x2d, y2d, mag2d);
+        EXPECT_EQ(x.size, mag.size);
+        EXPECT_EQ(0, cvtest::norm(mag.reshape(1, 6), mag2d, NORM_INF));
+
+        Mat angle, angle2d;
+        ASSERT_NO_THROW(phase(x, y, angle, true));
+        phase(x2d, y2d, angle2d, true);
+        EXPECT_EQ(x.size, angle.size);
+        EXPECT_EQ(0, cvtest::norm(angle.reshape(1, 6), angle2d, NORM_INF));
+    }
 }
 
 TEST(Core_CheckRange_INT_MAX1, accuracy)
@@ -2470,6 +2528,56 @@ TEST(Core_Invert, small)
 TEST(Core_CrossProduct, accuracy) { Core_CrossProductTest test; test.safe_run(); }
 TEST(Core_Determinant, accuracy) { Core_DetTest test; test.safe_run(); }
 TEST(Core_DotProduct, accuracy) { Core_DotProductTest test; test.safe_run(); }
+
+typedef testing::TestWithParam<int> Core_DotProduct_NewTypes;
+
+TEST_P(Core_DotProduct_NewTypes, accuracy)
+{
+    const int depth = GetParam();
+    // small integers: every depth stores them exactly, so the dot product is exact
+    Mat a32s(17, 41, CV_32SC2), b32s(17, 41, CV_32SC2);
+    randu(a32s, -8, 9);
+    randu(b32s, -8, 9);
+    Mat a, b;
+    a32s.convertTo(a, depth);
+    b32s.convertTo(b, depth);
+
+    // reference: the same values in CV_64F (negative values become 0 for the unsigned depths,
+    // non-zero values become 1 for CV_Bool)
+    Mat a64f, b64f;
+    a.convertTo(a64f, CV_64F);
+    b.convertTo(b64f, CV_64F);
+
+    EXPECT_EQ(a64f.dot(b64f), a.dot(b));
+    // a non-continuous ROI is processed plane by plane
+    const Rect roi(3, 2, 30, 11);
+    EXPECT_EQ(a64f(roi).dot(b64f(roi)), a(roi).dot(b(roi)));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_DotProduct_NewTypes,
+    testing::Values(CV_16F, CV_16BF, CV_Bool, CV_32U, CV_64U, CV_64S, CV_8F_E4M3FN, CV_8F_E4M3FNUZ));
+
+TEST(Core_DotProduct, bool_nonzero_bytes)
+{
+    // any non-zero byte is true, so 2 and 255 count as 1 (dotProd_8u would give 1027)
+    uchar a[] = { 2, 255, 0, 1, 7 };
+    uchar b[] = { 255, 2, 3, 0, 1 };
+    Mat ma = Mat(1, 5, CV_8U, a).reinterpret(CV_Bool);
+    Mat mb = Mat(1, 5, CV_8U, b).reinterpret(CV_Bool);
+    EXPECT_EQ(3., ma.dot(mb));
+
+    // long enough for the SIMD path and several 255-step blocks, with bytes 2 and 255
+    Mat la(1, 10007, CV_8U), lb(1, 10007, CV_8U);
+    int expected = 0;
+    for (int i = 0; i < la.cols; i++)
+    {
+        la.at<uchar>(i) = (uchar)(i % 97 == 0 ? 0 : 255);
+        lb.at<uchar>(i) = (uchar)(i % 89 == 0 ? 0 : 2);
+        expected += (i % 97 != 0) && (i % 89 != 0);
+    }
+    EXPECT_EQ((double)expected, la.reinterpret(CV_Bool).dot(lb.reinterpret(CV_Bool)));
+}
+
 TEST(Core_GEMM, accuracy) { Core_GEMMTest test; test.safe_run(); }
 
 TEST(Core_GEMM, inplace_complex)
@@ -2502,6 +2610,44 @@ TEST(Core_GEMM, inplace_complex)
     }
 }
 
+// A 1D Mat is a single row, so gemm should treat it the same as a 1 x N matrix
+typedef testing::TestWithParam<cvtest::MatDepth> Core_GEMM_1D;
+
+TEST_P(Core_GEMM_1D, input)
+{
+    const int type = GetParam();
+    const Mat v64 = Mat_<double>({5}, {1, 2, 3, 4, 5});   // 1D Mat: dims == 1
+    Mat v;
+    v64.convertTo(v, type);
+    ASSERT_EQ(1, v.dims);
+    const Mat row = v.reshape(0, 1);                    // same values as a 2D 1 x 5 Mat
+
+    Mat inner, expectedInner;                           // 1x5 * (1x5)^T = 1x1
+    gemm(v, v, 1, noArray(), 0, inner, GEMM_2_T);
+    gemm(row, row, 1, noArray(), 0, expectedInner, GEMM_2_T);
+    EXPECT_EQ(0., cvtest::norm(inner, expectedInner, NORM_INF)) << "inner product";
+
+    Mat outer, expectedOuter;                           // (1x5)^T * 1x5 = 5x5
+    gemm(v, v, 1, noArray(), 0, outer, GEMM_1_T);
+    gemm(row, row, 1, noArray(), 0, expectedOuter, GEMM_1_T);
+    EXPECT_EQ(0., cvtest::norm(outer, expectedOuter, NORM_INF)) << "outer product";
+
+    Mat withC, expectedWithC;                           // v * I + v, where C is 1D too
+    const Mat I = Mat::eye(5, 5, type);
+    gemm(v, I, 1, v, 1, withC);
+    gemm(row, I, 1, row, 1, expectedWithC);
+    EXPECT_EQ(0., cvtest::norm(withC, expectedWithC, NORM_INF)) << "1D C";
+
+    Mat preallocated({5}, type);                        // 1D output that already has the right size
+    const uchar* oldData = preallocated.data;
+    gemm(v, I, 1, noArray(), 0, preallocated);          // v * I = v
+    EXPECT_EQ(1, preallocated.dims) << "preallocated 1D D";
+    EXPECT_EQ(oldData, preallocated.data) << "preallocated 1D D";
+    EXPECT_EQ(0., cvtest::norm(preallocated, v, NORM_INF)) << "preallocated 1D D";
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Core_GEMM_1D, testing::Values(CV_32F, CV_64F));
+
 TEST(Core_Invert, accuracy) { Core_InvertTest test; test.safe_run(); }
 TEST(Core_Mahalanobis, accuracy) { Core_MahalanobisTest test; test.safe_run(); }
 TEST(Core_MulTransposed, accuracy) { Core_MulTransposedTest test; test.safe_run(); }
@@ -2509,6 +2655,24 @@ TEST(Core_Transform, accuracy) { Core_TransformTest test; test.safe_run(); }
 TEST(Core_TransformLarge, accuracy) { Core_TransformLargeTest test; test.safe_run(); }
 TEST(Core_PerspectiveTransform, accuracy) { Core_PerspectiveTransformTest test; test.safe_run(); }
 TEST(Core_Pow, accuracy) { Core_PowTest test; test.safe_run(); }
+
+using Core_PowZero = testing::TestWithParam<int>;
+
+TEST_P(Core_PowZero, fills_all_channels)
+{
+    const int channels = GetParam();
+    Mat src(3, 7, CV_MAKETYPE(CV_32F, channels));
+    src.reshape(1).setTo(-2.0);
+    Mat dst;
+
+    cv::pow(src, 0, dst);
+
+    ASSERT_EQ(src.size(), dst.size());
+    ASSERT_EQ(src.type(), dst.type());
+    EXPECT_EQ(0, countNonZero(dst.reshape(1) != 1));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_PowZero, testing::Values(1, 4, 5, 9));
 TEST(Core_SolveLinearSystem, accuracy) { Core_SolveTest test; test.safe_run(); }
 TEST(Core_Trace, accuracy) { Core_TraceTest test; test.safe_run(); }
 TEST(Core_SolvePoly, accuracy) { Core_SolvePolyTest test; test.safe_run(); }

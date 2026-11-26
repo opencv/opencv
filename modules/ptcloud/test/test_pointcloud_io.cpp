@@ -375,4 +375,30 @@ TEST(PointCloud, LoadObjFaceExtraSlashFields)
     std::remove(path.c_str());
 }
 
+TEST(PointCloud, LoadObjAttributeCountMismatch)
+{
+    // OBJ keeps "vn" and per-vertex colors independent of "v"
+    std::string path = tempfile("attr_mismatch.obj");
+    std::ofstream file(path, std::ios::binary);
+    file << "v 0 0 0 1 0 0\nv 1 0 0\nv 0 1 0\nv 1 1 0\nvn 0 0 1\n";
+    file.close();
+
+    std::vector<cv::Point3f> points, normals, rgb;
+    cv::loadPointCloud(path, points, normals, rgb);
+    EXPECT_EQ(points.size(), size_t(4));
+    EXPECT_EQ(normals.size(), size_t(1));
+    EXPECT_EQ(rgb.size(), size_t(1));
+    std::remove(path.c_str());
+}
+
+TEST(PointCloud, SavePlyAttributeCountMismatch)
+{
+    // PLY needs one normal and one color per vertex
+    std::vector<cv::Point3f> points(4), normals(1), rgb(1), no_normals;
+    std::string path = tempfile("attr_mismatch.ply");
+    EXPECT_THROW(cv::savePointCloud(path, points, normals), cv::Exception);
+    EXPECT_THROW(cv::savePointCloud(path, points, no_normals, rgb), cv::Exception);
+    std::remove(path.c_str());
+}
+
 }} /* namespace opencv_test */

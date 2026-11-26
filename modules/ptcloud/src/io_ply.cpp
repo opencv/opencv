@@ -682,6 +682,13 @@ void PlyEncoder::writeData(const std::vector<Point3f>& points, const std::vector
                            const std::vector<Point3f>& texCoords, int nTexCoords,
                            const std::vector<std::vector<int32_t>>& indices)
 {
+    // PLY stores normals, colors and texture coordinates per vertex
+    if (!normals.empty())
+        CV_CheckEQ(normals.size(), points.size(), "Normals should have the same size as vertices");
+    if (!rgb.empty())
+        CV_CheckEQ(rgb.size(), points.size(), "Colors should have the same size as vertices");
+    if (nTexCoords > 0)
+        CV_CheckEQ(texCoords.size(), points.size(), "Texture coordinates should have the same size as vertices");
     std::ofstream file(m_filename, std::ios::binary);
     if (!file)
     {

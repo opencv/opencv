@@ -61,11 +61,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             } else {
                 auto ws_allocator = csl::WorkspaceAllocator(workspace);
 
+                // reduce_mean_sqr_sum writes every row, so no zero-fill is needed
                 auto mean = ws_allocator.get_span<float>(loops / group_size);
-                kernels::fill<float>(stream, mean, 0.f);
-
                 auto stdev = ws_allocator.get_span<float>(loops / group_size);
-                kernels::fill<float>(stream, stdev, 0.f);
 
                 kernels::reduce_mean_sqr_sum<T>(stream, mean, stdev, input, norm_size * group_size);
                 kernels::compute_normalization_scale(stream, stdev, mean, stdev, norm_size * group_size, epsilon);

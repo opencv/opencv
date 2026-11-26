@@ -962,6 +962,64 @@ TEST(Calib3d_Triangulate, accuracy)
     }
 }
 
+template<typename T>
+void checkTriangulateColumnRoi(double tolerance)
+{
+    using Pixel = Vec<T, 2>;
+    const Matx<T, 3, 4> p1(512, 0, 320, 0, 0, 512, 240, 0, 0, 0, 1, 0);
+    const Matx<T, 3, 4> p2(512, 0, 320, -256, 0, 512, 240, 0, 0, 0, 1, 0);
+    const Point3d expected[] = {{0.25, 0.125, 2}, {-0.5, -0.25, 4}};
+    Pixel left[] = {{384, 272}, {256, 208}};
+    Pixel right[] = {{256, 272}, {192, 208}};
+    const Mat_<Pixel> packed1(2, 1, left), packed2(2, 1, right);
+
+    // The adjacent column contains observations of (0.75, 0.375, 8).
+    Pixel paddedLeft[] = {left[0], {368, 264}, left[1], {368, 264}};
+    Pixel paddedRight[] = {right[0], {336, 264}, right[1], {336, 264}};
+    const Mat_<Pixel> parent1(2, 2, paddedLeft), parent2(2, 2, paddedRight);
+    const Mat roi1 = parent1.col(0), roi2 = parent2.col(0);
+    ASSERT_FALSE(roi1.isContinuous());
+    ASSERT_FALSE(roi2.isContinuous());
+
+    const auto check = [&](const char* layout, const Mat& a, const Mat& b)
+    {
+        SCOPED_TRACE(layout);
+        Mat h;
+        triangulatePoints(p1, p2, a, b, h);
+        ASSERT_EQ(Size(2, 4), h.size());
+        ASSERT_EQ(traits::Depth<T>::value, h.type());
+        for (int i = 0; i < h.cols; ++i)
+        {
+            SCOPED_TRACE(i);
+            const double w = h.at<T>(3, i);
+            ASSERT_TRUE(std::isfinite(w));
+            ASSERT_NE(0.0, w);
+            const Point3d point(h.at<T>(0, i) / w, h.at<T>(1, i) / w, h.at<T>(2, i) / w);
+            EXPECT_LE(cv::norm(point - expected[i]), tolerance) << point;
+        }
+    };
+
+    check("packed column", packed1, packed2);
+    check("both column ROIs", roi1, roi2);
+    check("cloned columns", roi1.clone(), roi2.clone());
+    check("packed row", packed1.reshape(2, 1), packed2.reshape(2, 1));
+    check("single-channel rows", packed1.reshape(1).t(), packed2.reshape(1).t());
+    check("left column ROI", roi1, packed2);
+    check("right column ROI", packed1, roi2);
+}
+
+TEST(Calib3d_Triangulate, column_roi_stride)
+{
+    {
+        SCOPED_TRACE("CV_32F");
+        checkTriangulateColumnRoi<float>(1e-5);
+    }
+    {
+        SCOPED_TRACE("CV_64F");
+        checkTriangulateColumnRoi<double>(1e-12);
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 TEST(CV_RecoverPoseTest, regression_15341)

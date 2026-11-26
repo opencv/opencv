@@ -222,6 +222,12 @@ static void histPrepareImages( const Mat* images, int nimages, const int* channe
 
 ////////////////////////////////// C A L C U L A T E    H I S T O G R A M ////////////////////////////////////
 
+// Unsaturated floor: safe only once the caller has confirmed v0 is within [v0_lo, v0_hi).
+static inline int histBinFloor(double value)
+{
+    return cv::detail::cvFloorUnsaturated(value);
+}
+
 template<typename T> static void
 calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
            Size imsize, Mat& hist, int dims, const float** _ranges,
@@ -318,10 +324,9 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                         for( x = 0; x < imsize.width; x++, p0 += d0 )
                         {
                             double v0 = (double)*p0;
-                            int idx = cvFloor(v0*a + b);
                             if (v0 < v0_lo || v0 >= v0_hi)
                                 continue;
-                            idx = CV_CLAMP_INT(idx, 0, sz - 1);
+                            int idx = CV_CLAMP_INT(histBinFloor(v0*a + b), 0, sz - 1);
                             CV_DbgAssert((unsigned)idx < (unsigned)sz);
                             ((int*)H)[idx]++;
                         }
@@ -331,10 +336,9 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                         if( mask[x] )
                         {
                             double v0 = (double)*p0;
-                            int idx = cvFloor(v0*a + b);
                             if (v0 < v0_lo || v0 >= v0_hi)
                                 continue;
-                            idx = CV_CLAMP_INT(idx, 0, sz - 1);
+                            int idx = CV_CLAMP_INT(histBinFloor(v0*a + b), 0, sz - 1);
                             CV_DbgAssert((unsigned)idx < (unsigned)sz);
                             ((int*)H)[idx]++;
                         }
@@ -363,14 +367,12 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                     {
                         double v0 = (double)*p0;
                         double v1 = (double)*p1;
-                        int idx0 = cvFloor(v0*a0 + b0);
-                        int idx1 = cvFloor(v1*a1 + b1);
                         if (v0 < v0_lo || v0 >= v0_hi)
                             continue;
                         if (v1 < v1_lo || v1 >= v1_hi)
                             continue;
-                        idx0 = CV_CLAMP_INT(idx0, 0, sz0 - 1);
-                        idx1 = CV_CLAMP_INT(idx1, 0, sz1 - 1);
+                        int idx0 = CV_CLAMP_INT(histBinFloor(v0*a0 + b0), 0, sz0 - 1);
+                        int idx1 = CV_CLAMP_INT(histBinFloor(v1*a1 + b1), 0, sz1 - 1);
                         CV_DbgAssert((unsigned)idx0 < (unsigned)sz0 && (unsigned)idx1 < (unsigned)sz1);
                         ((int*)(H + hstep0*idx0))[idx1]++;
                     }
@@ -380,14 +382,12 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                         {
                             double v0 = (double)*p0;
                             double v1 = (double)*p1;
-                            int idx0 = cvFloor(v0*a0 + b0);
-                            int idx1 = cvFloor(v1*a1 + b1);
                             if (v0 < v0_lo || v0 >= v0_hi)
                                 continue;
                             if (v1 < v1_lo || v1 >= v1_hi)
                                 continue;
-                            idx0 = CV_CLAMP_INT(idx0, 0, sz0 - 1);
-                            idx1 = CV_CLAMP_INT(idx1, 0, sz1 - 1);
+                            int idx0 = CV_CLAMP_INT(histBinFloor(v0*a0 + b0), 0, sz0 - 1);
+                            int idx1 = CV_CLAMP_INT(histBinFloor(v1*a1 + b1), 0, sz1 - 1);
                             CV_DbgAssert((unsigned)idx0 < (unsigned)sz0 && (unsigned)idx1 < (unsigned)sz1);
                             ((int*)(H + hstep0*idx0))[idx1]++;
                         }
@@ -423,18 +423,15 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                         double v0 = (double)*p0;
                         double v1 = (double)*p1;
                         double v2 = (double)*p2;
-                        int idx0 = cvFloor(v0*a0 + b0);
-                        int idx1 = cvFloor(v1*a1 + b1);
-                        int idx2 = cvFloor(v2*a2 + b2);
                         if (v0 < v0_lo || v0 >= v0_hi)
                             continue;
                         if (v1 < v1_lo || v1 >= v1_hi)
                             continue;
                         if (v2 < v2_lo || v2 >= v2_hi)
                             continue;
-                        idx0 = CV_CLAMP_INT(idx0, 0, sz0 - 1);
-                        idx1 = CV_CLAMP_INT(idx1, 0, sz1 - 1);
-                        idx2 = CV_CLAMP_INT(idx2, 0, sz2 - 1);
+                        int idx0 = CV_CLAMP_INT(histBinFloor(v0*a0 + b0), 0, sz0 - 1);
+                        int idx1 = CV_CLAMP_INT(histBinFloor(v1*a1 + b1), 0, sz1 - 1);
+                        int idx2 = CV_CLAMP_INT(histBinFloor(v2*a2 + b2), 0, sz2 - 1);
                         CV_DbgAssert(
                             (unsigned)idx0 < (unsigned)sz0 &&
                             (unsigned)idx1 < (unsigned)sz1 &&
@@ -448,18 +445,15 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                             double v0 = (double)*p0;
                             double v1 = (double)*p1;
                             double v2 = (double)*p2;
-                            int idx0 = cvFloor(v0*a0 + b0);
-                            int idx1 = cvFloor(v1*a1 + b1);
-                            int idx2 = cvFloor(v2*a2 + b2);
                             if (v0 < v0_lo || v0 >= v0_hi)
                                 continue;
                             if (v1 < v1_lo || v1 >= v1_hi)
                                 continue;
                             if (v2 < v2_lo || v2 >= v2_hi)
                                 continue;
-                            idx0 = CV_CLAMP_INT(idx0, 0, sz0 - 1);
-                            idx1 = CV_CLAMP_INT(idx1, 0, sz1 - 1);
-                            idx2 = CV_CLAMP_INT(idx2, 0, sz2 - 1);
+                            int idx0 = CV_CLAMP_INT(histBinFloor(v0*a0 + b0), 0, sz0 - 1);
+                            int idx1 = CV_CLAMP_INT(histBinFloor(v1*a1 + b1), 0, sz1 - 1);
+                            int idx2 = CV_CLAMP_INT(histBinFloor(v2*a2 + b2), 0, sz2 - 1);
                             CV_DbgAssert(
                                 (unsigned)idx0 < (unsigned)sz0 &&
                                 (unsigned)idx1 < (unsigned)sz1 &&

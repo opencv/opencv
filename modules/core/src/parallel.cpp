@@ -454,7 +454,41 @@ namespace {
     static inline void pplParallelFor(int first, int last, const Body& body)
     {
 #if defined(_M_ARM64) || defined(_M_ARM64EC)
-        Concurrency::parallel_for(first, last, body, Concurrency::static_partitioner());
+        // static_partitioner just spawns one task per worker; the atomic loop rebalances.
+        if (first >= last)
+            return;
+
+        const int total = last - first;
+        // cv::getNumThreads() returns 0 for WINRT, which also reaches this function.
+        const unsigned vps = Concurrency::CurrentScheduler::Get()->GetNumberOfVirtualProcessors();
+        const unsigned workers = std::min(std::max(1u, vps), (unsigned)total);
+
+        // total<=workers means one unit each, so skip the contended claim loop below.
+        if (total <= (int)workers)
+        {
+            Concurrency::parallel_for(first, last, body, Concurrency::static_partitioner());
+            return;
+        }
+
+        const int remaining_multiplier = std::min(total,
+                (int)std::max(std::min(100u, workers * 4), workers * 2));  // experimental value
+
+        std::atomic<int> current_task(0);
+        const auto worker = [&](int)
+        {
+            for (;;)
+            {
+                int chunk_size = std::max(1, (total - current_task) / remaining_multiplier);
+                int id = current_task.fetch_add(chunk_size, std::memory_order_relaxed);
+                if (id >= total)
+                    break;
+                int end_id = std::min(total, id + chunk_size);
+                for (int i = first + id; i < first + end_id; ++i)
+                    body(i);
+            }
+        };
+        Concurrency::parallel_for(0, (int)workers, worker, Concurrency::static_partitioner());
+        CV_Assert(current_task >= total);
 #else
         Concurrency::parallel_for(first, last, body);
 #endif
@@ -465,9 +499,17 @@ namespace {
 
 #if defined HAVE_TBB
     #if TBB_INTERFACE_VERSION >= 8000
-        static tbb::task_arena tbbArena(tbb::task_arena::automatic);
+        static tbb::task_arena& getTbbArena() {
+            // Keep the TBB object alive until process termination to avoid static
+            // destruction during process teardown on Windows.
+            CV_SINGLETON_LAZY_INIT_REF(tbb::task_arena, new tbb::task_arena(tbb::task_arena::automatic));
+        }
     #else
-        static tbb::task_scheduler_init tbbScheduler(tbb::task_scheduler_init::deferred);
+        static tbb::task_scheduler_init& getTbbScheduler() {
+            // Keep the TBB object alive until process termination to avoid static
+            // destruction during process teardown on Windows.
+            CV_SINGLETON_LAZY_INIT_REF(tbb::task_scheduler_init, new tbb::task_scheduler_init(tbb::task_scheduler_init::deferred));
+        }
     #endif
 #elif defined HAVE_HPX
 // nothing for HPX
@@ -582,7 +624,7 @@ static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody
 #if defined HAVE_TBB
 
 #if TBB_INTERFACE_VERSION >= 8000
-        tbbArena.execute(pbody);
+        getTbbArena().execute(pbody);
 #else
         pbody();
 #endif
@@ -651,13 +693,13 @@ int getNumThreads(void)
 #if defined HAVE_TBB
 
 #if TBB_INTERFACE_VERSION >= 9100
-    return tbbArena.max_concurrency();
+    return getTbbArena().max_concurrency();
 #elif TBB_INTERFACE_VERSION >= 8000
     return numThreads > 0
         ? numThreads
         : tbb::task_scheduler_init::default_num_threads();
 #else
-    return tbbScheduler.is_active()
+    return getTbbScheduler().is_active()
            ? numThreads
            : tbb::task_scheduler_init::default_num_threads();
 #endif
@@ -735,11 +777,11 @@ void setNumThreads( int threads_ )
 #ifdef HAVE_TBB
 
 #if TBB_INTERFACE_VERSION >= 8000
-    if(tbbArena.is_active()) tbbArena.terminate();
-    if(threads > 0) tbbArena.initialize(threads);
+    if(getTbbArena().is_active()) getTbbArena().terminate();
+    if(threads > 0) getTbbArena().initialize(threads);
 #else
-    if(tbbScheduler.is_active()) tbbScheduler.terminate();
-    if(threads > 0) tbbScheduler.initialize(threads);
+    if(getTbbScheduler().is_active()) getTbbScheduler().terminate();
+    if(threads > 0) getTbbScheduler().initialize(threads);
 #endif
 
 #elif defined HAVE_HPX

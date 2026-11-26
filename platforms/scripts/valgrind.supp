@@ -287,3 +287,35 @@
    fun:allocate_dtv
    fun:_dl_allocate_tls
 }
+
+{
+   OpenCV-TBB-arena-leak
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:_Znwm
+   fun:_ZN2cv8parallel3tbbL8getArenaEv
+}
+
+{
+   OpenCV-TBB-scheduler-leak
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:_Znwm
+   fun:_ZN2cv8parallel3tbbL12getSchedulerEv
+}
+
+{
+   OpenCV-TBB-arena-singleton-leak
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:_Znwm
+   fun:_ZN2cv12_GLOBAL__N_1L11getTbbArenaEv
+}
+
+{
+   OpenCV-TBB-scheduler-singleton-leak
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:_Znwm
+   fun:_ZN2cv12_GLOBAL__N_1L15getTbbSchedulerEv
+}

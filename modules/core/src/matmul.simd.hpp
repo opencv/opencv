@@ -114,6 +114,14 @@ double dotProd_16s(const short* src1, const short* src2, int len);
 double dotProd_32s(const int* src1, const int* src2, int len);
 double dotProd_32f(const float* src1, const float* src2, int len);
 double dotProd_64f(const double* src1, const double* src2, int len);
+double dotProd_16f(const hfloat* src1, const hfloat* src2, int len);
+double dotProd_16bf(const bfloat* src1, const bfloat* src2, int len);
+double dotProd_bool(const uchar* src1, const uchar* src2, int len);
+double dotProd_64u(const uint64* src1, const uint64* src2, int len);
+double dotProd_64s(const int64* src1, const int64* src2, int len);
+double dotProd_32u(const unsigned* src1, const unsigned* src2, int len);
+double dotProd_8f(const fp8_t* src1, const fp8_t* src2, int len);
+double dotProd_8fnuz(const fp8a_t* src1, const fp8a_t* src2, int len);
 
 
 
@@ -3701,6 +3709,151 @@ double dotProd_32f(const float* src1, const float* src2, int len)
 double dotProd_64f(const double* src1, const double* src2, int len)
 {
     return dotProd_(src1, src2, len);
+}
+
+// 16F / 16BF: widen each value to float32 and multiply-add in float32, in blocks
+// like dotProd_32f, adding each block's sum to a double
+template<typename T> static inline
+double dotProdExpand_(const T* src1, const T* src2, int len)
+{
+    double r = 0.0;
+    int i = 0;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int cWidth = VTraits<v_float32>::vlanes();
+    const int len0 = len & -cWidth, blockSize0 = 1 << 13;
+    while (i < len0)
+    {
+        const int blockSize = std::min(len0 - i, blockSize0);
+        v_float32 v_sum0 = vx_setzero_f32(), v_sum1 = vx_setzero_f32();
+        int j = i;
+
+        // two independent sums, so each multiply-add doesn't wait for the previous one
+        for (; j <= i + blockSize - cWidth * 2; j += cWidth * 2)
+        {
+            v_sum0 = v_muladd(vx_load_expand(src1 + j), vx_load_expand(src2 + j), v_sum0);
+            v_sum1 = v_muladd(vx_load_expand(src1 + j + cWidth), vx_load_expand(src2 + j + cWidth), v_sum1);
+        }
+        for (; j < i + blockSize; j += cWidth)
+            v_sum0 = v_muladd(vx_load_expand(src1 + j), vx_load_expand(src2 + j), v_sum0);
+
+        r += v_reduce_sum(v_add(v_sum0, v_sum1));
+        i += blockSize;
+    }
+    vx_cleanup();
+#endif
+    return r + dotProd_(src1 + i, src2 + i, len - i);
+}
+
+// fp8: decode through the 256-entry table (gathered with v_lut, as in cvtFp8ToF32)
+template<typename T> static inline
+double dotProdFp8_(const T* src1_, const T* src2_, int len)
+{
+    const uchar* src1 = (const uchar*)src1_;
+    const uchar* src2 = (const uchar*)src2_;
+    const float* tab = T::decodeLUT();
+    double r = 0.0;
+    int i = 0;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int cWidth = VTraits<v_float32>::vlanes();
+    const int len0 = len & -cWidth, blockSize0 = 1 << 13;
+    while (i < len0)
+    {
+        const int blockSize = std::min(len0 - i, blockSize0);
+        v_float32 v_sum = vx_setzero_f32();
+        for (int j = i; j < i + blockSize; j += cWidth)
+        {
+            v_float32 v_src1 = v_lut(tab, v_reinterpret_as_s32(vx_load_expand_q(src1 + j)));
+            v_float32 v_src2 = v_lut(tab, v_reinterpret_as_s32(vx_load_expand_q(src2 + j)));
+            v_sum = v_muladd(v_src1, v_src2, v_sum);
+        }
+        r += v_reduce_sum(v_sum);
+        i += blockSize;
+    }
+    vx_cleanup();
+#endif
+    for (; i < len; i++)
+        r += (double)tab[src1[i]] * tab[src2[i]];
+    return r;
+}
+
+double dotProd_16f(const hfloat* src1, const hfloat* src2, int len)
+{
+    return dotProdExpand_(src1, src2, len);
+}
+
+double dotProd_16bf(const bfloat* src1, const bfloat* src2, int len)
+{
+    return dotProdExpand_(src1, src2, len);
+}
+
+// CV_Bool: any non-zero byte is true, so count the positions where both are true
+double dotProd_bool(const uchar* src1, const uchar* src2, int len)
+{
+    int r = 0;
+    int i = 0;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int cWidth = VTraits<v_uint8>::vlanes();
+    // each lane of the uchar counter goes up by at most 1 per step, so 255 steps fit
+    const int len0 = len & -cWidth, blockSize0 = 255 * cWidth;
+    const v_uint8 v_zero = vx_setzero_u8(), v_one = vx_setall_u8(1);
+    while (i < len0)
+    {
+        const int blockSize = std::min(len0 - i, blockSize0);
+        v_uint8 v_count = vx_setzero_u8();
+
+        v_uint8 v_count1 = vx_setzero_u8();
+        int j = i;
+        // two independent counters, so each add doesn't wait for the previous one
+        for (; j <= i + blockSize - cWidth * 2; j += cWidth * 2)
+        {
+            // v_ne gives 0xFF where a byte is non-zero, so v_and of both masks is 0xFF where both are true
+            v_uint8 v_both0 = v_and(v_ne(vx_load(src1 + j), v_zero), v_ne(vx_load(src2 + j), v_zero));
+            v_uint8 v_both1 = v_and(v_ne(vx_load(src1 + j + cWidth), v_zero), v_ne(vx_load(src2 + j + cWidth), v_zero));
+            v_count = v_add(v_count, v_and(v_both0, v_one));
+            v_count1 = v_add(v_count1, v_and(v_both1, v_one));
+        }
+        for (; j < i + blockSize; j += cWidth)
+        {
+            v_uint8 v_both = v_and(v_ne(vx_load(src1 + j), v_zero), v_ne(vx_load(src2 + j), v_zero));
+            v_count = v_add(v_count, v_and(v_both, v_one));
+        }
+
+        r += (int)v_reduce_sum(v_count) + (int)v_reduce_sum(v_count1);
+        i += blockSize;
+    }
+    vx_cleanup();
+#endif
+    for (; i < len; i++)
+        r += (src1[i] != 0) & (src2[i] != 0);
+    return r;
+}
+
+double dotProd_64u(const uint64* src1, const uint64* src2, int len)
+{
+    return dotProd_(src1, src2, len);
+}
+
+double dotProd_64s(const int64* src1, const int64* src2, int len)
+{
+    return dotProd_(src1, src2, len);
+}
+
+double dotProd_32u(const unsigned* src1, const unsigned* src2, int len)
+{
+    return dotProd_(src1, src2, len);
+}
+
+double dotProd_8f(const fp8_t* src1, const fp8_t* src2, int len)
+{
+    return dotProdFp8_(src1, src2, len);
+}
+
+double dotProd_8fnuz(const fp8a_t* src1, const fp8a_t* src2, int len)
+{
+    return dotProdFp8_(src1, src2, len);
 }
 
 #endif

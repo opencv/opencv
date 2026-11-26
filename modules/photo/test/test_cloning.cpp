@@ -55,6 +55,77 @@ namespace opencv_test { namespace {
 
 static const double numerical_precision = 0.05; // 95% of pixels should have exact values
 
+typedef testing::TestWithParam<tuple<int, bool> > Photo_SeamlessClone;
+
+TEST_P(Photo_SeamlessClone, input_mask_is_preserved)
+{
+    const int operation = get<0>(GetParam());
+    const bool useROI = get<1>(GetParam());
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "cloning/Normal_Cloning/";
+    Mat source = imread(folder + "source1.png", IMREAD_COLOR);
+    Mat destination = imread(folder + "destination1.png", IMREAD_COLOR);
+    Mat originalMask = imread(folder + "mask.png", IMREAD_GRAYSCALE);
+    ASSERT_FALSE(source.empty()) << "Could not load source image " << folder + "source1.png";
+    ASSERT_FALSE(destination.empty()) << "Could not load destination image "
+                                     << folder + "destination1.png";
+    ASSERT_FALSE(originalMask.empty()) << "Could not load mask image " << folder + "mask.png";
+
+    const Mat sourceBefore = source.clone();
+    const Mat destinationBefore = destination.clone();
+    const Point center(destination.cols / 2, destination.rows / 2);
+    const char* operations[] = {"NORMAL_CLONE", "NORMAL_CLONE_WIDE", "colorChange",
+                                "illuminationChange", "textureFlattening"};
+
+    SCOPED_TRACE(testing::Message() << operations[operation] << " useROI=" << useROI);
+    Mat maskParent(useROI ? Size(originalMask.cols + 8, originalMask.rows + 4)
+                         : originalMask.size(), CV_8UC1, Scalar(17));
+    Mat mask = useROI ? maskParent(Rect(Point(3, 2), originalMask.size())) : maskParent;
+    originalMask.copyTo(mask);
+    const Mat maskBefore = maskParent.clone();
+    Mat colorMask;
+    cvtColor(mask, colorMask, COLOR_GRAY2BGR);
+    const Mat colorMaskBefore = colorMask.clone();
+
+    const auto run = [&](const Mat& inputMask, Mat& result)
+    {
+        switch (operation)
+        {
+        case 0:
+        case 1:
+            seamlessClone(source, destination, inputMask, center, result,
+                          operation == 0 ? NORMAL_CLONE : NORMAL_CLONE_WIDE);
+            break;
+        case 2:
+            colorChange(source, inputMask, result, 1.5f, 0.5f, 0.5f);
+            break;
+        case 3:
+            illuminationChange(source, inputMask, result, 0.2f, 0.4f);
+            break;
+        case 4:
+            textureFlattening(source, inputMask, result, 30, 120, 3);
+            break;
+        }
+        EXPECT_EQ(0.0, cvtest::norm(sourceBefore, source, NORM_INF)) << "source";
+        EXPECT_EQ(0.0, cvtest::norm(destinationBefore, destination, NORM_INF))
+            << "destination";
+    };
+
+    Mat first, second, control;
+    run(mask, first);
+    EXPECT_EQ(0.0, cvtest::norm(maskBefore, maskParent, NORM_INF))
+        << "mask after first call";
+    run(mask, second);
+    EXPECT_EQ(0.0, cvtest::norm(maskBefore, maskParent, NORM_INF))
+        << "mask after second call";
+    run(colorMask, control);
+    EXPECT_EQ(0.0, cvtest::norm(colorMaskBefore, colorMask, NORM_INF)) << "color mask";
+    EXPECT_EQ(0.0, cvtest::norm(first, control, NORM_INF)) << "equivalent masks";
+    EXPECT_EQ(0.0, cvtest::norm(first, second, NORM_INF)) << "repeated call";
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Photo_SeamlessClone,
+    testing::Combine(testing::Values(0, 1, 2, 3, 4), testing::Bool()));
+
 TEST(Photo_SeamlessClone_normal, regression)
 {
     string folder = string(cvtest::TS::ptr()->get_data_path()) + "cloning/Normal_Cloning/";

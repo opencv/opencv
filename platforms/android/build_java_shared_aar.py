@@ -128,7 +128,7 @@ def main(args):
 
     print("Running gradle assembleRelease...")
     # Running gradle to build the Android project
-    cmd = ["./gradlew", "assembleRelease"]
+    cmd = ["./gradlew", "assembleRelease", "--info"]
     if args.offline:
         cmd = cmd + ["--offline"]
     subprocess.run(cmd, shell=False, cwd=ANDROID_PROJECT_DIR, check=True)
@@ -181,9 +181,9 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Builds AAR with Java and shared C++ libs from OpenCV SDK")
     parser.add_argument('opencv_sdk_path')
-    parser.add_argument('--android_compile_sdk', default="34")
+    parser.add_argument('--android_compile_sdk', default="36")
     parser.add_argument('--android_min_sdk', default="21")
-    parser.add_argument('--android_target_sdk', default="34")
+    parser.add_argument('--android_target_sdk', default="36")
     parser.add_argument('--java_version', default="17")
     parser.add_argument('--ndk_location', default="")
     parser.add_argument('--cmake_location', default="")

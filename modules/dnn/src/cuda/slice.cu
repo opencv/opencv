@@ -20,6 +20,7 @@
 #include <opencv2/core.hpp>
 
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 #include <iostream>
 #include <algorithm>
@@ -42,6 +43,26 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                 for (int j = 1; j < Rank; j++) {
                     out_index = (i % out_strides[j - 1]) / out_strides[j];
                     in_index = in_offset[j] + out_index;
+                    iidx += in_index * in_strides[j];
+                }
+
+                output[i] = input[iidx];
+            }
+        }
+
+        template <class T, std::size_t Rank>
+        __global__ void slice_strided(
+            Span<T> output, array<size_type, Rank> out_strides,
+            View<T> input, array<size_type, Rank> in_strides,
+            array<index_type, Rank> in_offset, array<index_type, Rank> in_step)
+        {
+            for (auto i : grid_stride_range(output.size())) {
+                index_type out_index = i / out_strides[0];
+                index_type in_index = in_offset[0] + out_index * in_step[0];
+                index_type iidx = in_index * in_strides[0];
+                for (int j = 1; j < Rank; j++) {
+                    out_index = (i % out_strides[j - 1]) / out_strides[j];
+                    in_index = in_offset[j] + out_index * in_step[j];
                     iidx += in_index * in_strides[j];
                 }
 
@@ -74,13 +95,64 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     GENERATE_KERNEL_DISPATCHER(slice_dispatcher, launch_slice);
 
+    template <class T, std::size_t Rank> static
+    void launch_slice_strided(
+        const Stream& stream,
+        Span<T> output, const std::vector<std::size_t>& outStride,
+        View<T> input, const std::vector<std::size_t>& inStride,
+        const std::vector<std::size_t>& inOffset, const std::vector<std::int64_t>& inStep)
+    {
+        CV_Assert(outStride.size() == Rank);
+        CV_Assert(inStride.size() == Rank);
+        CV_Assert(inOffset.size() == Rank);
+        CV_Assert(inStep.size() == Rank);
+
+        array<size_type, Rank> outStride_k, inStride_k;
+        outStride_k.assign(std::begin(outStride), std::end(outStride));
+        inStride_k.assign(std::begin(inStride), std::end(inStride));
+
+        array<index_type, Rank> inOffset_k, inStep_k;
+        inOffset_k.assign(std::begin(inOffset), std::end(inOffset));
+        inStep_k.assign(std::begin(inStep), std::end(inStep));
+
+        auto kernel = raw::slice_strided<T, Rank>;
+        auto policy = make_policy(kernel, output.size(), 0, stream);
+        launch_kernel(kernel, policy, output, outStride_k, input, inStride_k, inOffset_k, inStep_k);
+    }
+
+    GENERATE_KERNEL_DISPATCHER(slice_strided_dispatcher, launch_slice_strided);
+
     template <class T>
     void slice(const Stream& stream,
         TensorSpan<T> output, TensorView<T> input,
-        std::vector<std::size_t> offsets)
+        std::vector<std::size_t> offsets,
+        std::vector<std::int64_t> steps)
     {
         CV_Assert(output.rank() == input.rank());
         CV_Assert(output.rank() == offsets.size());
+
+        bool has_stride = std::any_of(std::begin(steps), std::end(steps),
+                                       [](std::int64_t s) { return s != 1; });
+        if (has_stride)
+        {
+            CV_Assert(steps.size() == offsets.size());
+
+            auto inShape = input.shape_as_vector();
+            auto outShape = output.shape_as_vector();
+            auto rank = inShape.size();
+
+            std::vector<std::size_t> inStride(rank), outStride(rank);
+            inStride.back() = 1;
+            outStride.back() = 1;
+            std::copy(std::begin(inShape) + 1, std::end(inShape), std::begin(inStride));
+            std::copy(std::begin(outShape) + 1, std::end(outShape), std::begin(outStride));
+            std::partial_sum(inStride.rbegin(), inStride.rend(), inStride.rbegin(), std::multiplies<std::size_t>());
+            std::partial_sum(outStride.rbegin(), outStride.rend(), outStride.rbegin(), std::multiplies<std::size_t>());
+
+            CV_Assert(1 <= rank && rank <= CSL_MAX_TENSOR_RANK);
+            slice_strided_dispatcher<T, 1, CSL_MAX_TENSOR_RANK>(rank, stream, output, outStride, input, inStride, offsets, steps);
+            return;
+        }
 
         /* copy directly if no slicing is required */
         if (is_shape_same(output, input))
@@ -196,13 +268,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     }
 
 #if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
-    template void slice(const Stream&, TensorSpan<__half>, TensorView<__half>, std::vector<std::size_t>);
+    template void slice(const Stream&, TensorSpan<__half>, TensorView<__half>, std::vector<std::size_t>, std::vector<std::int64_t>);
 #endif
-    template void slice(const Stream&, TensorSpan<float>, TensorView<float>, std::vector<std::size_t>);
-    template void slice(const Stream&, TensorSpan<int8_t>, TensorView<int8_t>, std::vector<std::size_t>);
-    template void slice(const Stream&, TensorSpan<uint8_t>, TensorView<uint8_t>, std::vector<std::size_t>);
-    template void slice(const Stream&, TensorSpan<int32_t>, TensorView<int32_t>, std::vector<std::size_t>);
-    template void slice(const Stream&, TensorSpan<int64_t>, TensorView<int64_t>, std::vector<std::size_t>);
-    template void slice(const Stream&, TensorSpan<bool>, TensorView<bool>, std::vector<std::size_t>);
+    template void slice(const Stream&, TensorSpan<float>, TensorView<float>, std::vector<std::size_t>, std::vector<std::int64_t>);
+    template void slice(const Stream&, TensorSpan<int8_t>, TensorView<int8_t>, std::vector<std::size_t>, std::vector<std::int64_t>);
+    template void slice(const Stream&, TensorSpan<uint8_t>, TensorView<uint8_t>, std::vector<std::size_t>, std::vector<std::int64_t>);
+    template void slice(const Stream&, TensorSpan<int32_t>, TensorView<int32_t>, std::vector<std::size_t>, std::vector<std::int64_t>);
+    template void slice(const Stream&, TensorSpan<int64_t>, TensorView<int64_t>, std::vector<std::size_t>, std::vector<std::int64_t>);
+    template void slice(const Stream&, TensorSpan<bool>, TensorView<bool>, std::vector<std::size_t>, std::vector<std::int64_t>);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */

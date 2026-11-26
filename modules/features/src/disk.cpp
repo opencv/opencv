@@ -95,6 +95,9 @@ public:
         CV_Assert(kptsBlob.depth()   == CV_64S);
         CV_Assert(scoresBlob.depth() == CV_32F);
         CV_Assert(descBlob.depth()   == CV_32F);
+        CV_CheckEQ(kptsBlob.cols, 2, "DISK keypoints output must be [1, N, 2]");
+        CV_CheckEQ(scoresBlob.cols, 1, "DISK scores output must hold one score per keypoint");
+        CV_CheckEQ(descBlob.cols, descriptorSize(), "DISK descriptors output must be [1, N, 128]");
 
         const int numFeatures = kptsBlob.rows;
         CV_Assert(scoresBlob.rows == numFeatures);

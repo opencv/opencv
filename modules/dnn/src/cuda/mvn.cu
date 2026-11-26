@@ -32,13 +32,46 @@ namespace raw {
         }
     }
 
+    constexpr int MEAN_SQR_SUM_BLOCK_SIZE = 256;
+
+    // one block per row: a warp-shuffle and shared-memory reduction, no per-element atomics
     template <class T>
     __global__ void reduce_mean_sqr_sum(Span<float> means, Span<float> sum_sqrs, View<T> input, size_type inner_size) {
-        for (auto idx : grid_stride_range(input.size())) {
-            const index_type outer_idx = idx / inner_size;
-            auto x = static_cast<float>(input[idx]);
-            atomicAdd(&means[outer_idx], x / inner_size);
-            atomicAdd(&sum_sqrs[outer_idx], x * x);
+        __shared__ float warp_sums[MEAN_SQR_SUM_BLOCK_SIZE / GPU_WARP_SIZE];
+        __shared__ float warp_sqrs[MEAN_SQR_SUM_BLOCK_SIZE / GPU_WARP_SIZE];
+
+        const index_type outer_idx = blockIdx.x;
+        const index_type row_start = outer_idx * inner_size;
+        float sum = 0.f, sqr = 0.f;
+        for (index_type i = threadIdx.x; i < inner_size; i += blockDim.x) {
+            const auto x = static_cast<float>(input[row_start + i]);
+            sum += x;
+            sqr += x * x;
+        }
+
+        for (int offset = GPU_WARP_SIZE / 2; offset > 0; offset /= 2) {
+            sum += WARP_SHFL_XOR(sum, offset);
+            sqr += WARP_SHFL_XOR(sqr, offset);
+        }
+        const int warp = threadIdx.x / GPU_WARP_SIZE, lane = threadIdx.x % GPU_WARP_SIZE;
+        if (lane == 0) {
+            warp_sums[warp] = sum;
+            warp_sqrs[warp] = sqr;
+        }
+        __syncthreads();
+
+        if (warp == 0) {
+            const int num_warps = blockDim.x / GPU_WARP_SIZE;
+            sum = lane < num_warps ? warp_sums[lane] : 0.f;
+            sqr = lane < num_warps ? warp_sqrs[lane] : 0.f;
+            for (int offset = GPU_WARP_SIZE / 2; offset > 0; offset /= 2) {
+                sum += WARP_SHFL_XOR(sum, offset);
+                sqr += WARP_SHFL_XOR(sqr, offset);
+            }
+            if (lane == 0) {
+                means[outer_idx] = sum / inner_size;
+                sum_sqrs[outer_idx] = sqr;
+            }
         }
     }
 
@@ -133,8 +166,13 @@ void reduce_mean_sqr_sum(const Stream& stream, Span<float> means, Span<float> su
     CV_Assert(input.size() / inner_size == means.size());
     CV_Assert(input.size() / inner_size == sum_sqrs.size());
 
+    if (means.size() == 0)
+        return;
+
     auto kernel = raw::reduce_mean_sqr_sum<T>;
-    auto policy = make_policy(kernel, input.size(), 0, stream);
+    // one block per row
+    auto policy = execution_policy(dim3(static_cast<unsigned int>(means.size())),
+                                   dim3(raw::MEAN_SQR_SUM_BLOCK_SIZE), 0, stream);
     launch_kernel(kernel, policy, means, sum_sqrs, input, inner_size);
 }
 

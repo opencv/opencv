@@ -65,7 +65,7 @@ public:
             return;
         }
 
-        EXPECT_EQ(CAP_PROP_UNKNOWN, cap.get(CV__CAP_PROP_LATEST));
+        EXPECT_EQ(static_cast<double>(CAP_PROP_UNKNOWN), cap.get(CV__CAP_PROP_LATEST));
 
         int n_frames = -1;
         EXPECT_NO_THROW(n_frames = (int)cap.get(CAP_PROP_FRAME_COUNT));
@@ -460,7 +460,7 @@ static Ext_Fourcc_PSNR synthetic_params[] = {
 
 Size all_sizes[] = {
     Size(640, 480),
-    Size(976, 768)
+    Size(656, 496)  // row step 1968 is not a multiple of 32: exercises the aligned-copy path in the FFmpeg writer
 };
 
 TEST_P(videoio_synthetic, write_read_position) { doTest(); }
@@ -535,7 +535,7 @@ TEST_P(Videoio_Writer, write_nothing)
     EXPECT_NO_THROW(writer.open(video_file, apiPref, fourcc, fps, frame_size, true));
     ASSERT_TRUE(writer.isOpened());
 
-    EXPECT_EQ(cv::VIDEOWRITER_PROP_UNKNOWN, writer.get(CV__CAP_PROP_LATEST));
+    EXPECT_EQ(static_cast<double>(cv::VIDEOWRITER_PROP_UNKNOWN), writer.get(CV__CAP_PROP_LATEST));
 
 #if 0  // no frames
     cv::Mat m(frame_size, CV_8UC3, Scalar::all(127));
@@ -1247,6 +1247,50 @@ inline static std::string stream_capture_ffmpeg_name_printer(const testing::Test
 }
 
 INSTANTIATE_TEST_CASE_P(videoio, stream_capture_ffmpeg, testing::Values("h264", "h265", "mjpg.avi"), stream_capture_ffmpeg_name_printer);
+
+TEST(Videoio, stream_capture_ffmpeg_read_exception)
+{
+    VideoCaptureAPIs apiPref = CAP_FFMPEG;
+    std::vector<VideoCaptureAPIs> supportedAPIs = videoio_registry::getStreamBufferedBackends();
+    if (!videoio_registry::hasBackend(apiPref))
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+    if (std::find(supportedAPIs.begin(), supportedAPIs.end(), apiPref) == supportedAPIs.end())
+        throw SkipTestException(cv::String("Backend is not supported: ") + cv::videoio_registry::getBackendName(apiPref));
+
+    if (!videoio_registry::isBackendBuiltIn(apiPref))
+    {
+        int pluginABI, pluginAPI;
+        videoio_registry::getStreamBufferedBackendPluginVersion(apiPref, pluginABI, pluginAPI);
+        if (pluginABI < 1 || (pluginABI == 1 && pluginAPI < 2))
+            throw SkipTestException(format("Buffer capture supported since ABI/API = 1/2. %s plugin is %d/%d",
+                                           cv::videoio_registry::getBackendName(apiPref).c_str(), pluginABI, pluginAPI));
+    }
+
+    class ThrowingStream : public IStreamReader
+    {
+    public:
+        bool readCalled = false;
+
+        long long read(char*, long long) CV_OVERRIDE
+        {
+            readCalled = true;
+            CV_Error(Error::StsError, "stream read failed");
+        }
+
+        long long seek(long long, int) CV_OVERRIDE
+        {
+            return -1;
+        }
+    };
+
+    Ptr<ThrowingStream> stream = makePtr<ThrowingStream>();
+    VideoCapture cap;
+    bool opened = true;
+    EXPECT_NO_THROW(opened = cap.open(stream, apiPref, {}));
+    EXPECT_TRUE(stream->readCalled);
+    EXPECT_FALSE(opened);
+    EXPECT_FALSE(cap.isOpened());
+}
 
 // Seek by frame index must be accurate on non-integer frame rates.
 typedef testing::TestWithParam<VideoCaptureAPIs> PreciseSeekingTest;

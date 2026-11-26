@@ -447,7 +447,8 @@ enum RetrievalModes {
 
 //! the contour approximation algorithm
 enum ContourApproximationModes {
-    /** TBD */
+    /** Outputs Freeman chain codes instead of contour points. The output uses `CV_8SC1` and is
+    experimental, so its representation may change in a future release. */
     CHAIN_CODE            = 0,
     /** stores absolutely all the contour points. That is, any 2 subsequent points (x1,y1) and
     (x2,y2) of the contour will be either horizontal, vertical or diagonal neighbors, that is,
@@ -460,7 +461,9 @@ enum ContourApproximationModes {
     CHAIN_APPROX_TC89_L1   = 3,
     /** applies one of the flavors of the Teh-Chin chain approximation algorithm @cite TehChin89 */
     CHAIN_APPROX_TC89_KCOS = 4,
-    /** TBD */
+    /** Uses the link-runs contour extraction algorithm. Prefer cv::findContoursLinkRuns() for
+    new code: using this mode through cv::findContours() is deprecated. If hierarchy is
+    requested, `mode` must be `RETR_CCOMP`; otherwise, `mode` is ignored. `offset` is ignored. */
     LINK_RUNS              = 5
 };
 
@@ -1215,7 +1218,7 @@ kernels are generated (see #Sobel). The filters are normally passed to #sepFilte
 @param ky Output matrix of column filter coefficients. It has the type ktype .
 @param dx Derivative order in respect of x.
 @param dy Derivative order in respect of y.
-@param ksize Aperture size. It can be FILTER_SCHARR, 1, 3, 5, or 7.
+@param ksize Aperture size. It can be FILTER_SCHARR, or an odd number not larger than 31 (1, 3, 5, and 7 are the typical choices).
 @param normalize Flag indicating whether to normalize (scale down) the filter coefficients or not.
 Theoretically, the coefficients should have the denominator \f$=2^{ksize*2-dx-dy-2}\f$. If you are
 going to filter floating-point images, you are likely to use the normalized kernels. But if you
@@ -1278,7 +1281,7 @@ In-place operation is supported.
 @param src input 1-, 3-, or 4-channel image; when ksize is 3 or 5, the image depth should be
 CV_8U, CV_16U, or CV_32F, for larger aperture sizes, it can only be CV_8U.
 @param dst destination array of the same size and type as src.
-@param ksize aperture linear size; it must be odd and greater than 1, for example: 3, 5, 7 ...
+@param ksize aperture linear size; it must be odd and positive, for example: 1, 3, 5, 7 ... (ksize = 1 returns the image unchanged)
 @sa  bilateralFilter, blur, boxFilter, GaussianBlur
  */
 CV_EXPORTS_W void medianBlur( InputArray src, OutputArray dst, int ksize );
@@ -1544,7 +1547,7 @@ The second case corresponds to a kernel of:
     8-bit input images it will result in truncated derivatives.
 @param dx order of the derivative x.
 @param dy order of the derivative y.
-@param ksize size of the extended Sobel kernel; it must be 1, 3, 5, or 7.
+@param ksize size of the extended Sobel kernel; it must be odd and not larger than 31 (1, 3, 5, and 7 are the typical choices).
 @param scale optional scale factor for the computed derivative values; by default, no scaling is
 applied (see #getDerivKernels for details).
 @param delta optional delta value that is added to the results prior to storing them in dst.
@@ -1628,7 +1631,7 @@ with the following \f$3 \times 3\f$ aperture:
 @param dst Destination image of the same size and the same number of channels as src .
 @param ddepth Desired depth of the destination image, see @ref filter_depths "combinations".
 @param ksize Aperture size used to compute the second-derivative filters. See #getDerivKernels for
-details. The size must be positive and odd.
+details. The size must be positive, odd, and not larger than 31 (1, 3, 5, and 7 are the typical choices).
 @param scale Optional scale factor for the computed Laplacian values. By default, no scaling is
 applied. See #getDerivKernels for details.
 @param delta Optional delta value that is added to the results prior to storing them in dst .
@@ -1708,7 +1711,7 @@ of the formulae in the cornerEigenValsAndVecs description.
 @param dst Image to store the minimal eigenvalues. It has the type CV_32FC1 and the same size as
 src .
 @param blockSize Neighborhood size (see the details on #cornerEigenValsAndVecs ).
-@param ksize Aperture parameter for the Sobel operator.
+@param ksize Aperture parameter for the Sobel operator. It can be #FILTER_SCHARR, or an odd number not larger than 31 (1, 3, 5, and 7 are the typical choices).
 @param borderType Pixel extrapolation method. See #BorderTypes. #BORDER_WRAP is not supported.
  */
 CV_EXPORTS_W void cornerMinEigenVal( InputArray src, OutputArray dst,
@@ -1730,7 +1733,7 @@ Corners in the image can be found as the local maxima of this response map.
 @param dst Image to store the Harris detector responses. It has the type CV_32FC1 and the same
 size as src .
 @param blockSize Neighborhood size (see the details on #cornerEigenValsAndVecs ).
-@param ksize Aperture parameter for the Sobel operator.
+@param ksize Aperture parameter for the Sobel operator. It can be #FILTER_SCHARR, or an odd number not larger than 31 (1, 3, 5, and 7 are the typical choices).
 @param k Harris detector free parameter. See the formula above.
 @param borderType Pixel extrapolation method. See #BorderTypes. #BORDER_WRAP is not supported.
  */
@@ -1763,7 +1766,7 @@ The output of the function can be used for robust edge or corner detection.
 @param src Input single-channel 8-bit or floating-point image.
 @param dst Image to store the results. It has the same size as src and the type CV_32FC(6) .
 @param blockSize Neighborhood size (see details below).
-@param ksize Aperture parameter for the Sobel operator.
+@param ksize Aperture parameter for the Sobel operator. It can be #FILTER_SCHARR, or an odd number not larger than 31 (1, 3, 5, and 7 are the typical choices).
 @param borderType Pixel extrapolation method. See #BorderTypes. #BORDER_WRAP is not supported.
 
 @sa  cornerMinEigenVal, cornerHarris, preCornerDetect
@@ -1790,9 +1793,9 @@ The corners can be found as local maximums of the functions, as shown below:
     Mat corner_mask = corners == dilated_corners;
 @endcode
 
-@param src Source single-channel 8-bit of floating-point image.
+@param src Source single-channel 8-bit or floating-point image.
 @param dst Output image that has the type CV_32F and the same size as src .
-@param ksize %Aperture size of the Sobel .
+@param ksize Aperture size of the Sobel operator; it must be odd and not larger than 31 (1, 3, 5, and 7 are the typical choices).
 @param borderType Pixel extrapolation method. See #BorderTypes. #BORDER_WRAP is not supported.
  */
 CV_EXPORTS_W void preCornerDetect( InputArray src, OutputArray dst, int ksize,
@@ -2190,7 +2193,9 @@ and then put in the formula above instead of M. The function cannot operate in-p
 @param flags combination of interpolation methods (#INTER_LINEAR or #INTER_NEAREST) and the
 optional flag #WARP_INVERSE_MAP, that sets M as the inverse transformation (
 \f$\texttt{dst}\rightarrow\texttt{src}\f$ ).
-@param borderMode pixel extrapolation method (#BORDER_CONSTANT or #BORDER_REPLICATE).
+@param borderMode pixel extrapolation method (see #BorderTypes); when
+borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination image corresponding to
+the "outliers" in the source image are not modified by the function.
 @param borderValue value used in case of a constant border; by default, it equals 0.
 @param hint Implementation modification flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
 for linear calculation for faster speed. See #AlgorithmHint.
@@ -2667,21 +2672,42 @@ up-right or rotated rectangular region of the image in a constant time, for exam
 It makes possible to do a fast blurring or fast block correlation with a variable window size, for
 example. In case of multi-channel images, sums for each channel are accumulated independently.
 
+@anchor integral_depths
+Supported depth combinations:
+Input depth (src.depth()) | sdepth    | sqdepth
+--------------------------|-----------|---------------------------
+CV_8U                     | -1/CV_32S | -1/CV_32S/CV_32F/CV_64F
+CV_8U                     | CV_32F    | -1/CV_32F/CV_64F
+CV_8U                     | CV_64F    | -1/CV_64F
+CV_16U/CV_16S             | -1/CV_64F | -1/CV_64F
+CV_32F                    | CV_32F    | -1/CV_32F/CV_64F
+CV_32F                    | -1/CV_64F | -1/CV_64F
+CV_64F                    | -1/CV_64F | -1/CV_64F
+
+When sdepth is -1, it means CV_32S for CV_8U input and CV_64F otherwise. When sqdepth is -1, it
+means CV_64F. Other combinations raise an error, except in the OpenCL case below.
+
+@note When src is CV_8UC1, sum is a UMat, OpenCL is used and tilted is not requested, any sdepth and
+sqdepth from CV_32S, CV_32F and CV_64F are accepted (CV_64F needs a device with double precision
+support). Without OpenCL, the combinations missing from the table raise an error, so portable
+code should stick to the table.
+
 As a practical example, the next figure shows the calculation of the integral of a straight
 rectangle Rect(4,4,3,2) and of a tilted rectangle Rect(5,1,2,3) . The selected pixels in the
 original image are shown, as well as the relative pixels in the integral images sum and tilted .
 
 ![integral calculation example](pics/integral.png)
 
-@param src input image as \f$W \times H\f$, 8-bit or floating-point (32f or 64f).
+@param src input image as \f$W \times H\f$, 8-bit, 16-bit or floating-point (32f or 64f).
 @param sum integral image as \f$(W+1)\times (H+1)\f$ , 32-bit integer or floating-point (32f or 64f).
-@param sqsum integral image for squared pixel values; it is \f$(W+1)\times (H+1)\f$, double-precision
-floating-point (64f) array.
+@param sqsum integral image for squared pixel values; it is \f$(W+1)\times (H+1)\f$ array of depth
+sqdepth (double-precision floating-point (64f) by default).
 @param tilted integral for the image rotated by 45 degrees; it is \f$(W+1)\times (H+1)\f$ array with
 the same data type as sum.
 @param sdepth desired depth of the integral and the tilted integral images, CV_32S, CV_32F, or
-CV_64F.
-@param sqdepth desired depth of the integral image of squared pixel values, CV_32F or CV_64F.
+CV_64F; see @ref integral_depths "combinations".
+@param sqdepth desired depth of the integral image of squared pixel values, CV_32S, CV_32F or
+CV_64F; see @ref integral_depths "combinations".
  */
 CV_EXPORTS_AS(integral3) void integral( InputArray src, OutputArray sum,
                                         OutputArray sqsum, OutputArray tilted,
@@ -2891,7 +2917,7 @@ CV_EXPORTS_W double threshold( InputArray src, OutputArray dst,
 If the mask is not empty, dst *must* be of the same size and type as src, so that
 outliers pixels are left as-is
 
-@param src input array (multiple-channel, 8-bit or 32-bit floating point).
+@param src input array (multiple-channel, CV_8U, CV_16S, CV_16U, CV_32F or CV_64F).
 @param dst output array of the same size  and type and the same number of channels as src.
 @param mask optional mask (same size as src, 8-bit).
 @param thresh threshold value.

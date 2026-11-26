@@ -350,6 +350,11 @@ void gemm(InputArray matA, InputArray matB, double alpha,
 #endif
 
     Mat A = matA.getMat(), B = matB.getMat(), C = beta != 0.0 ? matC.getMat() : Mat();
+    // A 1D Mat is one row, but its step[0] is the size of one element, not of the whole row.
+    // Give it an ordinary 2D one-row header so the row step passed to the kernels is right.
+    if (A.dims == 1) A = A.reshape(0, 1);
+    if (B.dims == 1) B = B.reshape(0, 1);
+    if (C.dims == 1) C = C.reshape(0, 1);
     Size a_size = A.size(), d_size;
     int len = 0, type = A.type();
 
@@ -388,6 +393,8 @@ void gemm(InputArray matA, InputArray matB, double alpha,
 
     _matD.create( d_size.height, d_size.width, type );
     Mat D = _matD.getMat();
+    // A preallocated 1D output keeps its 1D header after create(), so normalize it like A, B and C.
+    if (D.dims == 1) D = D.reshape(0, 1);
     if( (flags & GEMM_3_T) != 0 && C.data == D.data )
     {
         transpose( C, C );
@@ -972,6 +979,54 @@ static double dotProd_64f(const void* src1, const void* src2, int len)
     CV_CPU_DISPATCH(dotProd_64f, ((const double*)src1, (const double*)src2, len),
         CV_CPU_DISPATCH_MODES_ALL);
 }
+static double dotProd_16f(const void* src1, const void* src2, int len)
+{
+    CV_INSTRUMENT_REGION();
+    CV_CPU_DISPATCH(dotProd_16f, ((const hfloat*)src1, (const hfloat*)src2, len),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+static double dotProd_16bf(const void* src1, const void* src2, int len)
+{
+    CV_INSTRUMENT_REGION();
+    CV_CPU_DISPATCH(dotProd_16bf, ((const bfloat*)src1, (const bfloat*)src2, len),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+static double dotProd_bool(const void* src1, const void* src2, int len)
+{
+    CV_INSTRUMENT_REGION();
+    CV_CPU_DISPATCH(dotProd_bool, ((const uchar*)src1, (const uchar*)src2, len),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+static double dotProd_64u(const void* src1, const void* src2, int len)
+{
+    CV_INSTRUMENT_REGION();
+    CV_CPU_DISPATCH(dotProd_64u, ((const uint64*)src1, (const uint64*)src2, len),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+static double dotProd_64s(const void* src1, const void* src2, int len)
+{
+    CV_INSTRUMENT_REGION();
+    CV_CPU_DISPATCH(dotProd_64s, ((const int64*)src1, (const int64*)src2, len),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+static double dotProd_32u(const void* src1, const void* src2, int len)
+{
+    CV_INSTRUMENT_REGION();
+    CV_CPU_DISPATCH(dotProd_32u, ((const unsigned*)src1, (const unsigned*)src2, len),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+static double dotProd_8f(const void* src1, const void* src2, int len)
+{
+    CV_INSTRUMENT_REGION();
+    CV_CPU_DISPATCH(dotProd_8f, ((const fp8_t*)src1, (const fp8_t*)src2, len),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+static double dotProd_8fnuz(const void* src1, const void* src2, int len)
+{
+    CV_INSTRUMENT_REGION();
+    CV_CPU_DISPATCH(dotProd_8fnuz, ((const fp8a_t*)src1, (const fp8a_t*)src2, len),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
 
 typedef double (*DotProdFunc)(const void* src1, const void* src2, int len);
 
@@ -982,7 +1037,11 @@ static DotProdFunc getDotProdFunc(int depth)
         dotProd_8u, dotProd_8s,
         dotProd_16u, dotProd_16s,
         dotProd_32s, dotProd_32f,
-        dotProd_64f, 0
+        dotProd_64f, dotProd_16f,
+        dotProd_16bf, dotProd_bool,
+        dotProd_64u, dotProd_64s,
+        dotProd_32u, dotProd_8f,
+        dotProd_8fnuz
     };
 
     return dotProdTab[depth];
@@ -1037,6 +1096,10 @@ static bool ocl_dot( InputArray _src1, InputArray _src2, double & res )
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
     if ( !doubleSupport && depth == CV_64F )
+        return false;
+
+    // the OpenCL reduce kernel only has accumulators for CV_8U..CV_64F
+    if ( depth > CV_64F )
         return false;
 
     int dbsize = ocl::Device::getDefault().maxComputeUnits();

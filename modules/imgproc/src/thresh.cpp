@@ -1482,6 +1482,10 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
     type &= ~THRESH_DRYRUN;
 
     Mat src = _src.getMat();
+    // A 0D Mat holds one element but has no rows, and ThresholdRunner splits the work by rows.
+    // View it as 1x1, like the other imgproc functions do.
+    if (src.dims == 0)
+        src = src.reshape(0, 1);
 
     if (!isDisabled)
         _dst.create( src.size(), src.type() );
@@ -1631,6 +1635,11 @@ double cv::thresholdWithMask( InputArray _src, InputOutputArray _dst, InputArray
 
     Mat src = _src.getMat();
     Mat mask = _mask.getMat();
+    // see cv::threshold: view 0D inputs as 1x1 for the row-based ThresholdRunner
+    if (src.dims == 0)
+        src = src.reshape(0, 1);
+    if (mask.dims == 0)
+        mask = mask.reshape(0, 1);
 
     if (!isDisabled)
         _dst.create( src.size(), src.type() );

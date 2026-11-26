@@ -5,7 +5,7 @@
 
 namespace opencv_test {
 
-#define TYPICAL_MAT_TYPES_MORPH  CV_8UC1, CV_8UC4
+#define TYPICAL_MAT_TYPES_MORPH  CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16SC1, CV_32FC1, CV_32FC3, CV_32FC4
 #define TYPICAL_MATS_MORPH       testing::Combine(SZ_ALL_GA, testing::Values(TYPICAL_MAT_TYPES_MORPH))
 
 PERF_TEST_P(Size_MatType, erode, TYPICAL_MATS_MORPH)

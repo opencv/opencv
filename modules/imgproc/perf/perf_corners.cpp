@@ -14,7 +14,7 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_k_BorderType, cornerHarris,
             testing::Combine(
                 testing::Values( "stitching/a1.png", "cv/shared/pic5.png"),
                 testing::Values( 3, 5 ),
-                testing::Values( 3, 5 ),
+                testing::Values( -1, 3, 5 ),          // -1 = Scharr aperture
                 testing::Values( 0.04, 0.1 ),
                 BorderType::all()
                 )
@@ -70,7 +70,7 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_BorderType, cornerMinEigenVal,
             testing::Combine(
                 testing::Values( "stitching/a1.png", "cv/shared/pic5.png"),
                 testing::Values( 3, 5 ),
-                testing::Values( 3, 5 ),
+                testing::Values( -1, 3, 5 ),          // -1 = Scharr aperture
                 BorderType::all()
             )
           )

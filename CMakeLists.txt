@@ -670,6 +670,25 @@ if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
   endif()
 endif()
 
+# --- HIP/ROCm Support ---
+OCV_OPTION(WITH_HIP "Include AMD ROCm/HIP support" OFF)
+if(WITH_HIP AND CMAKE_VERSION VERSION_LESS "3.21")
+  message(WARNING "HIP: CMake 3.21 or newer is required, found ${CMAKE_VERSION}. HIP support disabled.")
+elseif(WITH_HIP)
+  include(CheckLanguage)
+  check_language(HIP)
+  if(CMAKE_HIP_COMPILER)
+    # Must precede enable_language(HIP): CMake caches its own CMAKE_HIP_ARCHITECTURES there,
+    # taken from the GPUs of the build machine.
+    include(cmake/OpenCVHipArchitectures.cmake)
+    ocv_hip_select_architectures()
+    if(OCV_HIP_ARCH_FOUND)
+      enable_language(HIP)
+    endif()
+  endif()
+  include(cmake/OpenCVDetectHIP.cmake)
+endif()
+
 # ----------------------------------------------------------------------------
 #       CHECK FOR SYSTEM LIBRARIES, OPTIONS, ETC..
 # ----------------------------------------------------------------------------
@@ -1919,6 +1938,17 @@ if(WITH_CUDA OR HAVE_CUDA)
     status("    NVIDIA PTX archs:"     ${OPENCV_CUDA_ARCH_PTX})
   endif()
  endif()
+
+if(WITH_HIP OR HAVE_HIP)
+  status("")
+  if(HAVE_HIP)
+    status("  AMD HIP:" ROCM_FOUND THEN "YES (ROCm ${ROCM_VERSION}, HIP ${hip_VERSION})"
+                                   ELSE "YES (HIP ${hip_VERSION}, ROCm version unknown)")
+    status("    AMD GPU arch:"         ${CMAKE_HIP_ARCHITECTURES})
+  else()
+    status("  AMD HIP:" "NO")
+  endif()
+endif()
 
  if(WITH_CUDNN OR HAVE_CUDNN)
     status("")

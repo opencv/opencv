@@ -50,7 +50,7 @@ In the current version, @ref cv::dnn::TextDetectionModel supports these algorith
 - and use @ref cv::dnn::TextDetectionModel_EAST with "EAST" models
 
 The following provided pretrained models are variants of DB (w/o deformable convolution),
-and the performance can be referred to the Table.1 in the [paper]((https://arxiv.org/abs/1911.08947)).
+and the performance can be referred to the Table.1 in the [paper](https://arxiv.org/abs/1911.08947).
 For more information, please refer to the [official code](https://github.com/MhLiao/DB)
 
 ---

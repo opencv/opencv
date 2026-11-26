@@ -3,9 +3,35 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "precomp.hpp"
+#include <climits>
+#include <cstdint>
 
 namespace cv
 {
+
+static bool isPacked2D(const Mat& m)
+{
+    return m.dims == 2 && m.step[1] == m.elemSize() &&
+           (m.rows <= 1 || m.step[0] == static_cast<size_t>(m.cols) * m.elemSize());
+}
+
+static bool hasValidRowStep(const Mat& m)
+{
+    return m.dims == 2 && m.step[1] == m.elemSize() &&
+           (m.rows <= 1 || m.step[0] >= static_cast<size_t>(m.cols) * m.elemSize());
+}
+
+static bool byteSpansOverlap(const Mat& a, const Mat& b)
+{
+    if (a.empty() || b.empty())
+        return false;
+    CV_Assert(a.dims <= 2 && b.dims <= 2);
+    const size_t aSpan = static_cast<size_t>(a.rows - 1) * a.step[0] + static_cast<size_t>(a.cols) * a.elemSize();
+    const size_t bSpan = static_cast<size_t>(b.rows - 1) * b.step[0] + static_cast<size_t>(b.cols) * b.elemSize();
+    const std::uintptr_t a0 = reinterpret_cast<std::uintptr_t>(a.data);
+    const std::uintptr_t b0 = reinterpret_cast<std::uintptr_t>(b.data);
+    return a0 <= b0 ? (b0 - a0) < aSpan : (a0 - b0) < bSpan;
+}
 
 /** Just compute the norm of a vector
  * @param vec a vector of size 3 and any type T
@@ -34,7 +60,7 @@ Mat_<T> computeRadius(const Mat& points)
     // Compute the
     Size size(points.cols, points.rows);
     Mat_<T> r(size);
-    if (points.isContinuous())
+    if (points.isContinuous() && isPacked2D(points))
         size = Size(points.cols * points.rows, 1);
     for (int y = 0; y < size.height; ++y)
     {
@@ -195,6 +221,7 @@ public:
     }
     virtual void setRows(int val) CV_OVERRIDE
     {
+        CV_CheckGT(val, 0, "Invalid number of rows for RgbdNormals");
         rows = val; cacheIsDirty = true;
     }
     virtual int getCols() const CV_OVERRIDE
@@ -203,6 +230,7 @@ public:
     }
     virtual void setCols(int val) CV_OVERRIDE
     {
+        CV_CheckGT(val, 0, "Invalid number of cols for RgbdNormals");
         cols = val; cacheIsDirty = true;
     }
     virtual int getWindowSize() const CV_OVERRIDE
@@ -261,6 +289,10 @@ public:
             CV_Error(Error::StsInternal, "Unknown normal computer algorithm");
         }
 
+        CV_CheckEQ(points3d_ori.rows, rows, "Invalid input height for RgbdNormals");
+        CV_CheckEQ(points3d_ori.cols, cols, "Invalid input width for RgbdNormals");
+        CV_Assert(!points3d_ori.empty() && hasValidRowStep(points3d_ori));
+
         // Initialize the pimpl
         cache();
 
@@ -277,28 +309,53 @@ public:
 
         // Get the normals
         normals_out.create(points3d_ori.size(), CV_MAKETYPE(dtype, 4));
-        if (points3d_ori.empty())
-            return;
 
         Mat normals = normals_out.getMat();
+        // Normalize 1-D / transposed OutputArray wrappers (e.g. std::vector<Vec4f>, OutputArray(ptr, n))
+        // to the exact 2-D (rows, cols) shape while sharing the caller's underlying buffer.
+        if (normals.dims != 2 || normals.rows != rows || normals.cols != cols)
+        {
+            const size_t nElems = static_cast<size_t>(rows) * static_cast<size_t>(cols);
+            CV_Assert(normals.isContinuous() && normals.total() == nElems);
+            CV_Assert(nElems <= static_cast<size_t>(INT_MAX) / static_cast<size_t>(normals.channels()));
+            normals = normals.reshape(0, rows);
+        }
+        CV_Assert(hasValidRowStep(normals));
+
+        // FALS and SRI index normals linearly as a rows*cols block; stage non-packed
+        // (and overlapping CrossProduct) outputs through a continuous temporary.
+        const bool copyOut = !isPacked2D(normals) ||
+            (method == RGBD_NORMALS_METHOD_CROSS_PRODUCT && byteSpansOverlap(points3d, normals));
+        Mat normalsBuf = copyOut
+            ? Mat(points3d_ori.size(), CV_MAKETYPE(dtype, 4))
+            : normals;
+
         if ((method == RGBD_NORMALS_METHOD_FALS) || (method == RGBD_NORMALS_METHOD_SRI))
         {
             // Compute the distance to the points
             Mat radius = computeRadius<T>(points3d);
-            compute(radius, normals);
+            compute(radius, normalsBuf);
         }
         else if (method == RGBD_NORMALS_METHOD_LINEMOD)
         {
-            compute(points3d_ori, normals);
+            // LINEMOD::computeImpl() indexes 1-channel depth rows by this->cols.
+            Mat linemodIn = (points3d_ori.channels() == 1 &&
+                             (!isPacked2D(points3d_ori) || byteSpansOverlap(points3d_ori, normalsBuf)))
+                ? points3d_ori.clone()
+                : points3d_ori;
+            compute(linemodIn, normalsBuf);
         }
         else if (method == RGBD_NORMALS_METHOD_CROSS_PRODUCT)
         {
-            compute(points3d, normals);
+            compute(points3d, normalsBuf);
         }
         else
         {
             CV_Error(Error::StsInternal, "Unknown normal computer algorithm");
         }
+
+        if (copyOut)
+            normalsBuf.copyTo(normals);
     }
 
     int rows, cols;
@@ -352,7 +409,7 @@ public:
         Mat_<Vec9T> M(this->rows, this->cols);
         Mat33T VVt;
         const Vec3T* vec = V_[0];
-        Vec9T* M_ptr = M[0], * M_ptr_end = M_ptr + this->rows * this->cols;
+        Vec9T* M_ptr = M[0], * M_ptr_end = M_ptr + static_cast<size_t>(this->rows) * static_cast<size_t>(this->cols);
         for (; M_ptr != M_ptr_end; ++vec, ++M_ptr)
         {
             VVt = (*vec) * vec->t();
@@ -365,7 +422,7 @@ public:
         Mat33T M_inv;
         M_inv_.create(this->rows, this->cols);
         Vec9T* M_inv_ptr = M_inv_[0];
-        for (M_ptr = &M(0); M_ptr != M_ptr_end; ++M_inv_ptr, ++M_ptr)
+        for (M_ptr = M[0]; M_ptr != M_ptr_end; ++M_inv_ptr, ++M_ptr)
         {
             // We have a semi-definite matrix
             invert(Mat33T(M_ptr->val), M_inv, DECOMP_CHOLESKY);
@@ -381,10 +438,11 @@ public:
      */
     virtual void compute(const Mat& r, Mat& normals) const CV_OVERRIDE
     {
+        CV_Assert(isPacked2D(r) && isPacked2D(normals));
         // Compute B
         Mat_<Vec3T> B(this->rows, this->cols);
 
-        const T* row_r = r.ptr < T >(0), * row_r_end = row_r + this->rows * this->cols;
+        const T* row_r = r.ptr < T >(0), * row_r_end = row_r + static_cast<size_t>(this->rows) * static_cast<size_t>(this->cols);
         const Vec3T* row_V = V_[0];
         Vec3T* row_B = B[0];
         for (; row_r != row_r_end; ++row_r, ++row_B, ++row_V)
@@ -521,6 +579,7 @@ public:
     template<typename DepthDepth, typename ContainerDepth>
     Mat computeImpl(const Mat_<DepthDepth>& depthIn, Mat& normals) const
     {
+        CV_Assert(isPacked2D(depthIn));
         const int r = 5; // used to be 7
         const int sample_step = r;
         const int square_size = ((2 * r / sample_step) + 1);
@@ -556,6 +615,8 @@ public:
         //TODO: fixit, difference threshold should not depend on input type
         difference_threshold *= (ContainerDepth)(std::is_same<DepthDepth, ushort>::value ? 1000.0 : 1.0);
         normals.setTo(std::numeric_limits<DepthDepth>::quiet_NaN());
+        if (this->cols <= 2 * r + 1)
+            return normals;
         for (int y = r; y < this->rows - r - 1; ++y)
         {
             const DepthDepth* p_line = reinterpret_cast<const DepthDepth*>(depthIn.ptr(y, r));
@@ -634,12 +695,29 @@ public:
         theta_step_(0)
     { }
 
+    virtual void setRows(int val) CV_OVERRIDE
+    {
+        CV_CheckGE(val, 2, "SRI requires at least 2 rows");
+        this->rows = val;
+        this->cacheIsDirty = true;
+    }
+
+    virtual void setCols(int val) CV_OVERRIDE
+    {
+        CV_CheckGE(val, 2, "SRI requires at least 2 cols");
+        this->cols = val;
+        this->cacheIsDirty = true;
+    }
+
     /** Compute cached data
      */
     virtual void cache() const CV_OVERRIDE
     {
         if (!this->cacheIsDirty)
             return;
+
+        CV_CheckGE(this->rows, 2, "SRI requires at least 2 rows");
+        CV_CheckGE(this->cols, 2, "SRI requires at least 2 cols");
 
         Mat_<T> cos_theta, sin_theta, cos_phi, sin_phi;
         computeThetaPhi<T>(this->rows, this->cols, this->K, cos_theta, sin_theta, cos_phi, sin_phi);
@@ -652,11 +730,12 @@ public:
         float min_theta = (float)std::asin(sin_theta(0, 0)), max_theta = (float)std::asin(sin_theta(0, this->cols - 1));
         float min_phi = (float)std::asin(sin_phi(0, this->cols / 2 - 1)), max_phi = (float)std::asin(sin_phi(this->rows - 1, this->cols / 2 - 1));
 
-        std::vector<Point3f> points3d(this->cols * this->rows);
+        std::vector<Point3f> points3d(static_cast<size_t>(this->cols) * static_cast<size_t>(this->rows));
         R_hat_.create(this->rows, this->cols);
         phi_step_ = float(max_phi - min_phi) / (this->rows - 1);
         theta_step_ = float(max_theta - min_theta) / (this->cols - 1);
-        for (int phi_int = 0, k = 0; phi_int < this->rows; ++phi_int)
+        size_t k = 0;
+        for (int phi_int = 0; phi_int < this->rows; ++phi_int)
         {
             float phi = min_phi + phi_int * phi_step_;
             float phi_sin = std::sin(phi), phi_cos = std::cos(phi);
@@ -723,6 +802,7 @@ public:
      */
     virtual void compute(const Mat& in, Mat& normals_out) const CV_OVERRIDE
     {
+        CV_Assert(isPacked2D(in) && isPacked2D(normals_out));
         const Mat_<T>& r_non_interp = in;
 
         // Interpolate the radial image to make derivatives meaningful
@@ -741,7 +821,7 @@ public:
         // Fill the result matrix
         Mat_<Vec4T> normals(this->rows, this->cols);
 
-        const T* r_theta_ptr = r_theta[0], * r_theta_ptr_end = r_theta_ptr + this->rows * this->cols;
+        const T* r_theta_ptr = r_theta[0], * r_theta_ptr_end = r_theta_ptr + static_cast<size_t>(this->rows) * static_cast<size_t>(this->cols);
         const T* r_phi_ptr = r_phi[0];
         const Mat33T* R = reinterpret_cast<const Mat33T*>(R_hat_[0]);
         const T* r_ptr = r[0];
@@ -768,7 +848,7 @@ public:
 
         remap(normals, normals_out, invxy_, invfxy_, INTER_LINEAR);
         normal = normals_out.ptr<Vec4T>(0);
-        Vec4T* normal_end = normal + this->rows * this->cols;
+        Vec4T* normal_end = normal + static_cast<size_t>(this->rows) * static_cast<size_t>(this->cols);
         for (; normal != normal_end; ++normal)
             signNormal((*normal)[0], (*normal)[1], (*normal)[2], *normal);
     }
@@ -897,6 +977,8 @@ Ptr<RgbdNormals> RgbdNormals::create(int rows, int cols, int depth, InputArray K
     }
     case RGBD_NORMALS_METHOD_SRI:
     {
+        CV_CheckGE(rows, 2, "SRI requires at least 2 rows");
+        CV_CheckGE(cols, 2, "SRI requires at least 2 cols");
         if (depth == CV_32F)
             ptr = makePtr<SRI<float> >(rows, cols, windowSize, mK);
         else

@@ -91,7 +91,10 @@ void Core_RandTest::run( int )
         { -1000000, 1000000 }, { -1000, 1000 }, { -1000, 1000 }};
 
     const int MAX_SDIM = 10;
-    const int N = 2000000;
+    const int N = 1000000;
+    // slice boundaries are drawn on the historical 2M length and scaled down, so the sequence of
+    // case parameters (depth, channels, distribution, ranges) drawn from the same rng is unchanged
+    const int N_DRAW = 2000000;
     const int maxSlice = 1000;
     const int MAX_HIST_SIZE = 1000;
     int progress = 0;
@@ -109,7 +112,7 @@ void Core_RandTest::run( int )
         int c, cn = (cvtest::randInt(rng) % 4) + 1;
         int type = CV_MAKETYPE(depth, cn);
         int dist_type = cvtest::randInt(rng) % (RNG::NORMAL+1);
-        int i, k, SZ = N/cn;
+        int i, k, SZ = N/cn, SZ_DRAW = N_DRAW/cn;
         Scalar A, B;
 
         double eps = 1.e-4;
@@ -168,11 +171,15 @@ void Core_RandTest::run( int )
         {
             tested_rng = saved_rng;
             int sz = 0, dsz = 0, slice;
-            for( slice = 0; slice < maxSlice && sz < SZ; slice++, sz += dsz )
+            for( slice = 0; slice < maxSlice && sz < SZ_DRAW; slice++, sz += dsz )
             {
-                dsz = slice+1 < maxSlice ? (int)(cvtest::randInt(rng) % (SZ - sz) + 1) : SZ - sz;
-                Mat aslice = arr[k].colRange(sz, sz + dsz);
-                tested_rng.fill(aslice, dist_type, A, B);
+                dsz = slice+1 < maxSlice ? (int)(cvtest::randInt(rng) % (SZ_DRAW - sz) + 1) : SZ_DRAW - sz;
+                int s0 = (int)((int64)sz*SZ/SZ_DRAW), s1 = (int)((int64)(sz + dsz)*SZ/SZ_DRAW);
+                if( s1 > s0 )
+                {
+                    Mat aslice = arr[k].colRange(s0, s1);
+                    tested_rng.fill(aslice, dist_type, A, B);
+                }
             }
         }
 

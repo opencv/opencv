@@ -80,6 +80,10 @@ public:
         int axis = inputs.size() > 1 ? parseAxis(inputs[1]) : axis_raw;
         axis = normalize_axis(axis, src_mat.dims);
 
+        // An empty input (e.g. an axis of length 0) has nothing to scan; the output is already empty.
+        if (src_mat.empty())
+            return;
+
         Mat& dst_mat = outputs[0];
         T* dst_ptr = dst_mat.ptr<T>();
 

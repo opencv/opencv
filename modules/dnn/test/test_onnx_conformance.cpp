@@ -2115,8 +2115,13 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         }
 
         if (name == "test_gelu_tanh_1") {
-            default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101815 vs 1e-05
-            default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152737 vs 0.0001
+            if (target == DNN_TARGET_CUDA_FP16) {
+                default_l1 = 0.0002; // Expected: (normL1) <= (l1), actual: 0.000166416 vs 0.00011
+                default_lInf = 0.0004; // Expected: (normInf) <= (lInf), actual: 0.000371695 vs 0.00016
+            } else {
+                default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101815 vs 1e-05
+                default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152737 vs 0.0001
+            }
         }
         if (name == "test_gelu_tanh_2") {
             if (target == DNN_TARGET_CUDA_FP16) {

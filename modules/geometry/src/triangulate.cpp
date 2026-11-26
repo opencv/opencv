@@ -63,7 +63,8 @@ void triangulatePoints( InputArray _P1, InputArray _P2,
     const float *p2f = depth2 == CV_32F ? points2.ptr<float>() : 0;
     const double *p1d = depth1 == CV_64F ? points1.ptr<double>() : 0;
     const double *p2d = depth2 == CV_64F ? points2.ptr<double>() : 0;
-    int pstep1, ystep1, pstep2, ystep2, npoints1, npoints2;
+    size_t pstep1, ystep1, pstep2, ystep2;
+    int npoints1, npoints2;
 
     CV_Assert(depth1 == depth2 && (depth1 == CV_32F || depth1 == CV_64F));
 
@@ -71,12 +72,12 @@ void triangulatePoints( InputArray _P1, InputArray _P2,
     {
         npoints1 = points1.rows + points1.cols - 1;
         ystep1 = 1;
-        pstep1 = 2;
+        pstep1 = points1.rows == 1 ? 2 : points1.step1(0);
     }
     else
     {
         npoints1 = points1.cols;
-        ystep1 = (int)(points1.step/points1.elemSize());
+        ystep1 = points1.step/points1.elemSize();
         pstep1 = 1;
     }
 
@@ -84,12 +85,12 @@ void triangulatePoints( InputArray _P1, InputArray _P2,
     {
         npoints2 = points2.rows + points2.cols - 1;
         ystep2 =  1;
-        pstep2 = 2;
+        pstep2 = points2.rows == 1 ? 2 : points2.step1(0);
     }
     else
     {
         npoints2 = points2.cols;
-        ystep2 = (int)(points2.step/points2.elemSize());
+        ystep2 = points2.step/points2.elemSize();
         pstep2 = 1;
     }
 

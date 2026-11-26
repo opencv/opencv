@@ -106,12 +106,14 @@ public:
             fstart = tensorToScalar<double>(startTensor);
             flimit = tensorToScalar<double>(limitTensor);
             fdelta = tensorToScalar<double>(deltaTensor);
+            CV_CheckNE(fdelta, 0., "Range: delta must not be zero");
 
             return rangeSize(fstart, flimit, fdelta);
         } else {
             istart = tensorToScalar<int64_t>(startTensor);
             ilimit = tensorToScalar<int64_t>(limitTensor);
             idelta = tensorToScalar<int64_t>(deltaTensor);
+            CV_CheckTrue(idelta != 0, "Range: delta must not be zero");
 
             return rangeSize(istart, ilimit, idelta);
         }

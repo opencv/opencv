@@ -4,11 +4,13 @@ buildscript {
 
     repositories {
         google()
-        jcenter()
+        //jcenter()
+        mavenCentral()
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:@ANDROID_GRADLE_PLUGIN_VERSION@'
-        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:@KOTLIN_PLUGIN_VERSION@'
+        // for Gradle less than 9
+        //classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:@KOTLIN_PLUGIN_VERSION@'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -18,7 +20,8 @@ buildscript {
 allprojects {
     repositories {
         google()
-        jcenter()
+        //jcenter()
+        mavenCentral()
         if (gradle.opencv_source == "maven_local") {
             maven {
                 url gradle.opencv_maven_path

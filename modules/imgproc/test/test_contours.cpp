@@ -125,6 +125,35 @@ TEST(Imgproc_FindContours, border)
     ASSERT_EQ(0, cvtest::norm(img, img_draw_contours, NORM_INF));
 }
 
+TEST(Imgproc_FindContours, empty_input)
+{
+    Mat empty;
+    std::vector<std::vector<Point> > contours(1, std::vector<Point>(1, Point(1, 2)));
+    std::vector<Vec4i> hierarchy(1, Vec4i(0, 0, 0, 0));
+
+    // General path (with hierarchy)
+    findContours(empty, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE);
+    EXPECT_TRUE(contours.empty());
+    EXPECT_TRUE(hierarchy.empty());
+
+    // Fast path (RETR_LIST without hierarchy -> findTRUContours)
+    contours.assign(1, std::vector<Point>(1, Point(1, 2)));
+    findContours(empty, contours, RETR_LIST, CHAIN_APPROX_SIMPLE, Point(3, 4));
+    EXPECT_TRUE(contours.empty());
+
+    // RETR_FLOODFILL with empty CV_32SC1
+    Mat empty32s(0, 0, CV_32SC1);
+    contours.assign(1, std::vector<Point>(1, Point(1, 2)));
+    hierarchy.assign(1, Vec4i(0, 0, 0, 0));
+    findContours(empty32s, contours, hierarchy, RETR_FLOODFILL, CHAIN_APPROX_SIMPLE);
+    EXPECT_TRUE(contours.empty());
+    EXPECT_TRUE(hierarchy.empty());
+
+    // Empty input still goes through type/mode validation
+    EXPECT_THROW(findContours(Mat(0, 0, CV_32FC1), contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE), cv::Exception);
+    EXPECT_THROW(findContours(empty, contours, hierarchy, RETR_FLOODFILL, CHAIN_APPROX_SIMPLE), cv::Exception);
+}
+
 TEST(Imgproc_FindContours, regression_4363_shared_nbd)
 {
     // Create specific test image

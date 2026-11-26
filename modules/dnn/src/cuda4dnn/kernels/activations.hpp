@@ -118,6 +118,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     void gelu(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
 
     template <class T>
+    void gelu_approximation(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
     void thresholdedrelu(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input, T alpha);
 
     template <class T>

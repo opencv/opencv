@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <type_traits>
 
 namespace cv {
 
@@ -334,9 +335,17 @@ struct EwAdd {
     template<typename V> static V preproc(const V& a, const V&) { return a; }
     // Accumulate in the promoted type, NOT in W: for the native saturating path W is the narrow
     // lane type (schar/short/...), and (W)(a+b) would wrap in 8/16 bits before saturate_cast<Tr>
-    // could clamp. Letting a+b promote (narrow -> int) keeps saturation for 8/16-bit outputs and
-    // the natural wrap for 32/64-bit (both matching cv::add). The SIMD path already saturates.
+    // could clamp. Letting a+b promote (narrow -> int) keeps saturation for 8/16-bit outputs, and
+    // 32-bit outputs clamp from their int64 W. The SIMD path already saturates.
     template<typename W, typename ST> static W scl(W a, W b, ST) { return W(a + b); }
+    // 64-bit has no wider WT to hold a+b, so the generic path would overflow. Saturate to match
+    // the smaller depths.
+    static uint64_t scl(uint64_t a, uint64_t b, uint64_t) { uint64_t s = a + b; return s < a ? UINT64_MAX : s; }
+    static int64_t scl(int64_t a, int64_t b, int64_t)
+    {
+        return b > 0 ? (a > INT64_MAX - b ? INT64_MAX : a + b)
+                     : (a < INT64_MIN - b ? INT64_MIN : a + b);
+    }
 };
 
 struct EwSub {
@@ -353,6 +362,12 @@ struct EwSub {
     // 64-bit unsigned has no wider WT to hold a-b, so the generic path would wrap on underflow.
     // Saturate at 0 to match cv::subtract (8/16/32-bit already saturate via SIMD floor / wide WT).
     static uint64_t scl(uint64_t a, uint64_t b, uint64_t) { return uint64_t(a >= b)*(a - b); }
+    // 64-bit signed has no wider WT either, so saturate at both ends.
+    static int64_t scl(int64_t a, int64_t b, int64_t)
+    {
+        return b > 0 ? (a < INT64_MIN + b ? INT64_MIN : a - b)
+                     : (a > INT64_MAX + b ? INT64_MAX : a - b);
+    }
 };
 
 // mul/div compute in a wide FLOAT work type (W = float for <=16-bit/f16/bf/f32, double for
@@ -383,7 +398,7 @@ struct EwMul {
 #endif
     template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V& s) { return v_mul(a, s); }
-    template<typename W, typename ST> static W scl(W a, W b, ST s) { return a * b * s; }
+    template<typename W, typename ST> static W scl(W a, W b, ST s) { return a * s * b; }
 };
 // div has two variants by the COMMON INPUT type (matching cv::'s per-type kernel choice): integer
 // inputs guard divide-by-zero -> 0 (cv:: iscalar_div); float inputs do NOT guard (cv:: fscalar_div,
@@ -573,6 +588,11 @@ static int scalarBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
     s1y /= sizeof(T);
     dsty /= sizeof(Tr);
     CV_Assert((s0x|s1x) == 1u || (s0x|s1x) + (size_t)width == 1u);
+    if constexpr (std::is_same_v<Op, EwMul>) {
+        if ((s1x == 0 && s0x != 0) || (s1y == 0 && s0y != 0 && s0x == s1x)) {
+            std::swap(src0_, src1_); std::swap(s0y, s1y); std::swap(s0x, s1x);
+        }
+    }
 
     const T* src0 = (const T*)src0_;
     const T* src1 = (const T*)src1_;
@@ -630,7 +650,10 @@ static inline void cmpUnpackPatch(int flags, uchar trueVal, uchar mvals[4], ucha
 // from TKernel::flags - 255 (default, matching cv::compare) or 1 (a numpy-style 0/1 mask). Integers
 // compare directly (WT == T); f16/bf16 compare through a float WT. This is the fallback for the depths
 // the SIMD kernel doesn't cover (f16/bf16/64-bit). stepx in {0,1}; dst is u8, byte step == element step.
-template<typename T, typename WT, class Cmp>
+// isBool normalises each operand to 0/1 first: a CV_Bool byte is not guaranteed canonical, since a
+// matrix wrapping an external buffer is never converted, so comparing raw bytes would order 2 above
+// 1 when both mean true. This matches countNonZero, norm and the scalar cv::compare overload.
+template<typename T, typename WT, class Cmp, bool isBool = false>
 static int scalarCompareKernel(const void* src0_, size_t s0y, size_t s0x,
                          const void* src1_, size_t s1y, size_t s1x,
                          const void*, size_t, size_t,
@@ -651,6 +674,7 @@ static int scalarCompareKernel(const void* src0_, size_t s0y, size_t s0x,
     cmpUnpackPatch(flags, trueVal, mvals, vvals);
     const bool perch = (flags & EW_CMP_PATCH) != 0;          // per-channel fix-up (width=cn<=4)
     CV_Assert(!perch || width <= 4);                         // a per-channel patch is a short-row tile
+    #define EW_CMP_LD(v) (isBool ? (WT)((v) != 0) : (WT)(v))
     #define EW_CMP_APPLY(cond, x) (perch ? (uchar)(((cond) ? mvals[x] : 0) | vvals[x]) \
                                          : (uchar)((cond) ? trueVal : 0))
 
@@ -658,18 +682,19 @@ static int scalarCompareKernel(const void* src0_, size_t s0y, size_t s0x,
     for (int y = 0; y < height; y++, src0 += s0y, src1 += s1y, dst += dsty)
     {
         if (s0x == s1x) {
-            for (int x = 0; x < width; x++) dst[x] = EW_CMP_APPLY(Cmp::cmp((WT)src0[x], (WT)src1[x]), x);
+            for (int x = 0; x < width; x++) dst[x] = EW_CMP_APPLY(Cmp::cmp(EW_CMP_LD(src0[x]), EW_CMP_LD(src1[x])), x);
         }
         else if (s0x == 0) {
-            WT a = (WT)src0[0];
-            for (int x = 0; x < width; x++) dst[x] = EW_CMP_APPLY(Cmp::cmp(a, (WT)src1[x]), x);
+            WT a = EW_CMP_LD(src0[0]);
+            for (int x = 0; x < width; x++) dst[x] = EW_CMP_APPLY(Cmp::cmp(a, EW_CMP_LD(src1[x])), x);
         }
         else {
-            WT b = (WT)src1[0];
-            for (int x = 0; x < width; x++) dst[x] = EW_CMP_APPLY(Cmp::cmp((WT)src0[x], b), x);
+            WT b = EW_CMP_LD(src1[0]);
+            for (int x = 0; x < width; x++) dst[x] = EW_CMP_APPLY(Cmp::cmp(EW_CMP_LD(src0[x]), b), x);
         }
     }
     #undef EW_CMP_APPLY
+    #undef EW_CMP_LD
     return 0;
 }
 
@@ -916,6 +941,11 @@ static int vecBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
     dsty /= sizeof(Tr);
 
     CV_Assert((s0x|s1x) == 1u || (s0x|s1x) + (size_t)width == 1u);
+    if constexpr (std::is_same_v<Op, EwMul>) {
+        if ((s1x == 0 && s0x != 0) || (s1y == 0 && s0y != 0 && s0x == s1x)) {
+            std::swap(src0_, src1_); std::swap(s0y, s1y); std::swap(s0x, s1x);
+        }
+    }
 
     const T* src0 = (const T*)src0_;
     const T* src1 = (const T*)src1_;
@@ -1361,6 +1391,9 @@ static KernelFunc compareByType(int T)
     case CV_16F:  return vecCompareKernel<hfloat,   v_float32, v_uint32, Cmp>;   // widen f16->f32
     #endif
     case CV_16BF: return vecCompareKernel<bfloat,   v_float32, v_uint32, Cmp>;   // widen bf16->f32 (no native)
+    // CV_Bool is logical, not a one-byte integer: compare it as (x != 0), so a non-canonical
+    // byte compares equal to 1 rather than above it.
+    case CV_Bool: return scalarCompareKernel<uchar,    uchar,    Cmp, true>;
     case CV_64U:  return scalarCompareKernel<uint64_t, uint64_t, Cmp>;
     case CV_64S:  return scalarCompareKernel<int64_t,  int64_t,  Cmp>;
     #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F

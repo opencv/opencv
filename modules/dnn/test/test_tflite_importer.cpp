@@ -294,7 +294,11 @@ TEST_P(Test_TFLite, Sign) {
 }
 
 TEST_P(Test_TFLite, BatchMatMul) {
-    testLayer("batch_matmul", 1e-5, 1e-4);
+    // CUDA_FP16 runs the GEMM on half storage; it gets the default FP16 bound
+    if (target == DNN_TARGET_CUDA_FP16)
+        testLayer("batch_matmul");
+    else
+        testLayer("batch_matmul", 1e-5, 1e-4);
 }
 
 TEST_P(Test_TFLite, Select) {

@@ -146,7 +146,7 @@ HoughLinesStandard( InputArray src, OutputArray lines, int type,
     int numrho = cvRound(((max_rho - min_rho) + 1) / rho);
 
 #if defined HAVE_IPP && IPP_VERSION_X100 >= 810 && !IPP_DISABLE_HOUGH
-    if (type == CV_32FC2 && CV_IPP_CHECK_COND)
+    if (type == CV_32FC2 && threshold > 0 && CV_IPP_CHECK_COND)
     {
         IppiSize srcSize = { width, height };
         IppPointPolar delta = { rho, theta };
@@ -556,7 +556,7 @@ HoughLinesProbabilistic( Mat& image,
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
 
 #if defined HAVE_IPP && IPP_VERSION_X100 >= 810 && !IPP_DISABLE_HOUGH
-    CV_IPP_CHECK()
+    if (threshold > 0 && CV_IPP_CHECK_COND)
     {
         IppiSize srcSize = { width, height };
         IppPointPolar delta = { rho, theta };
@@ -979,7 +979,7 @@ void HoughLines( InputArray _image, OutputArray lines,
 
     CV_Check(rho, std::isfinite((float)rho) && (float)rho > 0, "rho must be positive and finite");
     CV_Check(theta, std::isfinite((float)theta) && (float)theta > 0, "theta must be positive and finite");
-    CV_CheckGT(threshold, 0, "threshold must be greater than 0");
+    CV_CheckGE(threshold, 0, "threshold must be non-negative");
     CV_CheckGE(max_theta, min_theta, "max_theta must be greater than min_theta");
 
     if (_image.empty())
@@ -1013,7 +1013,7 @@ void HoughLinesP(InputArray _image, OutputArray _lines,
 
     CV_Check(rho, std::isfinite((float)rho) && (float)rho > 0, "rho must be positive and finite");
     CV_Check(theta, std::isfinite((float)theta) && (float)theta > 0, "theta must be positive and finite");
-    CV_CheckGT(threshold, 0, "threshold must be greater than 0");
+    CV_CheckGE(threshold, 0, "threshold must be non-negative");
     CV_Check(minLineLength, std::isfinite(minLineLength) && minLineLength >= 0, "minLineLength out of range");
     CV_Check(maxGap, std::isfinite(maxGap) && maxGap >= 0, "maxGap out of range");
 

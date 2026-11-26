@@ -443,6 +443,13 @@ void Net::enableWinograd(bool useWinograd)
     return impl->enableWinograd(useWinograd);
 }
 
+void Net::enableTF32(bool useTF32)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->enableTF32(useTF32);
+}
+
 int64 Net::getPerfProfile(std::vector<double>& timings)
 {
     CV_TRACE_FUNCTION();

@@ -1381,6 +1381,37 @@ TEST(MatTestRoi, adjustRoiUndefinedBehavior)
     EXPECT_EQ(m.data, roi.data);
 }
 
+TEST(MatTestRoi, locateROI_1D)
+{
+    int sz = 6;
+    Mat m(1, &sz, CV_32S);
+    for (int i = 0; i < sz; i++)
+        m.at<int>(i) = i * 10;
+    Mat roi = m.colRange(2, 4);
+    ASSERT_EQ(1, roi.dims);
+
+    Size wholeSize;
+    Point ofs;
+    roi.locateROI(wholeSize, ofs);
+    EXPECT_EQ(Size(6, 1), wholeSize);
+    EXPECT_EQ(Point(2, 0), ofs);
+
+    UMat u = roi.getUMat(ACCESS_READ);
+    EXPECT_EQ(1, u.dims);
+    EXPECT_EQ(2, u.cols);
+    u.locateROI(wholeSize, ofs);
+    EXPECT_EQ(Size(6, 1), wholeSize);
+    EXPECT_EQ(Point(2, 0), ofs);
+    Mat back = u.getMat(ACCESS_READ);
+    EXPECT_EQ(20, back.at<int>(0));
+    EXPECT_EQ(30, back.at<int>(1));
+
+    roi.adjustROI(0, 0, 1, 1);
+    ASSERT_EQ(4, roi.cols);
+    EXPECT_EQ(10, roi.at<int>(0));
+    EXPECT_EQ(40, roi.at<int>(3));
+}
+
 CV_ENUM(SortRowCol, SORT_EVERY_COLUMN, SORT_EVERY_ROW)
 CV_ENUM(SortOrder, SORT_ASCENDING, SORT_DESCENDING)
 

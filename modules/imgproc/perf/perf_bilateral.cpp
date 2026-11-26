@@ -12,7 +12,7 @@ typedef TestBaseWithParam< tuple<Size, int, Mat_Type, double> > TestBilateralFil
 PERF_TEST_P( TestBilateralFilter, BilateralFilter,
              Combine(
                 Values( szVGA, sz1080p ), // image size
-                Values( 3, 5 ), // d
+                Values( 3, 5, 7, 21 ), // d
                 Mat_Type::all(), // image type
                 Values(1., 5.)
              )

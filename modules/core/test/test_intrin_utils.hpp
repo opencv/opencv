@@ -726,6 +726,38 @@ template<typename R> struct TheTest
             EXPECT_EQ(dataA[i] <  dataB[i], resG[i] != 0);
             EXPECT_EQ(dataA[i] <= dataB[i], resH[i] != 0);
         }
+
+        if (std::numeric_limits<LaneType>::has_quiet_NaN || std::is_same<LaneType, hfloat>::value)
+        {
+            const LaneType qnan = (LaneType)std::numeric_limits<float>::quiet_NaN();
+            dataA[0] = qnan;
+            if (VTraits<R>::vlanes() > 1)
+            {
+                dataA[1] = qnan;
+                dataB[1] = qnan;
+            }
+            if (VTraits<R>::vlanes() > 2)
+                dataB[2] = qnan;
+            a = dataA; b = dataB;
+
+            resC = (v_eq(a, b));
+            resD = (v_ne(a, b));
+            resE = (v_gt(a, b));
+            resF = (v_ge(a, b));
+            resG = (v_lt(a, b));
+            resH = (v_le(a, b));
+
+            for (int i = 0; i < VTraits<R>::vlanes(); ++i)
+            {
+                SCOPED_TRACE(cv::format("nan i=%d", i));
+                EXPECT_EQ(dataA[i] == dataB[i], resC.as_int(i) != 0);
+                EXPECT_EQ(dataA[i] != dataB[i], resD.as_int(i) != 0);
+                EXPECT_EQ(dataA[i] >  dataB[i], resE.as_int(i) != 0);
+                EXPECT_EQ(dataA[i] >= dataB[i], resF.as_int(i) != 0);
+                EXPECT_EQ(dataA[i] <  dataB[i], resG.as_int(i) != 0);
+                EXPECT_EQ(dataA[i] <= dataB[i], resH.as_int(i) != 0);
+            }
+        }
         return *this;
     }
 

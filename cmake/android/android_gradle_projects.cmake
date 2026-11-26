@@ -1,11 +1,13 @@
 # https://developer.android.com/studio/releases/gradle-plugin
-set(ANDROID_GRADLE_PLUGIN_VERSION "8.6.0" CACHE STRING "Android Gradle Plugin version")
+set(ANDROID_GRADLE_PLUGIN_VERSION "9.5.0" CACHE STRING "Android Gradle Plugin version")
 message(STATUS "Android Gradle Plugin version: ${ANDROID_GRADLE_PLUGIN_VERSION}")
+
+set(GRADLE_VERSION "9.9.2" CACHE STRING "Gradle version")
+message(STATUS "Gradle version: ${GRADLE_VERSION}")
 
 set(KOTLIN_PLUGIN_VERSION "1.8.20" CACHE STRING "Kotlin Plugin version")
 message(STATUS "Kotlin Plugin version: ${KOTLIN_PLUGIN_VERSION}")
-
-if(BUILD_KOTLIN_EXTENSIONS)
+if(BUILD_KOTLIN_EXTENSIONS AND GRADLE_VERSION VERSION_LESS 9)
   set(KOTLIN_PLUGIN_DECLARATION "apply plugin: 'kotlin-android'" CACHE STRING "Kotlin Plugin version")
   set(KOTLIN_STD_LIB "implementation 'org.jetbrains.kotlin:kotlin-stdlib:${KOTLIN_PLUGIN_VERSION}'" CACHE STRING "Kotlin Standard Library dependency")
 else()
@@ -13,16 +15,13 @@ else()
   set(KOTLIN_STD_LIB "" CACHE STRING "Kotlin Standard Library dependency")
 endif()
 
-set(GRADLE_VERSION "8.11.1" CACHE STRING "Gradle version")
-message(STATUS "Gradle version: ${GRADLE_VERSION}")
-
-set(ANDROID_COMPILE_SDK_VERSION "34" CACHE STRING "Android compileSdkVersion")
+set(ANDROID_COMPILE_SDK_VERSION "36" CACHE STRING "Android compileSdkVersion")
 if(ANDROID_NATIVE_API_LEVEL GREATER 21)
   set(ANDROID_MIN_SDK_VERSION "${ANDROID_NATIVE_API_LEVEL}" CACHE STRING "Android minSdkVersion")
 else()
   set(ANDROID_MIN_SDK_VERSION "21" CACHE STRING "Android minSdkVersion")
 endif()
-set(ANDROID_TARGET_SDK_VERSION "34" CACHE STRING "Android targetSdkVersion")
+set(ANDROID_TARGET_SDK_VERSION "36" CACHE STRING "Android targetSdkVersion")
 
 set(ANDROID_BUILD_BASE_DIR "${OpenCV_BINARY_DIR}/opencv_android" CACHE INTERNAL "")
 set(ANDROID_TMP_INSTALL_BASE_DIR "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/install/opencv_android")
