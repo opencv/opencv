@@ -1,6 +1,7 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, Intel Corporation, all rights reserved.
 #include "perf_precomp.hpp"
 
 namespace opencv_test {
@@ -344,6 +345,76 @@ PERF_TEST_P(Size_MatType_dx_dy_Border3x3ROI, scharrViaSobelFilter,
     TEST_CYCLE() Sobel(src, dst, ddepth, dx, dy, -1, 1, 0, border);
 
     SANITY_CHECK(dst);
+}
+
+/**************** Sobel / Scharr with 16S and 32F source ********************/
+
+// Extra tuple slot for ksize {3,5} (IPP ippSobel swept both).
+typedef tuple<Size, MatType, tuple<int, int>, BorderType3x3, bool, int> Size_MatType_dx_dy_Border3x3_scale_ksize_t;
+typedef perf::TestBaseWithParam<Size_MatType_dx_dy_Border3x3_scale_ksize_t> Size_MatType_dx_dy_Border3x3_scale_ksize;
+
+// Scharr's kernel is fixed 3x3, so it keeps the no-ksize fixture.
+typedef tuple<Size, MatType, tuple<int, int>, BorderType3x3, bool> Size_MatType_dx_dy_Border3x3_scale_t;
+typedef perf::TestBaseWithParam<Size_MatType_dx_dy_Border3x3_scale_t> Size_MatType_dx_dy_Border3x3_scale;
+
+PERF_TEST_P(Size_MatType_dx_dy_Border3x3_scale_ksize, sobelFilter_srcType,
+            testing::Combine(
+                testing::Values(FILTER_SRC_SIZES),
+                testing::Values(CV_16S, CV_32F),   // source depth (dst = same)
+                testing::Values(make_tuple(0, 1), make_tuple(1, 0), make_tuple(1, 1), make_tuple(0, 2), make_tuple(2, 0), make_tuple(2, 2)),
+                BorderType3x3::all(),
+                testing::Bool(),                   // scaled: false=scale 1/delta 0, true=scale 1.333/delta 2
+                testing::Values(3, 5)              // ksize
+            )
+          )
+{
+    Size size = get<0>(GetParam());
+    int depth = get<1>(GetParam());
+    int dx = get<0>(get<2>(GetParam()));
+    int dy = get<1>(get<2>(GetParam()));
+    BorderType3x3 border = get<3>(GetParam());
+    bool scaled = get<4>(GetParam());
+    int ksize = get<5>(GetParam());
+    double scale = scaled ? 1.333 : 1.0;
+    double delta = scaled ? 2.0 : 0.0;
+
+    Mat src(size, depth);
+    Mat dst(size, depth);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() cv::Sobel(src, dst, depth, dx, dy, ksize, scale, delta, border);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P(Size_MatType_dx_dy_Border3x3_scale, scharrFilter_srcType,
+            testing::Combine(
+                testing::Values(FILTER_SRC_SIZES),
+                testing::Values(CV_16S, CV_32F),   // source depth (dst = same)
+                testing::Values(make_tuple(0, 1), make_tuple(1, 0)),
+                BorderType3x3::all(),
+                testing::Bool()
+            )
+          )
+{
+    Size size = get<0>(GetParam());
+    int depth = get<1>(GetParam());
+    int dx = get<0>(get<2>(GetParam()));
+    int dy = get<1>(get<2>(GetParam()));
+    BorderType3x3 border = get<3>(GetParam());
+    bool scaled = get<4>(GetParam());
+    double scale = scaled ? 1.333 : 1.0;
+    double delta = scaled ? 2.0 : 0.0;
+
+    Mat src(size, depth);
+    Mat dst(size, depth);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() cv::Scharr(src, dst, depth, dx, dy, scale, delta, border);
+
+    SANITY_CHECK_NOTHING();
 }
 
 } // namespace
