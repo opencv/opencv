@@ -528,7 +528,7 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
             if (nch > 2 && param.swapRB)
             {
                 Mat tmpRB;
-                cvtColor(image, tmpRB, COLOR_BGR2RGB);
+                cvtColor(image, tmpRB, nch == 4 ? COLOR_BGRA2RGBA : COLOR_BGR2RGB);
                 tmpRB.copyTo(Mat(tmpRB.rows, tmpRB.cols, subMatType, blob.ptr((int)i, 0)));
             }
             else

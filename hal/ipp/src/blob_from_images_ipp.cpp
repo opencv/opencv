@@ -434,11 +434,13 @@ int ipp_hal_blobFromImages(const uchar* const* src_data, const size_t* src_step,
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     const bool needResize = g.rsize != cv::Size(width, height);
 
-#if !defined(IPP_CALLS_ENFORCED)
-    // ipp_resize_prepare() declines 8U INTER_LINEAR in this mode: give up before any work is done
-    if (needResize && depth == CV_8U && (interpolation & cv::INTER_MAX) == cv::INTER_LINEAR)
+    // All images have the same size and type, so the resize setup is the same for all of them: give up before any
+    // work is done if the resize is not supported
+    IppiInterpolationType inter = ippNearest;
+    bool affine = false;
+    if (needResize && ipp_resize_prepare(src_type, width, height, g.rsize.width, g.rsize.height,
+                                         g.inv_scale_x, g.inv_scale_y, interpolation, inter, affine) != CV_HAL_ERROR_OK)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
-#endif
 
     const ipp_blob_params p = { depth, ddepth, channels, layout, swapRB && channels >= 3, needMeanScale,
                                 mean, scalefactor, dst_step };
@@ -510,12 +512,6 @@ int ipp_hal_blobFromImages(const uchar* const* src_data, const size_t* src_step,
     cv::Mat resized, bordered;
     auto resizeAndConvert = [&](const cv::Mat& src, int i) -> int
     {
-        IppiInterpolationType inter;
-        bool affine;
-        if (ipp_resize_prepare(src_type, src.cols, src.rows, g.rsize.width, g.rsize.height,
-                               g.inv_scale_x, g.inv_scale_y, interpolation, inter, affine) != CV_HAL_ERROR_OK)
-            return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
         // The resize writes the resized image, or the middle of the padded blob image
         cv::Mat out, img;
         if (g.letterbox)
