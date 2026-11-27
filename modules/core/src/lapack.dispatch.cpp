@@ -301,11 +301,14 @@ decodeSVDParameters(const fptype* U, const fptype* Vt, int m, int n, int n1)
     return halSVDFlag;
 }
 
-// The float kernels enter their SIMD loops only once a row holds two full
-// vectors, which is 32 elements on the 512-bit dispatch targets. Shorter rows
-// would compute their dot products scalar there, while the baseline path still
-// vectorizes them, so keep those on the baseline.
+// Row lengths below these cutoffs run on the SSE3 baseline. Measured by timing
+// cv::SVD on the AVX512 dispatch against the baseline.
+// Float: AVX512 is slower for lengths 4-15 and 20-31, and only reliably faster
+// from 32 up, so 32 is the cutoff.
+// Double: AVX512 is slower for lengths 2-7 and 10-15. Lengths 8-9 are faster on
+// AVX512, but a single cutoff cannot keep them and drop 10-15, so 16 is used.
 static const int JacobiSVD32f_min_m = 32;
+static const int JacobiSVD64f_min_m = 16;
 
 void hal::SVD32f(float* At, size_t astep, float* W, float* U, size_t ustep, float* Vt, size_t vstep, int m, int n, int n1)
 {
@@ -320,9 +323,10 @@ void hal::SVD32f(float* At, size_t astep, float* W, float* U, size_t ustep, floa
 void hal::SVD64f(double* At, size_t astep, double* W, double* U, size_t ustep, double* Vt, size_t vstep, int m, int n, int n1)
 {
     CALL_HAL(SVD64f, cv_hal_SVD64f, At, astep, W, U, ustep, Vt, vstep, m, n, decodeSVDParameters(U, Vt, m, n, n1))
-    // No size gate here: the double kernels are faster at every m, since their
-    // Givens rotations already vectorize from one full vector upwards.
-    CV_CPU_DISPATCH(JacobiSVD64f, (At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1),
+    n1 = !Vt ? 0 : n1 < 0 ? n : n1;
+    if( m < JacobiSVD64f_min_m )
+        CV_CPU_CALL_BASELINE(JacobiSVD64f, (At, astep, W, Vt, vstep, m, n, n1));
+    CV_CPU_DISPATCH(JacobiSVD64f, (At, astep, W, Vt, vstep, m, n, n1),
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
