@@ -367,12 +367,7 @@ void boxFilter(InputArray _src, OutputArray _dst, int ddepth,
 
     borderType = (borderType&~BORDER_ISOLATED);
 
-    // the fused 3x3/5x5 kernels of createBoxFilter only run out of place with a centered anchor;
-    // 32F and 64F stay on blockSum, which accumulates in double
-    bool useRowColumnSum = sdepth < CV_32F && src.data != dst.data && ksize.width == ksize.height &&
-                           (ksize.width == 3 || ksize.width == 5) &&
-                           (anchor == Point(-1, -1) || anchor == Point(ksize.width/2, ksize.height/2));
-    if(sdepth >= CV_32F && src.type() == dst.type() && (ksize.height <= 5 && ksize.width <= 5) && !useRowColumnSum)
+    if(sdepth >= CV_32F && src.type() == dst.type() && (ksize.height <= 5 && ksize.width <= 5))
     {
         CV_CPU_DISPATCH(blockSum, (src, dst, ksize, anchor, wsz, ofs, normalize, borderType),
             CV_CPU_DISPATCH_MODES_ALL);
