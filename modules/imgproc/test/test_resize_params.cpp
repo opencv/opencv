@@ -377,7 +377,15 @@ static void checkAgainstReference(const Mat& src, const Mat& dst, const ResizePa
 
     Mat expected;
     if (p.interpolation == INTER_AREA)
-        cv::resize(src, expected, p.dsize, p.fx, p.fy, INTER_AREA);   // classic resize is the reference
+    {
+        // Classic resize is the reference, run in float so that no HAL takes it: they serve
+        // INTER_AREA for integer depths only, and KleidiCV's exact-half path also takes odd sizes at
+        // fx = fy = 0.5, where its result is not OpenCV's.
+        Mat srcF, expectedF;
+        src.convertTo(srcF, CV_32F);
+        cv::resize(srcF, expectedF, p.dsize, p.fx, p.fy, INTER_AREA);
+        expectedF.convertTo(expected, src.depth());
+    }
     else
         expected = referenceSeparable(src, p, dsize, gx, gy);
     EXPECT_LE(cvtest::norm(expected, dst, NORM_INF), referenceTolerance(src.depth(), p.interpolation));
