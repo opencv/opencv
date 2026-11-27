@@ -28,6 +28,11 @@ Common style errors and fixes
 These checks use rough rules, not a real TeX parser. Some hits are false.
 Use ``--exclude`` to skip them.
 
+The first full scan found 1,689 hits. ``MULTIPLICATION_SIGN`` was the worst:
+230 of 321 hits were the ``*`` that marks a Doxygen comment line.
+``TEXT_IN_MATH_MODE`` hit ``\texttt{...}`` code most of the time, and
+``UNNECESSARY_MATH_MODE`` hit many lone Greek letters.
+
 Operator names (``BACKSLASH_NEEDED``)
 -------------------------------------
 
@@ -72,8 +77,16 @@ Greek letters are commands too: ``delta`` is five plain letters, while
 One-word subscripts and superscripts are the exception. ``V_{max}`` and
 ``R_{avg}`` are fine; ``\mathit`` there costs more than it fixes.
 
+Most hits in this repo are ``\texttt{...}`` code in a formula; use
+``\mathtt``. The check also flags the ``\f[`` that starts a long formula,
+so read the line first.
+
 Multiplication sign (``MULTIPLICATION_SIGN``)
 ---------------------------------------------
+
+This check is noisy in OpenCV. Most hits are the ``*`` that starts a Doxygen
+comment line in a long formula, or ``*`` in ``\texttt{...}`` code. Start
+with ``--exclude MULTIPLICATION_SIGN``.
 
 In math mode use ``\cdot``. Use ``\times`` only for size, cross products and
 the like::
@@ -137,8 +150,12 @@ with runs of spaces (``INDENTATION_WITH_SPACES``). Do not put spaces around
 Other frequent cases
 --------------------
 
-``UNNECESSARY_MATH_MODE``: a formula with one punctuation mark is often a
-split formula, or a ``$...$`` that should not be there.
+``UNNECESSARY_MATH_MODE``: a formula with one mark is often a split formula,
+or a ``$...$`` that should not be there. Arrows between words are common: in
+prose, use HTML entities ``\leftrightarrow`` -> ``&harr;``,
+``\rightarrow`` -> ``&rarr;``, ``\leftarrow`` -> ``&larr;``. A lone Greek
+letter such as ``\f$\theta\f$`` is real math; keep it even when the check
+flags it.
 
 ``SETS_IN_BBFONT``: number sets use ``\mathbb{N}``, ``\mathbb{R}``, etc.
 
