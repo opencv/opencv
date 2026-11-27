@@ -6224,4 +6224,24 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Reduce_Unsigned, Values(
     CV_64U
 ));
 
+TEST(Layer_Test_IsInf, NoDetection)
+{
+    LayerParams lp;
+    lp.type = "IsInf";
+    lp.name = "testIsInf";
+    lp.set("detect_positive", 0);
+    lp.set("detect_negative", 0);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("IsInf", lp);
+
+    const float inf = std::numeric_limits<float>::infinity();
+    float data[] = {1.f, inf, -inf, 0.f};
+    Mat input(1, 4, CV_32F, data);
+    std::vector<Mat> inputs = {input}, outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    for (int i = 0; i < 4; i++)
+        EXPECT_EQ(outputs[0].ptr<uchar>()[i], 0) << "index " << i;
+}
+
 }} // namespace
