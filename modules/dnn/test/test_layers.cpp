@@ -3226,6 +3226,46 @@ TEST_P(Layer_Test_Resize, nearest_int64_keeps_precision)
         EXPECT_EQ(vals[i / 2], outData[i]) << "i=" << i;
 }
 
+// tf_crop_and_resize with a box that reaches the input edge maps the last
+// output pixel exactly onto the last input pixel, which is inside the input.
+// Bilinear used to treat it as out of bounds and write extrapolation_value.
+TEST_P(Layer_Test_Resize, tf_crop_and_resize_bilinear_edge)
+{
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
+    if (backendId != DNN_BACKEND_OPENCV)
+        throw SkipTestException("Resize2 layer is implemented for the OpenCV backend only");
+
+    Mat inp(std::vector<int>{1, 1, 4, 4}, CV_32F);
+    for (int i = 0; i < 16; ++i)
+        inp.ptr<float>()[i] = (float)i;
+
+    LayerParams lp;
+    lp.type = "Resize2";
+    lp.name = "testLayer";
+    lp.set("height", 3);
+    lp.set("width", 3);
+    lp.set("interpolation", "bilinear");
+    lp.set("coordinate_transformation_mode", "tf_crop_and_resize");
+    lp.set("extrapolation_value", -1.f);
+
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInput(inp);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    Mat out = net.forward();
+
+    const float ref[] = {
+         0.f,  1.5f,  3.f,
+         6.f,  7.5f,  9.f,
+        12.f, 13.5f, 15.f
+    };
+    ASSERT_EQ(9, (int)out.total());
+    for (int i = 0; i < 9; ++i)
+        EXPECT_FLOAT_EQ(ref[i], out.ptr<float>()[i]) << "i=" << i;
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Resize, dnnBackendsAndTargets());
 
 struct Layer_Test_Slice : public testing::TestWithParam<tuple<Backend, Target> >
