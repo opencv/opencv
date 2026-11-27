@@ -1146,7 +1146,7 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
         else
         {
             copyMakeBorder(image, extImg, border, border, border, border,
-                           BORDER_REFLECT_101);
+                           BORDER_REFLECT_101 + BORDER_ISOLATED);
             if( !mask.empty() )
                 copyMakeBorder(mask, extMask, border, border, border, border,
                                BORDER_CONSTANT+BORDER_ISOLATED);
