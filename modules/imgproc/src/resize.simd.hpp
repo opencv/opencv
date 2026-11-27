@@ -1280,9 +1280,9 @@ static int hresize_linear_u8_cn4(const uchar** src, int** dst, int count,
     return dx;
 }
 
-// 16-bit (ushort/short) gather-to-f32; identical apart from the source type.
-template<typename T> static int hresize_linear_fp_16(const T** src, float** dst, int count,
-                                                     const int* xofs, const float* alpha, int cn, int xmax)
+// Gather-to-f32 for ushort, short and float sources.
+template<typename T> static int hresize_linear_fp(const T** src, float** dst, int count,
+                                                  const int* xofs, const float* alpha, int cn, int xmax)
 {
     const int step = 4;
     const int len0 = xmax & -step;
@@ -1328,53 +1328,6 @@ template<typename T> static int hresize_linear_fp_16(const T** src, float** dst,
     return dx;
 }
 
-static int hresize_linear_fp_float(const float** src, float** dst, int count,
-                                   const int* xofs, const float* alpha, int cn, int xmax)
-{
-    const int step = 4;
-    const int len0 = xmax & -step;
-    int dx = 0, k = 0;
-
-    for( ; k <= count - 2; k += 2 )
-    {
-        const float *S0 = src[k], *S1 = src[k + 1];
-        float *D0 = dst[k], *D1 = dst[k + 1];
-        for( dx = 0; dx < len0; dx += step )
-        {
-            int sx0 = xofs[dx + 0];
-            int sx1 = xofs[dx + 1];
-            int sx2 = xofs[dx + 2];
-            int sx3 = xofs[dx + 3];
-            v_float32x4 a_even, a_odd;
-            v_load_deinterleave(alpha + dx * 2, a_even, a_odd);
-            v_float32x4 s0(S0[sx0], S0[sx1], S0[sx2], S0[sx3]);
-            v_float32x4 s1(S0[sx0 + cn], S0[sx1 + cn], S0[sx2 + cn], S0[sx3 + cn]);
-            v_float32x4 t0(S1[sx0], S1[sx1], S1[sx2], S1[sx3]);
-            v_float32x4 t1(S1[sx0 + cn], S1[sx1 + cn], S1[sx2 + cn], S1[sx3 + cn]);
-            v_store(D0 + dx, v_add(v_mul(s0, a_even), v_mul(s1, a_odd)));
-            v_store(D1 + dx, v_add(v_mul(t0, a_even), v_mul(t1, a_odd)));
-        }
-    }
-    for( ; k < count; k++ )
-    {
-        const float *S = src[k];
-        float *D = dst[k];
-        for( dx = 0; dx < len0; dx += step )
-        {
-            int sx0 = xofs[dx + 0];
-            int sx1 = xofs[dx + 1];
-            int sx2 = xofs[dx + 2];
-            int sx3 = xofs[dx + 3];
-            v_float32x4 a_even, a_odd;
-            v_load_deinterleave(alpha + dx * 2, a_even, a_odd);
-            v_float32x4 s0(S[sx0], S[sx1], S[sx2], S[sx3]);
-            v_float32x4 s1(S[sx0 + cn], S[sx1 + cn], S[sx2 + cn], S[sx3 + cn]);
-            v_store(D + dx, v_add(v_mul(s0, a_even), v_mul(s1, a_odd)));
-        }
-    }
-    return dx;
-}
-
 struct HResizeLinearVecU8
 {
     int operator()(const uchar** src, int** dst, int count, const int* xofs,
@@ -1394,16 +1347,12 @@ struct HResizeLinearVecU8
 
 typedef HResizeLinearVecU8 HResizeLinearVec_8u32s;
 
-#endif // CV_SIMD
-
-#if CV_SIMD  // fixed-width 128-bit kernels; not valid for scalable backends (RVV)
-
 struct HResizeLinearVec_32f
 {
     int operator()(const float** src, float** dst, int count, const int* xofs,
         const float* alpha, int, int, int cn, int, int xmax) const
     {
-        return hresize_linear_fp_float(src, dst, count, xofs, alpha, cn, xmax);
+        return hresize_linear_fp(src, dst, count, xofs, alpha, cn, xmax);
     }
 };
 
@@ -1412,7 +1361,7 @@ struct HResizeLinearVec_16u32f
     int operator()(const ushort** src, float** dst, int count, const int* xofs,
         const float* alpha, int, int, int cn, int, int xmax) const
     {
-        return hresize_linear_fp_16(src, dst, count, xofs, alpha, cn, xmax);
+        return hresize_linear_fp(src, dst, count, xofs, alpha, cn, xmax);
     }
 };
 
@@ -1421,23 +1370,18 @@ struct HResizeLinearVec_16s32f
     int operator()(const short** src, float** dst, int count, const int* xofs,
         const float* alpha, int, int, int cn, int, int xmax) const
     {
-        return hresize_linear_fp_16(src, dst, count, xofs, alpha, cn, xmax);
+        return hresize_linear_fp(src, dst, count, xofs, alpha, cn, xmax);
     }
 };
 
 #else
 
+typedef HResizeNoVec HResizeLinearVec_8u32s;
 typedef HResizeNoVec HResizeLinearVec_16u32f;
 typedef HResizeNoVec HResizeLinearVec_16s32f;
 typedef HResizeNoVec HResizeLinearVec_32f;
 
-#endif
-
-#if !CV_SIMD
-
-typedef HResizeNoVec HResizeLinearVec_8u32s;
-
-#endif
+#endif // CV_SIMD
 
 typedef HResizeNoVec HResizeLinearVec_64f;
 
@@ -1895,99 +1839,6 @@ static inline T area_fast_round(WT sum, int area)
     return area_fast_round_helper<T, WT>::round(sum, area);
 }
 
-template<typename T>
-static int area_fast_tail_nxn_cn1(const T* S, T* D, int w, int dx, int scale, int step)
-{
-    typedef typename area_fast_wt<T>::type WT;
-    const int area = scale * scale;
-
-    for (; dx < w; ++dx)
-    {
-        const int sx = dx * scale;
-        WT sum = 0;
-        for (int ry = 0; ry < scale; ++ry)
-            for (int k = 0; k < scale; ++k)
-                sum += ((const T*)((const uchar*)S + (size_t)ry * step))[sx + k];
-        D[dx] = area_fast_round<T>(sum, area);
-    }
-    return dx;
-}
-
-template<typename T>
-static int area_fast_tail_nxn_cn3(const T* S, T* D, int w, int dx, int scale, int step)
-{
-    typedef typename area_fast_wt<T>::type WT;
-    const int area = scale * scale;
-
-    for (; dx < w; dx += 3)
-    {
-        const int sx = dx * scale;
-        for (int c = 0; c < 3; ++c)
-        {
-            WT sum = 0;
-            for (int ry = 0; ry < scale; ++ry)
-                for (int k = 0; k < scale; ++k)
-                    sum += ((const T*)((const uchar*)S + (size_t)ry * step))[sx + k * 3 + c];
-            D[dx + c] = area_fast_round<T>(sum, area);
-        }
-    }
-    return dx;
-}
-
-template<typename T>
-static int area_fast_tail_nxn_cn4(const T* S, T* D, int w, int dx, int scale, int step)
-{
-    typedef typename area_fast_wt<T>::type WT;
-    const int area = scale * scale;
-
-    for (; dx < w; dx += 4)
-    {
-        const int sx = dx * scale;
-        for (int c = 0; c < 4; ++c)
-        {
-            WT sum = 0;
-            for (int ry = 0; ry < scale; ++ry)
-                for (int k = 0; k < scale; ++k)
-                    sum += ((const T*)((const uchar*)S + (size_t)ry * step))[sx + k * 4 + c];
-            D[dx + c] = area_fast_round<T>(sum, area);
-        }
-    }
-    return dx;
-}
-
-static int area_fast_tail_2x2(const float* S, float* D, int w, int dx, int cn, int step)
-{
-    const float* nextS = (const float*)((const uchar*)S + step);
-    const float q = 0.25f;
-    if (cn == 1)
-        for (; dx < w; ++dx)
-        {
-            const int index = dx * 2;
-            D[dx] = q * (S[index] + S[index + 1] + nextS[index] + nextS[index + 1]);
-        }
-    else if (cn == 3)
-        for (; dx < w; dx += 3)
-        {
-            const int index = dx * 2;
-            D[dx] = q * (S[index] + S[index + 3] + nextS[index] + nextS[index + 3]);
-            D[dx + 1] = q * (S[index + 1] + S[index + 4] + nextS[index + 1] + nextS[index + 4]);
-            D[dx + 2] = q * (S[index + 2] + S[index + 5] + nextS[index + 2] + nextS[index + 5]);
-        }
-    else
-    {
-        CV_Assert(cn == 4);
-        for (; dx < w; dx += 4)
-        {
-            const int index = dx * 2;
-            D[dx] = q * (S[index] + S[index + 4] + nextS[index] + nextS[index + 4]);
-            D[dx + 1] = q * (S[index + 1] + S[index + 5] + nextS[index + 1] + nextS[index + 5]);
-            D[dx + 2] = q * (S[index + 2] + S[index + 6] + nextS[index + 2] + nextS[index + 6]);
-            D[dx + 3] = q * (S[index + 3] + S[index + 7] + nextS[index + 3] + nextS[index + 7]);
-        }
-    }
-    return dx;
-}
-
 static inline int area_fast_f32_cn3_2x2(const float* S0, const float* S1, float* D, int w, int dx)
 {
     const float q = 0.25f;
@@ -2054,11 +1905,22 @@ static int area_fast_tail_2x2(const T* S, T* D, int w, int dx, int cn, int step)
 template<typename T>
 static int area_fast_tail_nxn(const T* S, T* D, int w, int dx, int scale, int cn, int step)
 {
-    if (cn == 1)
-        return area_fast_tail_nxn_cn1(S, D, w, dx, scale, step);
-    if (cn == 3)
-        return area_fast_tail_nxn_cn3(S, D, w, dx, scale, step);
-    return area_fast_tail_nxn_cn4(S, D, w, dx, scale, step);
+    typedef typename area_fast_wt<T>::type WT;
+    const int area = scale * scale;
+
+    for (; dx < w; dx += cn)
+    {
+        const int sx = dx * scale;
+        for (int c = 0; c < cn; ++c)
+        {
+            WT sum = 0;
+            for (int ry = 0; ry < scale; ++ry)
+                for (int k = 0; k < scale; ++k)
+                    sum += ((const T*)((const uchar*)S + (size_t)ry * step))[sx + k * cn + c];
+            D[dx + c] = area_fast_round<T>(sum, area);
+        }
+    }
+    return dx;
 }
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -3456,16 +3318,16 @@ static void area_hpass_32f(float* D, const float* S, const AreaXPlan& p, int cn)
     }
 }
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+static inline v_float32 area_load_f32(const float* p) { return vx_load(p); }
+static inline v_float32 area_load_f32(const uchar* p) { return v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(p))); }
+static inline v_float32 area_load_f32(const ushort* p) { return v_cvt_f32(v_reinterpret_as_s32(vx_load_expand(p))); }
+static inline v_float32 area_load_f32(const short* p) { return v_cvt_f32(vx_load_expand(p)); }
+#endif
+
 // vrow = beta*S (first row of a destination row) or vrow += beta*S.
-static inline void area_vacc_row(const float* S, int n, float beta, float* vrow, bool first)
-{
-    if( first )
-        inter_area::mul(S, n, beta, vrow);
-    else
-        inter_area::muladd(S, n, beta, vrow);
-}
-
-static inline void area_vacc_row(const uchar* S, int n, float beta, float* vrow, bool first)
+template<typename T>
+static inline void area_vacc_row(const T* S, int n, float beta, float* vrow, bool first)
 {
     int x = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -3473,40 +3335,8 @@ static inline void area_vacc_row(const uchar* S, int n, float beta, float* vrow,
     const v_float32 vb = vx_setall_f32(beta);
     for( ; x <= n - L; x += L )
     {
-        const v_float32 s = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(S + x)));
-        v_store(vrow + x, first ? v_mul(s, vb) : v_muladd(s, vb, vx_load(vrow + x)));
-    }
-#endif
-    for( ; x < n; x++ )
-        vrow[x] = first ? S[x]*beta : vrow[x] + S[x]*beta;
-}
-
-static inline void area_vacc_row(const ushort* S, int n, float beta, float* vrow, bool first)
-{
-    int x = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    const int L = VTraits<v_float32>::vlanes();
-    const v_float32 vb = vx_setall_f32(beta);
-    for( ; x <= n - L; x += L )
-    {
-        const v_float32 s = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand(S + x)));
-        v_store(vrow + x, first ? v_mul(s, vb) : v_muladd(s, vb, vx_load(vrow + x)));
-    }
-#endif
-    for( ; x < n; x++ )
-        vrow[x] = first ? S[x]*beta : vrow[x] + S[x]*beta;
-}
-
-static inline void area_vacc_row(const short* S, int n, float beta, float* vrow, bool first)
-{
-    int x = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    const int L = VTraits<v_float32>::vlanes();
-    const v_float32 vb = vx_setall_f32(beta);
-    for( ; x <= n - L; x += L )
-    {
-        const v_float32 s = v_cvt_f32(vx_load_expand(S + x));
-        v_store(vrow + x, first ? v_mul(s, vb) : v_muladd(s, vb, vx_load(vrow + x)));
+        const v_float32 s = v_mul(area_load_f32(S + x), vb);
+        v_store(vrow + x, first ? s : v_add(s, vx_load(vrow + x)));
     }
 #endif
     for( ; x < n; x++ )
