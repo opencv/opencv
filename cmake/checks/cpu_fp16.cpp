@@ -11,8 +11,7 @@ int test()
     _mm_storel_epi64((__m128i*)dst, v_dst);
     return (int)dst[0];
 }
-#elif (defined __GNUC__ && (defined __arm__ || defined __aarch64__)) /*|| (defined _MSC_VER && defined _M_ARM64)*/
-// Windows + ARM64 case disabled: https://github.com/opencv/opencv/issues/25052
+#elif (defined __GNUC__ && (defined __arm__ || defined __aarch64__))
 #include "arm_neon.h"
 int test()
 {
@@ -21,6 +20,17 @@ int test()
     float32x4_t v_src = *(float32x4_t*)src;
     float16x4_t v_dst = vcvt_f16_f32(v_src);
     *(float16x4_t*)dst = v_dst;
+    return (int)dst[0];
+}
+#elif defined _MSC_VER && (defined _M_ARM64 || defined _M_ARM64EC)
+// OpenCV is built with _ARM64_DISTINCT_NEON_TYPES, which hides the vcvt_*_f16 wrappers.
+#define _ARM64_DISTINCT_NEON_TYPES
+#include "arm_neon.h"
+int test()
+{
+    short dst[8] = { 0 };
+    __n128 v_src = neon_fcvtl_32(neon_ld1m_16((const __int16*)dst));
+    neon_st1m_16((__int16*)dst, neon_fcvtn_32(v_src));
     return (int)dst[0];
 }
 #else
