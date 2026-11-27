@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2025, Advanced Micro Devices, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -195,6 +196,225 @@ int FilterEngine__start(FilterEngine& this_, const Size &_wholeSize, const Size 
     return this_.startY;
 }
 
+void inline fillRowData(uchar *row, const uchar *src, int width1, int _dx1, int _dx2,
+                int esz, bool makeBorder, const int *btab, int btab_esz)
+{
+    int i;
+    int len = (width1 - _dx2 - _dx1)*esz;
+
+    memcpy( row + _dx1*esz, src, len );
+
+    if( makeBorder )
+    {
+        if( btab_esz*(int)sizeof(int) == esz )
+        {
+            const int* isrc = (const int*)src;
+            int* irow = (int*)row;
+            for( i = 0; i < _dx1*btab_esz; i++ )
+                irow[i] = isrc[btab[i]];
+            for( i = 0; i < _dx2*btab_esz; i++ )
+                irow[i + (width1 - _dx2)*btab_esz] = isrc[btab[i+_dx1*btab_esz]];
+        }
+        else
+        {
+            for( i = 0; i < _dx1*esz; i++ )
+                row[i] = src[btab[i]];
+            for( i = 0; i < _dx2*esz; i++ )
+                row[i + (width1 - _dx2)*esz] = src[btab[i+_dx1*esz]];
+        }
+    }
+}
+
+void inline fillBrows(FilterEngine& this_, uchar** brows, int &i, int yOffset, int bufRows, int dy, int kheight )
+{
+    int max_i = std::min(bufRows, this_.roi.height - (this_.dstY + dy) + (kheight - 1));
+    uchar* ringBuf = alignPtr(&this_.ringBuf[0], VEC_ALIGN);
+    for( i = 0; i < max_i; i++ )
+    {
+        int srcY = borderInterpolate(yOffset+i, this_.wholeSize.height, this_.columnBorderType);
+        if( srcY < 0 ) // can happen only with constant border type
+            brows[i] = alignPtr(&this_.constBorderRow[0], VEC_ALIGN);
+        else
+        {
+            CV_Assert(srcY >= this_.startY);
+            if( srcY >= this_.startY + this_.rowCount)
+                break;
+            int bi = (srcY - this_.startY0) % bufRows;
+            brows[i] = ringBuf + bi*this_.bufStep;
+        }
+    }
+}
+
+void inline incrementRowCount(FilterEngine& this_, int bufRows)
+{
+    if (++this_.rowCount > bufRows)
+    {
+        --this_.rowCount;
+        ++this_.startY;
+    }
+}
+
+int inline getNextBatchCount(FilterEngine& this_, int bufRows, int kheight, int ay, int &count)
+{
+    int dcount = bufRows - ay - this_.startY - this_.rowCount + this_.roi.y;
+    dcount = dcount > 0 ? dcount : bufRows - kheight + 1;
+    dcount = std::min(dcount, count);
+    count -= dcount;
+    return dcount;
+}
+
+// Copy n border pixels starting at border index b0 (0.._dx1-1 left, _dx1.. right) into out.
+static inline void copyBorderPixels(uchar* out, const uchar* src, int b0, int n, int esz, bool makeBorder,
+                                    const int* btab, int btab_esz, const uchar* constVal)
+{
+    if( n <= 0 )
+        return;
+    if( !makeBorder )
+    {
+        memcpy(out, constVal, n*esz);
+        return;
+    }
+    if( btab_esz*(int)sizeof(int) == esz )
+    {
+        const int* isrc = (const int*)src;
+        int* iout = (int*)out;
+        for( int i = 0; i < n*btab_esz; i++ )
+            iout[i] = isrc[btab[b0*btab_esz + i]];
+    }
+    else
+    {
+        for( int i = 0; i < n*esz; i++ )
+            out[i] = src[btab[b0*esz + i]];
+    }
+}
+
+// Gather row pixels [0, seg) and [width1 - seg, width1) of a bordered row into out.
+static inline void gatherRowEdges(uchar* out, const uchar* src, int seg, int width1, int _dx1, int _dx2,
+                                  int esz, bool makeBorder, const int* btab, int btab_esz, const uchar* constVal)
+{
+    copyBorderPixels(out, src, 0, _dx1, esz, makeBorder, btab, btab_esz, constVal);
+    memcpy(out + _dx1*esz, src, (seg - _dx1)*esz);
+    out += seg*esz;
+    memcpy(out, src + (width1 - seg - _dx1)*esz, (seg - _dx2)*esz);
+    copyBorderPixels(out + (seg - _dx2)*esz, src, _dx1, _dx2, esz, makeBorder, btab, btab_esz, constVal);
+}
+
+// Separable box filter whose inner region is computed by this_.rowColumnFilter in one pass.
+// Only the pixels the fused kernel does not produce go through rowFilter/columnFilter:
+// the top/bottom kx rows at image borders and the left/right kx columns of the other rows.
+static int proceedRowColumnSeparable(FilterEngine& this_, const uchar* src, int srcstep, uchar* dst, int dststep)
+{
+    const int esz = (int)getElemSize(this_.srcType);
+    const int bsz = (int)getElemSize(this_.bufType);
+    const int dsz = (int)getElemSize(this_.dstType);
+    const int cn = CV_MAT_CN(this_.bufType);
+    const int k = this_.ksize.width, kx = k / 2;
+    const int width = this_.roi.width, height = this_.roi.height;
+    const int width1 = width + k - 1;
+    const int wholeHeight = this_.wholeSize.height;
+    const int _dx1 = this_.dx1, _dx2 = this_.dx2;
+    const bool makeBorder = (_dx1 > 0 || _dx2 > 0) && this_.rowBorderType != BORDER_CONSTANT;
+    const int* btab = &this_.borderTab[0];
+    const int btab_esz = this_.borderElemSize;
+    const uchar* constVal = this_.constBorderValue.empty() ? 0 : &this_.constBorderValue[0];
+    const int xofs1 = std::min(this_.roi.x, this_.anchor.x);
+    const int y0 = this_.startY0;
+    BaseRowFilter& rowFilter = *this_.rowFilter;
+    BaseColumnFilter& columnFilter = *this_.columnFilter;
+
+    const int top = this_.roi.y >= kx ? 0 : kx;
+    const int bottom = this_.roi.y + height + kx <= wholeHeight ? 0 : kx;
+    const int inner = height - top - bottom;
+
+    auto srcRowPtr = [&](int y) { return src + (ptrdiff_t)(y - y0)*srcstep - xofs1*esz; };
+
+    // Rows at the top/bottom image border: full row sums, then one column pass.
+    uchar* srcRow = &this_.srcRow[0];
+    uchar* ringBuf = alignPtr(&this_.ringBuf[0], VEC_ALIGN);
+    const uchar* constRow = this_.columnBorderType == BORDER_CONSTANT ? alignPtr(&this_.constBorderRow[0], VEC_ALIGN) : 0;
+    const uchar* brows[16];
+    for( int part = 0; part < 2; part++ )
+    {
+        int nOut = part == 0 ? top : bottom;
+        if( nOut == 0 )
+            continue;
+        int dy0 = part == 0 ? 0 : height - bottom;
+        int nIn = nOut + k - 1;
+        CV_Assert( nIn <= (int)this_.rows.size() );
+        for( int i = 0; i < nIn; i++ )
+        {
+            int y = borderInterpolate(this_.roi.y + dy0 - kx + i, wholeHeight, this_.columnBorderType);
+            if( y < 0 )
+            {
+                brows[i] = constRow;
+                continue;
+            }
+            uchar* brow = ringBuf + i*this_.bufStep;
+            fillRowData(srcRow, srcRowPtr(y), width1, _dx1, _dx2, esz, makeBorder, btab, btab_esz);
+            rowFilter(srcRow, brow, width, cn);
+            brows[i] = brow;
+        }
+        columnFilter.reset();
+        columnFilter(brows, dst + (ptrdiff_t)dy0*dststep, dststep, nOut, width*cn);
+    }
+
+    if( inner > 0 )
+    {
+        // Left/right kx columns of the inner rows, in chunks of up to maxChunk output rows.
+        // Each source row contributes two segments of seg pixels (row pixels [0, seg) and
+        // [width1 - seg, width1)); a chunk's segments are row-summed in one call, then each
+        // side gets one column pass.
+        const int seg = k + kx - 1;
+        const int maxChunk = 64;
+        const int maxIn = std::min(inner, maxChunk) + k - 1;
+        AutoBuffer<uchar> _edge((size_t)maxIn*2*seg*(esz + bsz) + VEC_ALIGN);
+        uchar* edge = _edge.data();
+        uchar* edgeSum = alignPtr(edge + (size_t)maxIn*2*seg*esz, VEC_ALIGN);
+        const uchar* erows[maxChunk + 16];
+        for( int y = 0; y < inner; y += maxChunk )
+        {
+            const int nOut = std::min(maxChunk, inner - y);
+            const int nIn = nOut + k - 1;
+            for( int i = 0; i < nIn; i++ )
+                gatherRowEdges(edge + (size_t)i*2*seg*esz, srcRowPtr(this_.roi.y + top + y - kx + i), seg, width1,
+                               _dx1, _dx2, esz, makeBorder, btab, btab_esz, constVal);
+            rowFilter(edge, edgeSum, nIn*2*seg - (k - 1), cn);
+
+            uchar* dstChunk = dst + (ptrdiff_t)(top + y)*dststep;
+            for( int side = 0; side < 2; side++ )
+            {
+                for( int i = 0; i < nIn; i++ )
+                    erows[i] = edgeSum + ((size_t)i*2 + side)*seg*bsz;
+                columnFilter.reset();
+                columnFilter(erows, dstChunk + (side ? (width - kx)*dsz : 0), dststep, nOut, kx*cn);
+            }
+        }
+
+        // The fused filter walks each column strip down all its rows. On wide rows that thrashes
+        // the caches and hardware prefetchers, so it runs on bands of rows of about 256 KB.
+        // Bands are independent. Images with at least 1 MB of work per thread are split into
+        // one stripe per thread; smaller ones lose more to thread wake-up than they gain.
+        const size_t rowBytes = (size_t)width*(esz + dsz);
+        const int nstripes = (int)std::max((size_t)1, std::min((size_t)std::max(1, getNumThreads()), rowBytes*inner >> 20));
+        int band = std::max(8, (int)std::min((size_t)inner, ((size_t)256 << 10) / rowBytes));
+        if( nstripes > 1 )
+            band = std::max(8, std::min(band, (inner + nstripes - 1) / nstripes));
+        const int nBands = (inner + band - 1) / band;
+        BaseRowColumnFilter& rowColumnFilter = *this_.rowColumnFilter;
+        const int roiY = this_.roi.y;
+        parallel_for_(Range(0, nBands), [&](const Range& r)
+        {
+            for( int b = r.start; b < r.end; b++ )
+            {
+                const int yd = top + b*band;
+                const uchar* srcBand = src + (ptrdiff_t)(roiY + yd - kx - y0)*srcstep;
+                rowColumnFilter(srcBand, dst + (ptrdiff_t)yd*dststep, srcstep, dststep, width,
+                                std::min(band, inner - b*band), cn);
+            }
+        }, nstripes);
+    }
+    return height;
+}
 
 int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, int count,
                           uchar* dst, int dststep)
@@ -216,77 +436,64 @@ int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, in
     bool isSep = this_.isSeparable();
     bool makeBorder = (_dx1 > 0 || _dx2 > 0) && this_.rowBorderType != BORDER_CONSTANT;
     int dy = 0, i = 0;
+    int startY0 = this_.startY0;
+    int bufStep = this_.bufStep;
 
     src -= xofs1*esz;
     count = std::min(count, this_.remainingInputRows());
 
     CV_Assert(src && dst && count > 0);
+    bool isRowColumnSeparable = this_.isRowColumnSeparable();
 
+    // The fused path writes dst before it has finished reading src, so any overlap
+    // (in-place calls on an ROI included) must take the row-buffered path.
+    const uchar* srcEnd = src + (ptrdiff_t)srcstep*(count - 1) + (ptrdiff_t)(width1 - _dx1 - _dx2)*esz;
+    const uchar* dstEnd = dst + (ptrdiff_t)dststep*(this_.roi.height - 1) + (ptrdiff_t)width*getElemSize(this_.dstType);
+    bool overlap = src < dstEnd && dst < srcEnd;
+
+    if(width <= 32 || this_.roi.height <= 2 || overlap)
+        isRowColumnSeparable = false;
+
+    if(isRowColumnSeparable && width*cn < this_.rowColumnFilter->minWidth)
+        isRowColumnSeparable = false;
+
+    // The fused path needs the whole ROI in one call and a centered square kernel.
+    if(isRowColumnSeparable &&
+       (this_.dstY != 0 || this_.rowCount != 0 || count != this_.endY - this_.startY ||
+        kheight != kwidth || this_.anchor != Point(kwidth/2, kheight/2) || this_.roi.height <= kheight))
+        isRowColumnSeparable = false;
+
+    if(isSep && isRowColumnSeparable)
+    {
+        dy = proceedRowColumnSeparable(this_, src + xofs1*esz, srcstep, dst, dststep);
+        this_.dstY += dy;
+        CV_Assert(this_.dstY <= this_.roi.height);
+        return dy;
+    }
+
+    uchar* ringBuf = alignPtr(&this_.ringBuf[0], VEC_ALIGN);
+    uchar* srcRow = &this_.srcRow[0];
+
+    // Separable: row-filter each source row into the ring buffer, column-filter at the end.
+    // Non-separable (filter2D): copy the bordered row into the ring buffer, filter2D at the end.
     for(;; dst += dststep*i, dy += i)
     {
-        int dcount = bufRows - ay - this_.startY - this_.rowCount + this_.roi.y;
-        dcount = dcount > 0 ? dcount : bufRows - kheight + 1;
-        dcount = std::min(dcount, count);
-        count -= dcount;
+        int dcount = getNextBatchCount(this_, bufRows, kheight, ay, count);
+
         for( ; dcount-- > 0; src += srcstep )
         {
-            int bi = (this_.startY - this_.startY0 + this_.rowCount) % bufRows;
-            uchar* brow = alignPtr(&this_.ringBuf[0], VEC_ALIGN) + bi*this_.bufStep;
-            uchar* row = isSep ? &this_.srcRow[0] : brow;
-
-            if (++this_.rowCount > bufRows)
-            {
-                --this_.rowCount;
-                ++this_.startY;
-            }
-
-            memcpy( row + _dx1*esz, src, (width1 - _dx2 - _dx1)*esz );
-
-            if( makeBorder )
-            {
-                if( btab_esz*(int)sizeof(int) == esz )
-                {
-                    const int* isrc = (const int*)src;
-                    int* irow = (int*)row;
-
-                    for( i = 0; i < _dx1*btab_esz; i++ )
-                        irow[i] = isrc[btab[i]];
-                    for( i = 0; i < _dx2*btab_esz; i++ )
-                        irow[i + (width1 - _dx2)*btab_esz] = isrc[btab[i+_dx1*btab_esz]];
-                }
-                else
-                {
-                    for( i = 0; i < _dx1*esz; i++ )
-                        row[i] = src[btab[i]];
-                    for( i = 0; i < _dx2*esz; i++ )
-                        row[i + (width1 - _dx2)*esz] = src[btab[i+_dx1*esz]];
-                }
-            }
-
+            int bi = (this_.startY - startY0 + this_.rowCount) % bufRows;
+            uchar* brow = ringBuf + bi*bufStep;
+            incrementRowCount(this_, bufRows);
+            fillRowData(isSep ? srcRow : brow, src, width1, _dx1, _dx2, esz, makeBorder, btab, btab_esz);
             if( isSep )
-                (*this_.rowFilter)(row, brow, width, CV_MAT_CN(this_.srcType));
+                (*this_.rowFilter)(srcRow, brow, width, CV_MAT_CN(this_.srcType));
         }
-
-        int max_i = std::min(bufRows, this_.roi.height - (this_.dstY + dy) + (kheight - 1));
-        for( i = 0; i < max_i; i++ )
-        {
-            int srcY = borderInterpolate(this_.dstY + dy + i + this_.roi.y - ay,
-                    this_.wholeSize.height, this_.columnBorderType);
-            if( srcY < 0 ) // can happen only with constant border type
-                brows[i] = alignPtr(&this_.constBorderRow[0], VEC_ALIGN);
-            else
-            {
-                CV_Assert(srcY >= this_.startY);
-                if( srcY >= this_.startY + this_.rowCount)
-                    break;
-                int bi = (srcY - this_.startY0) % bufRows;
-                brows[i] = alignPtr(&this_.ringBuf[0], VEC_ALIGN) + bi*this_.bufStep;
-            }
-        }
+        fillBrows(this_, brows, i, (this_.dstY + dy + this_.roi.y - ay),  bufRows, dy, kheight);
         if( i < kheight )
             break;
         i -= kheight - 1;
-        if (isSep)
+        if( isSep )
             (*this_.columnFilter)((const uchar**)brows, dst, dststep, i, this_.roi.width*cn);
         else
             (*this_.filter2D)((const uchar**)brows, dst, dststep, i, this_.roi.width, cn);
@@ -2257,7 +2464,6 @@ struct SymmColumnVec_32f
 
         if( symmetrical )
         {
-
 #if CV_AVX
             {
                 const float *S, *S2;

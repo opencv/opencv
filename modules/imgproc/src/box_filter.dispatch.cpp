@@ -307,6 +307,14 @@ Ptr<BaseColumnFilter> getColumnSumFilter(int sumType, int dstType, int ksize, in
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+Ptr<BaseRowColumnFilter> getRowColumnSumFilter(int srcType, int dstType, int ksize, double scale)
+{
+    CV_INSTRUMENT_REGION();
+
+    CV_CPU_DISPATCH(getRowColumnSumFilter, (srcType, dstType, ksize, scale),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
 
 Ptr<FilterEngine> createBoxFilter(int srcType, int dstType, Size ksize,
                                   Point anchor, bool normalize, int borderType)
@@ -433,7 +441,7 @@ void sqrBoxFilter(InputArray _src, OutputArray _dst, int ddepth,
                                                             dstType, ksize.height, anchor.y,
                                                             normalize ? 1./(ksize.width*ksize.height) : 1);
 
-    Ptr<FilterEngine> f = makePtr<FilterEngine>(Ptr<BaseFilter>(), rowFilter, columnFilter,
+    Ptr<FilterEngine> f = makePtr<FilterEngine>(Ptr<BaseFilter>(), rowFilter, columnFilter, Ptr<BaseRowColumnFilter>(),
                                                 srcType, dstType, sumType, borderType );
     Point ofs;
     Size wsz(src.cols, src.rows);

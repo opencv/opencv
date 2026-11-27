@@ -128,7 +128,7 @@ Ptr<FilterEngine> createMorphologyFilter(
                                        depth == CV_32F ? (double)-FLT_MAX : -DBL_MAX);
     }
 
-    return makePtr<FilterEngine>(filter2D, rowFilter, columnFilter,
+    return makePtr<FilterEngine>(filter2D, rowFilter, columnFilter, Ptr<BaseRowColumnFilter>(),
                                  type, type, type, _rowBorderType, _columnBorderType, borderValue );
 }
 
