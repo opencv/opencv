@@ -48,6 +48,9 @@
 #ifdef HAVE_LAPACK
 
 #include "opencv_lapack.h"
+#if CV_NEON && CV_NEON_AARCH64 && defined(HAVE_LAPACK_BUILTIN)
+#include "gemm/gemm_engine.hpp"
+#endif
 
 #include <cmath>
 #include <algorithm>
@@ -768,6 +771,11 @@ int lapack_gemm32f(const float *src1, size_t src1_step, const float *src2, size_
 {
     if(!shouldUseLapackGemm(m, n, k, flags))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
+#if CV_NEON && CV_NEON_AARCH64 && defined(HAVE_LAPACK_BUILTIN)
+    // AArch64: the GEMM engine is faster than the built-in reference LAPACK on the shapes LAPACK takes.
+    if (cv::gemm_engine::gemm32f(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m, n, k, flags))
+        return CV_HAL_ERROR_OK;
+#endif
     return lapack_gemm(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m, n, k, flags);
 }
 
