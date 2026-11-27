@@ -2128,48 +2128,41 @@ static inline v_uint32 area_fast_plane_row_quads(const v_uint8& plane)
     return area_fast_byte_sum_u32(v_reinterpret_as_u32(plane));
 }
 
-static inline v_uint32 area_fast_scale_round(const v_uint32& sum, float inv_area)
+// Matches area_fast_round<uchar>(sum, 16), i.e. cvRound(sum / 16.f) with ties to even.
+static inline v_uint32 area_fast_round_div16(const v_uint32& sum)
 {
-    const int area = cvRound(1.f / inv_area);
-    CV_DECL_ALIGNED(64) uint32_t s[VTraits<v_uint32>::max_nlanes];
-    CV_DECL_ALIGNED(64) uint32_t r[VTraits<v_uint32>::max_nlanes];
-    const int n = VTraits<v_uint32>::vlanes();
-    v_store(s, sum);
-    for (int i = 0; i < n; ++i)
-        r[i] = (uint32_t)area_fast_round<uchar>((int)s[i], area);
-    return vx_load(r);
+    const v_uint32 odd = v_and(v_shr<4>(sum), vx_setall_u32(1));
+    return v_shr<4>(v_add(v_add(sum, vx_setall_u32(7)), odd));
+}
+
+static inline v_uint32 area_fast_round_div4(const v_uint32& sum)
+{
+    return v_shr<2>(v_add(sum, vx_setall_u32(2)));
 }
 
 static inline void area_fast_store_bgra(uchar* dst, v_uint32 sb, v_uint32 sg, v_uint32 sr, v_uint32 sa)
 {
-    const float inv_area = 1.f / 16;
-    v_uint32 px = v_add(v_add(area_fast_scale_round(sb, inv_area),
-                              v_shl<8>(area_fast_scale_round(sg, inv_area))),
-                        v_add(v_shl<16>(area_fast_scale_round(sr, inv_area)),
-                              v_shl<24>(area_fast_scale_round(sa, inv_area))));
+    v_uint32 px = v_add(v_add(area_fast_round_div16(sb),
+                              v_shl<8>(area_fast_round_div16(sg))),
+                        v_add(v_shl<16>(area_fast_round_div16(sr)),
+                              v_shl<24>(area_fast_round_div16(sa))));
     v_store(reinterpret_cast<uint32_t*>(dst), px);
-}
-
-static inline void area_fast_store_gray_scaled(uchar* dst, const v_uint32& sum, int n, int area)
-{
-    CV_DECL_ALIGNED(64) uint32_t tmp[16];
-    v_store(tmp, area_fast_scale_round(sum, 1.f / area));
-    for (int i = 0; i < n; ++i)
-        dst[i] = (uchar)tmp[i];
 }
 
 static inline void area_fast_store_gray(uchar* dst, const v_uint32& sum, int n)
 {
-    area_fast_store_gray_scaled(dst, sum, n, 16);
+    CV_DECL_ALIGNED(64) uint32_t tmp[VTraits<v_uint32>::max_nlanes];
+    v_store(tmp, area_fast_round_div16(sum));
+    for (int i = 0; i < n; ++i)
+        dst[i] = (uchar)tmp[i];
 }
 
-static inline void area_fast_store_rgb_scaled(uchar* dst, v_uint32 sb, v_uint32 sg, v_uint32 sr, int n, int area)
+static inline void area_fast_store_rgb_rounded(uchar* dst, const v_uint32& vb, const v_uint32& vg, const v_uint32& vr, int n)
 {
-    const float inv_area = 1.f / area;
-    CV_DECL_ALIGNED(64) uint32_t b[16], g[16], r[16];
-    v_store(b, area_fast_scale_round(sb, inv_area));
-    v_store(g, area_fast_scale_round(sg, inv_area));
-    v_store(r, area_fast_scale_round(sr, inv_area));
+    CV_DECL_ALIGNED(64) uint32_t b[VTraits<v_uint32>::max_nlanes], g[VTraits<v_uint32>::max_nlanes], r[VTraits<v_uint32>::max_nlanes];
+    v_store(b, vb);
+    v_store(g, vg);
+    v_store(r, vr);
     uchar* p = dst;
     for (int i = 0; i < n; ++i)
     {
@@ -2182,7 +2175,8 @@ static inline void area_fast_store_rgb_scaled(uchar* dst, v_uint32 sb, v_uint32 
 
 static inline void area_fast_store_rgb(uchar* dst, v_uint32 sb, v_uint32 sg, v_uint32 sr)
 {
-    area_fast_store_rgb_scaled(dst, sb, sg, sr, VTraits<v_uint32>::vlanes(), 16);
+    area_fast_store_rgb_rounded(dst, area_fast_round_div16(sb), area_fast_round_div16(sg), area_fast_round_div16(sr),
+                                VTraits<v_uint32>::vlanes());
 }
 
 static int area_fast_u8_cn4_4x4(const uchar* S, uchar* D, int w, int step, int dx)
@@ -2285,16 +2279,13 @@ public:
         auto neon_plane_row_quads = [&](uint8x16_t plane) {
             return neon_byte_sum_u32(vreinterpretq_u32_u8(plane));
         };
-        auto neon_round_area = [&](uint32x4_t s, int area) {
-            uint32_t tmp[4], out[4];
-            vst1q_u32(tmp, s);
-            for (int i = 0; i < 4; ++i)
-                out[i] = (uint32_t)area_fast_detail::area_fast_round<uchar>((int)tmp[i], area);
-            return vld1q_u32(out);
+        auto neon_round_div16 = [](uint32x4_t s) {
+            const uint32x4_t odd = vandq_u32(vshrq_n_u32(s, 4), vdupq_n_u32(1));
+            return vshrq_n_u32(vaddq_u32(vaddq_u32(s, vdupq_n_u32(7)), odd), 4);
         };
         auto neon_store_bgra4 = [&](uchar* dst, uint32x4_t sb, uint32x4_t sg, uint32x4_t sr, uint32x4_t sa) {
-            uint32x4_t px = vaddq_u32(vaddq_u32(neon_round_area(sb, 16), vshlq_n_u32(neon_round_area(sg, 16), 8)),
-                                      vaddq_u32(vshlq_n_u32(neon_round_area(sr, 16), 16), vshlq_n_u32(neon_round_area(sa, 16), 24)));
+            uint32x4_t px = vaddq_u32(vaddq_u32(neon_round_div16(sb), vshlq_n_u32(neon_round_div16(sg), 8)),
+                                      vaddq_u32(vshlq_n_u32(neon_round_div16(sr), 16), vshlq_n_u32(neon_round_div16(sa), 24)));
             vst1q_u32(reinterpret_cast<uint32_t*>(dst), px);
         };
 
@@ -2315,8 +2306,8 @@ public:
                     sum1 = vaddq_u32(sum1, vaddq_u32(vaddq_u32(vshrq_n_u32(a1, 24), vandq_u32(vshrq_n_u32(a1, 16), mask)),
                                                      vaddq_u32(vandq_u32(vshrq_n_u32(a1, 8), mask), vandq_u32(a1, mask))));
                 }
-                uint16x4_t d0 = vmovn_u32(neon_round_area(sum0, 16));
-                uint16x4_t d1 = vmovn_u32(neon_round_area(sum1, 16));
+                uint16x4_t d0 = vmovn_u32(neon_round_div16(sum0));
+                uint16x4_t d1 = vmovn_u32(neon_round_div16(sum1));
                 vst1_u8(D + dx, vqmovn_u16(vcombine_u16(d0, d1)));
             }
             return dx;
@@ -2383,12 +2374,12 @@ public:
                     sr1 = vaddq_u32(sr1, neon_plane_row_quads(p1.val[2]));
                 }
                 uint32_t bv0[4], gv0[4], rv0[4], bv1[4], gv1[4], rv1[4];
-                vst1q_u32(bv0, neon_round_area(sb0, 16));
-                vst1q_u32(gv0, neon_round_area(sg0, 16));
-                vst1q_u32(rv0, neon_round_area(sr0, 16));
-                vst1q_u32(bv1, neon_round_area(sb1, 16));
-                vst1q_u32(gv1, neon_round_area(sg1, 16));
-                vst1q_u32(rv1, neon_round_area(sr1, 16));
+                vst1q_u32(bv0, neon_round_div16(sb0));
+                vst1q_u32(gv0, neon_round_div16(sg0));
+                vst1q_u32(rv0, neon_round_div16(sr0));
+                vst1q_u32(bv1, neon_round_div16(sb1));
+                vst1q_u32(gv1, neon_round_div16(sg1));
+                vst1q_u32(rv1, neon_round_div16(sr1));
                 for (int i = 0; i < 4; ++i)
                 {
                     D[dx + i * 3 + 0] = (uchar)bv0[i];
@@ -2411,9 +2402,9 @@ public:
                     sr = vaddq_u32(sr, neon_plane_row_quads(p.val[2]));
                 }
                 uint32_t bv[4], gv[4], rv[4];
-                vst1q_u32(bv, neon_round_area(sb, 16));
-                vst1q_u32(gv, neon_round_area(sg, 16));
-                vst1q_u32(rv, neon_round_area(sr, 16));
+                vst1q_u32(bv, neon_round_div16(sb));
+                vst1q_u32(gv, neon_round_div16(sg));
+                vst1q_u32(rv, neon_round_div16(sr));
                 for (int i = 0; i < 4; ++i)
                 {
                     D[dx + i * 3 + 0] = (uchar)bv[i];
@@ -2713,8 +2704,11 @@ public:
                                     v_add(v_shr<16>(v_reinterpret_as_u32(g1)), v_and(v_reinterpret_as_u32(g1), masklow)));
                 v_uint32 rh = v_add(v_add(v_shr<16>(v_reinterpret_as_u32(r0)), v_and(v_reinterpret_as_u32(r0), masklow)),
                                     v_add(v_shr<16>(v_reinterpret_as_u32(r1)), v_and(v_reinterpret_as_u32(r1), masklow)));
-                area_fast_detail::area_fast_store_rgb_scaled(D, bl, gl, rl, VTraits<v_uint32>::vlanes(), 4);
-                area_fast_detail::area_fast_store_rgb_scaled(D + 3 * VTraits<v_uint32>::vlanes(), bh, gh, rh, VTraits<v_uint32>::vlanes(), 4);
+                area_fast_detail::area_fast_store_rgb_rounded(D, area_fast_detail::area_fast_round_div4(bl), area_fast_detail::area_fast_round_div4(gl),
+                                                              area_fast_detail::area_fast_round_div4(rl), VTraits<v_uint32>::vlanes());
+                area_fast_detail::area_fast_store_rgb_rounded(D + 3 * VTraits<v_uint32>::vlanes(), area_fast_detail::area_fast_round_div4(bh),
+                                                              area_fast_detail::area_fast_round_div4(gh), area_fast_detail::area_fast_round_div4(rh),
+                                                              VTraits<v_uint32>::vlanes());
             }
 #else
             for ( ; dx <= w - 3*VTraits<v_uint8>::vlanes(); dx += 3*VTraits<v_uint8>::vlanes(), S0 += 6*VTraits<v_uint8>::vlanes(), S1 += 6*VTraits<v_uint8>::vlanes(), D += 3*VTraits<v_uint8>::vlanes())
