@@ -103,6 +103,18 @@ struct v_set<float>
     }
 };
 
+// Vector kernels cover a row remainder by rewinding the final block so it ends at n,
+// which re-reads source pixels that were already visited. That is only safe when the
+// source row and destination row byte ranges are disjoint; otherwise an earlier store may
+// have overwritten bytes the re-read needs. For overlapping buffers the tail is finished
+// by the scalar loop instead, which reads each pixel before writing it. Overlapping
+// conversion is therefore supported only for dst <= src.
+static inline bool rgbRowsDisjoint(const void* src, size_t srcBytes, const void* dst, size_t dstBytes)
+{
+    const uintptr_t s0 = (uintptr_t)src, d0 = (uintptr_t)dst;
+    return (s0 + srcBytes <= d0) || (d0 + dstBytes <= s0);
+}
+
 template<typename _Tp>
 struct RGB2RGB
 {
@@ -547,6 +559,8 @@ struct RGB5x52Gray
     {
         int gb = greenBits;
         int i = 0;
+        const bool disjoint = rgbRowsDisjoint(src, (size_t)n*sizeof(ushort), dst, (size_t)n);
+        CV_UNUSED(disjoint);
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int vsize = VTraits<v_uint16>::vlanes();
 
@@ -561,7 +575,7 @@ struct RGB5x52Gray
             i += vsize, src += vsize*sizeof(ushort), dst += vsize)
         {
             if ( i > n - vsize ) {
-                if (i == 0 || src == dst) {
+                if (i == 0 || !disjoint) {
                     break;
                 }
                 int backup = i - (n - vsize);
@@ -677,6 +691,8 @@ struct RGB2Gray<float>
     void operator()(const float * src, float * dst, int n) const
     {
         int scn = srccn, i = 0;
+        const bool disjoint = rgbRowsDisjoint(src, (size_t)n*scn*sizeof(float), dst, (size_t)n*sizeof(float));
+        CV_UNUSED(disjoint);
         float cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -686,7 +702,7 @@ struct RGB2Gray<float>
             i += vsize, src += vsize*scn, dst += vsize)
         {
             if ( i > n - vsize ) {
-                if (i == 0 || src == dst) {
+                if (i == 0 || !disjoint) {
                     break;
                 }
                 int backup = i - (n - vsize);
@@ -746,14 +762,17 @@ struct RGB2Gray<uchar>
         short cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
         int i = 0;
 
+        const bool disjoint = rgbRowsDisjoint(src, (size_t)n*scn*sizeof(uchar), dst, (size_t)n*sizeof(uchar));
+        CV_UNUSED(disjoint);
+
 #if CV_AVX512_SKX
         // Bit-exact x86 fast paths. BGRA: no channel deinterleave at all - the 4-byte
         // pixel feeds vpmaddwd directly. BGR (VBMI): vpermb deinterleaves into b/g pairs
         // + r, then one vpmaddwd (b*cb+g*cg) and one vpmulld (r*cr). Full 15-bit -> maxErr 0.
         const __m512i vdelta = _mm512_set1_epi32(1 << (shift - 1));
         // The final block is clamped to [n-16, n) so any remainder is covered by one
-        // overlapping (idempotent) store instead of a scalar tail - no odd-width penalty.
-        if (n >= 16 && scn == 4)
+        // overlapping store instead of a scalar tail; hence these kernels need `disjoint`.
+        if (n >= 16 && scn == 4 && disjoint)
         {
             const __m512i coef = _mm512_set1_epi64(((int64_t)cr << 32) | ((int64_t)((uint16_t)cg) << 16) | (uint16_t)cb);
             const __m512i idxEven = _mm512_setr_epi32(0,2,4,6,8,10,12,14, 16,18,20,22,24,26,28,30);
@@ -767,12 +786,12 @@ struct RGB2Gray<uchar>
                 __m512i y  = _mm512_srli_epi32(_mm512_add_epi32(_mm512_add_epi32(bg, rr), vdelta), shift);
                 _mm_storeu_si128((__m128i*)(dst + j), _mm512_cvtusepi32_epi8(y));
             };
-            for (; i + 16 <= n; i += 16) do16(i);
+            for (; i <= n - 16; i += 16) do16(i);
             if (i < n) do16(n - 16);
             return;
         }
 #if CV_AVX_512VBMI
-        if (n >= 16 && scn == 3)
+        if (n >= 16 && scn == 3 && disjoint)
         {
             static const uint8_t idxb[64] = {
                 0,1, 3,4, 6,7, 9,10, 12,13, 15,16, 18,19, 21,22, 24,25, 27,28, 30,31, 33,34, 36,37, 39,40, 42,43, 45,46,
@@ -791,7 +810,7 @@ struct RGB2Gray<uchar>
                 y = _mm512_srli_epi32(_mm512_add_epi32(y, vdelta), shift);
                 _mm_storeu_si128((__m128i*)(dst + j), _mm512_cvtusepi32_epi8(y));
             };
-            for (; i + 16 <= n; i += 16) do16(i);
+            for (; i <= n - 16; i += 16) do16(i);
             if (i < n) do16(n - 16);
             return;
         }
@@ -816,7 +835,8 @@ struct RGB2Gray<uchar>
              i += vsize, src += scn*vsize, dst += vsize)
         {
             if ( i > n - vsize ) {
-                if (i == 0 || src == dst) {
+                // Overlapping buffers: do not rewind; the scalar loop below finishes.
+                if (i == 0 || !disjoint) {
                     break;
                 }
                 int backup = i - (n - vsize);
@@ -920,6 +940,8 @@ struct RGB2Gray<ushort>
         int scn = srccn;
         short cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
         int i = 0;
+        const bool disjoint = rgbRowsDisjoint(src, (size_t)n*scn*sizeof(ushort), dst, (size_t)n*sizeof(ushort));
+        CV_UNUSED(disjoint);
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int vsize = VTraits<v_uint16>::vlanes();
@@ -933,7 +955,7 @@ struct RGB2Gray<ushort>
                  i += vsize, src += scn*vsize, dst += vsize)
             {
                 if ( i > n - vsize ) {
-                    if (i == 0 || src == dst) {
+                    if (i == 0 || !disjoint) {
                         break;
                     }
                     int backup = i - (n - vsize);
@@ -978,7 +1000,7 @@ struct RGB2Gray<ushort>
              i += vsize, src += scn*vsize, dst += vsize)
         {
             if ( i > n - vsize ) {
-                if (i == 0 || src == dst) {
+                if (i == 0 || !disjoint) {
                     break;
                 }
                 int backup = i - (n - vsize);
