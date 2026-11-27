@@ -125,33 +125,30 @@ TEST(Imgproc_PyrDown, right_border_tail_32f)
     EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 1e-6);
 }
 
-TEST(Imgproc_PyrDown, right_border_even_half_plus_one)
-{
-    const Size src_sizes[] = { Size(4, 4), Size(10, 10), Size(14, 14), Size(16, 16) };
-    const int types[] = { CV_8UC1, CV_8UC3, CV_16UC3, CV_32FC1, CV_32FC3, CV_64FC1 };
-    const int borders[] = { BORDER_REFLECT_101, BORDER_REPLICATE, BORDER_REFLECT };
+typedef testing::TestWithParam<tuple<Size, perf::MatType, int> > Imgproc_PyrDown_right_border;
 
-    RNG rng(2025);
-    for (size_t si = 0; si < sizeof(src_sizes) / sizeof(src_sizes[0]); ++si)
-    {
-        const Size ssize = src_sizes[si];
-        const Size dsize(ssize.width / 2 + 1, ssize.height / 2 + 1);
-        for (size_t ti = 0; ti < sizeof(types) / sizeof(types[0]); ++ti)
-        {
-            Mat src(ssize, types[ti]);
-            rng.fill(src, RNG::UNIFORM, Scalar::all(0), Scalar::all(200));
-            for (size_t bi = 0; bi < sizeof(borders) / sizeof(borders[0]); ++bi)
-            {
-                Mat dst;
-                pyrDown(src, dst, dsize, borders[bi]);
-                Mat expected = pyrDownReference(src, dsize, borders[bi]);
-                const double tol = (CV_MAT_DEPTH(types[ti]) >= CV_32F) ? 1e-4 : 0.0;
-                EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), tol)
-                    << "ssize=" << ssize << " type=" << types[ti] << " border=" << borders[bi];
-            }
-        }
-    }
+TEST_P(Imgproc_PyrDown_right_border, even_half_plus_one)
+{
+    const Size ssize = get<0>(GetParam());
+    const int type = get<1>(GetParam());
+    const int border = get<2>(GetParam());
+    const Size dsize(ssize.width / 2 + 1, ssize.height / 2 + 1);
+
+    Mat src(ssize, type);
+    theRNG().fill(src, RNG::UNIFORM, Scalar::all(0), Scalar::all(200));
+
+    Mat dst;
+    pyrDown(src, dst, dsize, border);
+    Mat expected = pyrDownReference(src, dsize, border);
+    const double tol = (CV_MAT_DEPTH(type) >= CV_32F) ? 1e-4 : 0.0;
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), tol);
 }
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgproc_PyrDown_right_border, testing::Combine(
+    testing::Values(Size(4, 4), Size(10, 10), Size(14, 14), Size(16, 16)),
+    testing::Values(CV_8UC1, CV_8UC3, CV_16UC3, CV_32FC1, CV_32FC3, CV_64FC1),
+    testing::Values(static_cast<int>(BORDER_REFLECT_101), static_cast<int>(BORDER_REPLICATE), static_cast<int>(BORDER_REFLECT))
+));
 
 TEST(Imgproc_PyrDown, border_isolated)
 {
