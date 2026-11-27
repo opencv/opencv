@@ -205,8 +205,7 @@ typedef ::perf::TestBaseWithParam< Size > Perf_Objdetect_QRCode_Uniform_Noise;
 PERF_TEST_P_(Perf_Objdetect_QRCode_Uniform_Noise, detect)
 {
     Mat noise(GetParam(), CV_8UC1);
-    RNG rng(12345);
-    rng.fill(noise, RNG::UNIFORM, Scalar(0), Scalar(256));
+    theRNG().fill(noise, RNG::UNIFORM, Scalar(0), Scalar(256));
     std::vector<Point> corners;
     QRCodeDetector qrcode;
     TEST_CYCLE() qrcode.detect(noise, corners);
