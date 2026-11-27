@@ -130,7 +130,7 @@ def main():
                 frame_obj_points = pattern_points
         elif pattern_type == 'charucoboard':
             corners, charucoIds, _, _ = charuco_detector.detectBoard(img)
-            if corners is not None and len(corners) > 0:
+            if corners is not None and len(corners) >= 4:
                 frame_obj_points, frame_img_points = board.matchImagePoints(corners, charucoIds)
                 found = True
             else:
@@ -143,7 +143,7 @@ def main():
             vis = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
             if pattern_type == 'chessboard':
                 cv.drawChessboardCorners(vis, pattern_size, corners, found)
-            elif pattern_type == 'charucoboard' and found:
+            elif pattern_type == 'charucoboard' and charucoIds is not None:
                 cv.aruco.drawDetectedCornersCharuco(vis, corners, charucoIds=charucoIds)
             _path, name, _ext = splitfn(fn)
             outfile = os.path.join(debug_dir, name + '_board.png')
