@@ -162,15 +162,15 @@ static inline void buildBilinearIndexAndLerp(std::vector<int>& i0,
                                       coordTransMode, halfPixelCenters, start_coord, end_coord);
         if (tf_crop_and_resize_mode)
         {
-            int base = int(std::floor(src));
-            if (base < 0 || base >= inLen - 1) {
+            if (src < 0.f || src > float(inLen - 1)) {
                 outOfBounds[o] = 1;
                 i0[o] = 0;
                 i1[o] = 0;
                 frac[o] = 0.0f;
             } else {
+                int base = int(std::floor(src));
                 i0[o] = base;
-                i1[o] = base + 1;
+                i1[o] = std::min(base + 1, inLen - 1);
                 frac[o] = src - float(base);
             }
         }
