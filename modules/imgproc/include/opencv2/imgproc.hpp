@@ -1406,7 +1406,7 @@ The call `blur(src, dst, ksize, anchor, borderType)` is equivalent to `boxFilter
 anchor, true, borderType)`.
 
 @param src input image; it can have any number of channels, which are processed independently, but
-the depth should be CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
+the depth should be CV_8U, CV_16U, CV_16S, CV_32F, CV_64F, CV_16F or CV_16BF.
 @param dst output image of the same size and type as src.
 @param ksize blurring kernel size.
 @param anchor anchor point; default value Point(-1,-1) means that the anchor is at the kernel
@@ -1428,7 +1428,7 @@ depending on if they are on the right or on the left side of the stack. The only
 Original paper was proposed by Mario Klingemann, which can be found https://underdestruction.com/2004/02/25/stackblur-2004.
 
 @param src input image. The number of channels can be arbitrary, but the depth should be one of
-CV_8U, CV_16U, CV_16S or CV_32F.
+CV_8U, CV_16U, CV_16S, CV_32F, CV_16F or CV_16BF.
 @param dst output image of the same size and type as src.
 @param ksize stack-blurring kernel size. The ksize.width and ksize.height can differ but they both must be
 positive and odd.

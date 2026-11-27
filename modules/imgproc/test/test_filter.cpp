@@ -1597,5 +1597,58 @@ INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_BoxFilterInplaceROI, testing::Combine(
     testing::Values(CV_32F, CV_64F), testing::Values(1, 3, 5),
     testing::Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101)));
 
+typedef testing::TestWithParam<tuple<int, int> > Imgproc_BoxFilter_HalfFloat;
+
+// the bound is relative because the unnormalized sums grow with the kernel area
+TEST_P(Imgproc_BoxFilter_HalfFloat, vs_fp32)
+{
+    const int depth = get<0>(GetParam()), cn = get<1>(GetParam());
+    const double eps = depth == CV_16F ? 1e-3 : 8e-3;
+    Mat src32(37, 43, CV_MAKETYPE(CV_32F, cn)), src, widened;
+    theRNG().fill(src32, RNG::UNIFORM, -1., 1.);
+    src32.convertTo(src, depth);
+    src.convertTo(widened, CV_32F);
+
+    const Size kernels[] = {Size(3, 3), Size(5, 3), Size(7, 7), Size(15, 1), Size(1, 15), Size(21, 21)};
+    const int borders[] = {BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101};
+    for (const Size& kernel : kernels)
+        for (int border : borders)
+            for (int normalize = 0; normalize < 2; ++normalize)
+            {
+                SCOPED_TRACE(testing::Message() << "kernel=" << kernel << " border=" << border
+                             << " normalize=" << normalize);
+                Mat dst, dst32, ref;
+                cv::boxFilter(src, dst, -1, kernel, Point(-1, -1), normalize != 0, border);
+                cv::boxFilter(widened, ref, -1, kernel, Point(-1, -1), normalize != 0, border);
+                ASSERT_EQ(src.type(), dst.type());
+                dst.convertTo(dst32, CV_32F);
+                EXPECT_LE(cvtest::norm(dst32, ref, NORM_INF), eps * std::max(1.0, cvtest::norm(ref, NORM_INF)));
+            }
+}
+
+TEST_P(Imgproc_BoxFilter_HalfFloat, float_output)
+{
+    const int depth = get<0>(GetParam()), cn = get<1>(GetParam());
+    Mat src32(37, 43, CV_MAKETYPE(CV_32F, cn)), src, widened;
+    theRNG().fill(src32, RNG::UNIFORM, -1., 1.);
+    src32.convertTo(src, depth);
+    src.convertTo(widened, CV_32F);
+
+    Mat a, b;
+    cv::boxFilter(src, a, CV_32F, Size(5, 5));
+    cv::boxFilter(widened, b, CV_32F, Size(5, 5));
+    ASSERT_EQ(CV_32F, a.depth());
+    EXPECT_LE(cvtest::norm(a, b, NORM_INF), 1e-5);
+
+    // a narrow input defaults to a CV_32F result
+    cv::sqrBoxFilter(src, a, -1, Size(3, 3));
+    cv::sqrBoxFilter(widened, b, CV_32F, Size(3, 3));
+    ASSERT_EQ(CV_32F, a.depth());
+    EXPECT_LE(cvtest::norm(a, b, NORM_INF), 1e-5);
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_BoxFilter_HalfFloat, testing::Combine(
+    testing::Values(CV_16F, CV_16BF), testing::Values(1, 3, 4)));
+
 
 }} // namespace

@@ -44,6 +44,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include <algorithm>
 #include <climits>
 #include <limits>
+#include <type_traits>
 
 using namespace std;
 
@@ -90,6 +91,48 @@ static unsigned char const stackblurShr[255] =
         };
 
 namespace cv{
+
+// fp16/bf16 rows are blurred in float: widened on load, narrowed on store
+template<typename T>
+struct StackBlurWork
+{
+    typedef T WT;
+    static const T* load(const T* src, T*, int) { return src; }
+    static T* out(T* dst, T*) { return dst; }
+    static void store(const T*, T*, int) {}
+};
+
+template<typename T>
+struct StackBlurHalfWork
+{
+    typedef float WT;
+    static float* out(T*, float* buf) { return buf; }
+};
+
+// stackblur.cpp is built for the baseline ISA, so use core's dispatched conversions
+template<> struct StackBlurWork<hfloat> : StackBlurHalfWork<hfloat>
+{
+    static const float* load(const hfloat* src, float* buf, int len) { hal::cvt16f32f(src, buf, len); return buf; }
+    static void store(const float* buf, hfloat* dst, int len) { hal::cvt32f16f(buf, dst, len); }
+};
+
+// hal::cvt16bf32f is declared but not defined, so bf16 widening stays here
+template<> struct StackBlurWork<bfloat> : StackBlurHalfWork<bfloat>
+{
+    static const float* load(const bfloat* src, float* buf, int len)
+    {
+        int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int VECSZ = VTraits<v_float32>::vlanes();
+        for (; i <= len - VECSZ; i += VECSZ)
+            v_store(buf + i, vx_load_expand(src + i));
+#endif
+        for (; i < len; i++)
+            buf[i] = (float)src[i];
+        return buf;
+    }
+    static void store(const float* buf, bfloat* dst, int len) { hal::cvt32f16bf(buf, dst, len); }
+};
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
 template<typename T>
@@ -495,7 +538,14 @@ public:
      * */
     virtual void operator ()(const Range& range) const CV_OVERRIDE
     {
+        typedef StackBlurWork<T> Work;
+        typedef typename Work::WT WT;
+
         const int kernelSize = 2 * radius + 1;
+        const int rowLen = width * CN;
+        AutoBuffer<WT> rowBuf(std::is_same<T, WT>::value ? 0 : 2 * rowLen);
+        WT* srcBuf = rowBuf.data();
+        WT* dstBuf = srcBuf + rowBuf.size() / 2;
 
         if (kernelSize <= 9 && width > kernelSize) // Special branch for small kernel
         {
@@ -511,8 +561,8 @@ public:
             const ushort * kx = kVec.data() + kernelSize/2;
             for (int row = range.start; row < range.end; row++)
             {
-                const T* srcPtr = src.ptr<T>(row);
-                T* dstPtr = dst.ptr<T>(row);
+                const WT* srcPtr = Work::load(src.ptr<T>(row), srcBuf, rowLen);
+                WT* dstPtr = Work::out(dst.ptr<T>(row), dstBuf);
                 TBuf sumVal;
 
                 // init
@@ -526,7 +576,7 @@ public:
                             int index = std::max(k - radius + i, 0);
                             sumVal += (TBuf)srcPtr[index * CN + ci] * (TBuf)kVec[k];
                         }
-                        dstPtr[i*CN + ci] = (T)(sumVal * mulVal);
+                        dstPtr[i*CN + ci] = (WT)(sumVal * mulVal);
                     }
                 }
 
@@ -535,14 +585,14 @@ public:
                 // middle
                 int wc = radius * CN;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-                wc = opRow<T>(srcPtr, dstPtr, kVec, mulVal, radius, CN, widthCN);
+                wc = opRow<WT>(srcPtr, dstPtr, kVec, mulVal, radius, CN, widthCN);
 #endif
                 for (; wc < widthCN; wc++)
                 {
                     sumVal = srcPtr[wc] * kx[0];
                     for (int k = 1; k <= radius; k++)
                         sumVal += ((TBuf)(srcPtr[wc + k * CN])+(TBuf)(srcPtr[wc - k * CN])) * (TBuf)kx[k];
-                    dstPtr[wc] = (T)(sumVal * mulVal);
+                    dstPtr[wc] = (WT)(sumVal * mulVal);
                 }
 
                 // tail
@@ -556,10 +606,11 @@ public:
                             int index = std::min(k - radius + i, wm);
                             sumVal += (TBuf)srcPtr[index * CN + ci] * (TBuf)kVec[k];
                         }
-                        dstPtr[i*CN + ci] = (T)(sumVal * mulVal);
+                        dstPtr[i*CN + ci] = (WT)(sumVal * mulVal);
                     }
                 }
 
+                Work::store(dstPtr, dst.ptr<T>(row), rowLen);
             }
         }
         else
@@ -578,15 +629,17 @@ public:
             {
                 memset(bufptr, 0, bufSize);
 
-                const T* srcPtr = src.ptr<T>(row);
-                T* dstPtr = dst.ptr<T>(row);
+                const WT* srcRow = Work::load(src.ptr<T>(row), srcBuf, rowLen);
+                WT* dstRow = Work::out(dst.ptr<T>(row), dstBuf);
+                const WT* srcPtr = srcRow;
+                WT* dstPtr = dstRow;
 
                 const int64_t radiusMul = (int64_t)(radius + 2) * (radius + 1) / 2;
                 for (int ci = 0; ci < CN; ci++)
                     sum[ci] += (TBuf)srcPtr[ci] * (TBuf)radiusMul;
 
                 // compute diff
-                const T* srcPtr0 = srcPtr;
+                const WT* srcPtr0 = srcPtr;
 
                 // init
                 for (int i = 0; i < radius; i++)
@@ -611,8 +664,8 @@ public:
                     diff0[0] = (TBuf)(srcPtr[CNR1]) - (TBuf)(srcPtr[0]);
 
                 // tails
-                srcPtr0 = src.ptr<T>(row) + index;
-                const T* srcPtr1 = src.ptr<T>(row) + (width - 1) * CN;
+                srcPtr0 = srcRow + index;
+                const WT* srcPtr1 = srcRow + (width - 1) * CN;
                 int dist = width - index/CN;
                 for (int r = 0; r < radius; r++, diff0 += CN)
                 {
@@ -626,7 +679,7 @@ public:
                     }
                 }
 
-                srcPtr = src.ptr<T>(row);
+                srcPtr = srcRow;
                 diff0 = diff + radius * CN;
                 for (int ci = 0; ci < CN; ci++)
                     diffVal[ci] += diff0[ci];
@@ -636,7 +689,7 @@ public:
                 {
                     for (int i = 0; i < width; i++, diff0 ++, dstPtr ++, srcPtr ++)
                     {
-                        *(dstPtr) = saturate_cast<T>((sum[0] * mulVal));
+                        *(dstPtr) = saturate_cast<WT>((sum[0] * mulVal));
                         sum[0] += diffVal[0];
                         diffVal[0] += (diff0[0] - diff0[-CNR1]);
                     }
@@ -645,9 +698,9 @@ public:
                 {
                     for (int i = 0; i < width; i++, diff0 += CN, dstPtr += CN, srcPtr += CN)
                     {
-                        *(dstPtr + 0) = saturate_cast<T>((sum[0] * mulVal));
-                        *(dstPtr + 1) = saturate_cast<T>((sum[1] * mulVal));
-                        *(dstPtr + 2) = saturate_cast<T>((sum[2] * mulVal));
+                        *(dstPtr + 0) = saturate_cast<WT>((sum[0] * mulVal));
+                        *(dstPtr + 1) = saturate_cast<WT>((sum[1] * mulVal));
+                        *(dstPtr + 2) = saturate_cast<WT>((sum[2] * mulVal));
 
                         sum[0] += diffVal[0];
                         sum[1] += diffVal[1];
@@ -662,10 +715,10 @@ public:
                 {
                     for (int i = 0; i < width; i++, diff0 += CN, dstPtr += CN, srcPtr += CN)
                     {
-                        *(dstPtr + 0) = saturate_cast<T>((sum[0] * mulVal));
-                        *(dstPtr + 1) = saturate_cast<T>((sum[1] * mulVal));
-                        *(dstPtr + 2) = saturate_cast<T>((sum[2] * mulVal));
-                        *(dstPtr + 3) = saturate_cast<T>((sum[3] * mulVal));
+                        *(dstPtr + 0) = saturate_cast<WT>((sum[0] * mulVal));
+                        *(dstPtr + 1) = saturate_cast<WT>((sum[1] * mulVal));
+                        *(dstPtr + 2) = saturate_cast<WT>((sum[2] * mulVal));
+                        *(dstPtr + 3) = saturate_cast<WT>((sum[3] * mulVal));
 
                         sum[0] += diffVal[0];
                         sum[1] += diffVal[1];
@@ -685,12 +738,14 @@ public:
                     {
                         for (int ci = 0; ci < CN; ci++)
                         {
-                            *(dstPtr + ci) = saturate_cast<T>((sum[ci] * mulVal));
+                            *(dstPtr + ci) = saturate_cast<WT>((sum[ci] * mulVal));
                             sum[ci] += diffVal[ci];
                             diffVal[ci] += (diff0[ci] - diff0[ci - CNR1]);
                         }
                     }
                 }
+
+                Work::store(dstRow, dst.ptr<T>(row), rowLen);
             }
         }
     }
@@ -1105,11 +1160,14 @@ public:
         if (radius == 0)
             return;
 
+        typedef StackBlurWork<T> Work;
+        typedef typename Work::WT WT;
+
         const int kernelSize = 2 * radius + 1;
         int widthImg = std::min(range.end, src.cols * CN);
         int widthLen = widthImg - range.start;
 
-        size_t bufSize = 3 * widthLen * sizeof(TBuf) + kernelSize * widthLen * sizeof(T);
+        size_t bufSize = 3 * widthLen * sizeof(TBuf) + kernelSize * widthLen * sizeof(WT);
 
         AutoBuffer<uchar> _buf(bufSize + 16);
         uchar* bufptr = alignPtr(_buf.data(), 16);
@@ -1117,28 +1175,34 @@ public:
         TBuf* sum = (TBuf *)bufptr;
         TBuf* sumIn = sum + widthLen;
         TBuf* sumOut = sumIn + widthLen;
-        T* stack = (T* )(sumOut + widthLen);
+        WT* stack = (WT* )(sumOut + widthLen);
+
+        AutoBuffer<WT> rowBuf(std::is_same<T, WT>::value ? 0 : 2 * widthLen);
+        WT* srcBuf = rowBuf.data();
+        WT* dstBuf = srcBuf + rowBuf.size() / 2;
 
         memset(bufptr, 0, bufSize);
 
         const T* srcPtr =dst.ptr<T>() + range.start;
+        const WT* srcRow = Work::load(srcPtr, srcBuf, widthLen);
 
         for (int i = 0; i <= radius; i++)
         {
             for (int k = 0; k < widthLen; k++)
             {
-                stack[i * widthLen + k] = *(srcPtr + k);
-                sum[k] += (TBuf)*(srcPtr + k) * (i + 1);
-                sumOut[k] += *(srcPtr + k);
+                stack[i * widthLen + k] = srcRow[k];
+                sum[k] += (TBuf)srcRow[k] * (i + 1);
+                sumOut[k] += srcRow[k];
             }
         }
 
         for (int i = 1; i <= radius; i++)
         {
             if (i <= hm) srcPtr += widthElem;
+            srcRow = Work::load(srcPtr, srcBuf, widthLen);
             for (int k = 0; k < widthLen; k++)
             {
-                T tmp = *(srcPtr + k);
+                WT tmp = srcRow[k];
                 stack[(i + radius) * widthLen + k] = tmp;
                 sum[k] += (TBuf)tmp * (radius - i + 1);
                 sumIn[k] += tmp;
@@ -1169,25 +1233,30 @@ public:
                 srcPtr += widthElem;
             }
 
+            srcRow = Work::load(srcPtr, srcBuf, widthLen);
+            WT* dstRow = Work::out(dstPtr, dstBuf);
+
             int k = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            k = opColumn<T, TBuf>(srcPtr, dstPtr, stack, sum, sumIn, sumOut, mulVal, mulValTab, shrValTab,
+            k = opColumn<WT, TBuf>(srcRow, dstRow, stack, sum, sumIn, sumOut, mulVal, mulValTab, shrValTab,
                                       widthLen, stackStart, sp1);
 #endif
 
             for (; k < widthLen; k++)
             {
-                *(dstPtr + k) = static_cast<T>(sum[k] * mulVal);
+                *(dstRow + k) = static_cast<WT>(sum[k] * mulVal);
                 sum[k] -= sumOut[k];
                 sumOut[k] -= stack[stackStart * widthLen + k];
 
-                stack[stackStart * widthLen + k] = *(srcPtr + k);
-                sumIn[k] += *(srcPtr + k);
+                stack[stackStart * widthLen + k] = *(srcRow + k);
+                sumIn[k] += *(srcRow + k);
                 sum[k] += sumIn[k];
 
                 sumOut[k] += stack[sp1 * widthLen + k];
                 sumIn[k] -= stack[sp1 * widthLen + k];
             }
+
+            Work::store(dstRow, dstPtr, widthLen);
 
             dstPtr += widthElem;
             ++sp;
@@ -1248,6 +1317,15 @@ static void stackBlurInteger(const Mat& src, Mat& dst, int radiusW, int radiusH,
     }
 }
 
+template<typename T>
+static void stackBlurFloat(const Mat& src, Mat& dst, int radiusW, int radiusH, int widthElem, int numOfThreads)
+{
+    if (radiusW != 0)
+        parallel_for_(Range(0, src.rows), ParallelStackBlurRow<T, float>(src, dst, radiusW), numOfThreads);
+    if (radiusH != 0)
+        parallel_for_(Range(0, widthElem), ParallelStackBlurColumn<T, float>(dst, dst, radiusH), numOfThreads);
+}
+
 void stackBlur(InputArray _src, OutputArray _dst, Size ksize)
 {
     CV_INSTRUMENT_REGION();
@@ -1300,13 +1378,18 @@ void stackBlur(InputArray _src, OutputArray _dst, Size ksize)
     }
     else if (sdepth == CV_32F)
     {
-        if (ksize.width != 1)
-            parallel_for_(Range(0, src.rows), ParallelStackBlurRow<float, float>(src, dst, radiusW), numOfThreads);
-        if (ksize.height != 1)
-            parallel_for_(Range(0, widthElem), ParallelStackBlurColumn<float, float>(dst, dst, radiusH), numOfThreads);
+        stackBlurFloat<float>(src, dst, radiusW, radiusH, widthElem, numOfThreads);
+    }
+    else if (sdepth == CV_16F)
+    {
+        stackBlurFloat<hfloat>(src, dst, radiusW, radiusH, widthElem, numOfThreads);
+    }
+    else if (sdepth == CV_16BF)
+    {
+        stackBlurFloat<bfloat>(src, dst, radiusW, radiusH, widthElem, numOfThreads);
     }
     else
         CV_Error(Error::StsNotImplemented,
-                   ("Unsupported input format in StackBlur, the supported formats are: CV_8U, CV_16U, CV_16S and CV_32F."));
+                   ("Unsupported input format in StackBlur, the supported formats are: CV_8U, CV_16U, CV_16S, CV_32F, CV_16F and CV_16BF."));
 }
 } //namespace
