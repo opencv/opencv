@@ -60,5 +60,121 @@ TEST(Imgproc_PyrUp, pyrUp_regression_22194)
     }
 }
 
+static Mat pyrDownReference(const Mat& src, Size dsize, int borderType)
+{
+    static const int k[5] = { 1, 4, 6, 4, 1 };
+    const int cn = src.channels();
+    const int depth = src.depth();
+    const int borderTypeNI = borderType & ~BORDER_ISOLATED;
+
+    Mat padded, padded64;
+    cv::copyMakeBorder(src, padded, 2, 4, 2, 4, borderTypeNI);
+    padded.convertTo(padded64, CV_64F);
+
+    Mat horiz(padded64.rows, dsize.width, CV_64FC(cn), Scalar::all(0));
+    for (int y = 0; y < padded64.rows; ++y)
+    {
+        const double* srow = padded64.ptr<double>(y);
+        double* hrow = horiz.ptr<double>(y);
+        for (int dx = 0; dx < dsize.width; ++dx)
+        {
+            const int sx_base = dx * 2;
+            for (int c = 0; c < cn; ++c)
+            {
+                double sum = 0.0;
+                for (int t = 0; t < 5; ++t)
+                    sum += k[t] * srow[(sx_base + t) * cn + c];
+                hrow[dx * cn + c] = sum;
+            }
+        }
+    }
+
+    Mat dst(dsize, src.type());
+    for (int dy = 0; dy < dsize.height; ++dy)
+    {
+        const int sy_base = dy * 2;
+        const int cols_cn = dsize.width * cn;
+        for (int x = 0; x < cols_cn; ++x)
+        {
+            double sum = 0.0;
+            for (int t = 0; t < 5; ++t)
+                sum += k[t] * horiz.ptr<double>(sy_base + t)[x];
+
+            if (depth == CV_8U)
+                dst.ptr<uchar>(dy)[x] = saturate_cast<uchar>((cvRound(sum) + 128) >> 8);
+            else if (depth == CV_16U)
+                dst.ptr<ushort>(dy)[x] = saturate_cast<ushort>((cvRound(sum) + 128) >> 8);
+            else if (depth == CV_16S)
+                dst.ptr<short>(dy)[x] = saturate_cast<short>((cvRound(sum) + 128) >> 8);
+            else if (depth == CV_32F)
+                dst.ptr<float>(dy)[x] = static_cast<float>(sum / 256.0);
+            else
+                dst.ptr<double>(dy)[x] = sum / 256.0;
+        }
+    }
+    return dst;
+}
+
+TEST(Imgproc_PyrDown, right_border_tail_32f)
+{
+    Mat src = (Mat_<float>(1, 4) << 0.f, 1.f, 2.f, 3.f);
+    Mat dst;
+    pyrDown(src, dst, Size(3, 1), BORDER_REPLICATE);
+
+    Mat expected = (Mat_<float>(1, 3) << 0.375f, 1.9375f, 2.9375f);
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 1e-6);
+}
+
+typedef testing::TestWithParam<tuple<Size, perf::MatType, int> > Imgproc_PyrDown_right_border;
+
+TEST_P(Imgproc_PyrDown_right_border, even_half_plus_one)
+{
+    const Size ssize = get<0>(GetParam());
+    const int type = get<1>(GetParam());
+    const int border = get<2>(GetParam());
+    const Size dsize(ssize.width / 2 + 1, ssize.height / 2 + 1);
+
+    Mat src(ssize, type);
+    theRNG().fill(src, RNG::UNIFORM, Scalar::all(0), Scalar::all(200));
+
+    Mat dst;
+    pyrDown(src, dst, dsize, border);
+    Mat expected = pyrDownReference(src, dsize, border);
+    const double tol = (CV_MAT_DEPTH(type) >= CV_32F) ? 1e-4 : 0.0;
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), tol);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgproc_PyrDown_right_border, testing::Combine(
+    testing::Values(Size(4, 4), Size(10, 10), Size(14, 14), Size(16, 16)),
+    testing::Values(CV_8UC1, CV_8UC3, CV_16UC3, CV_32FC1, CV_32FC3, CV_64FC1),
+    testing::Values(static_cast<int>(BORDER_REFLECT_101), static_cast<int>(BORDER_REPLICATE), static_cast<int>(BORDER_REFLECT))
+));
+
+TEST(Imgproc_PyrDown, border_isolated)
+{
+    Mat parent(24, 24, CV_16UC3, Scalar::all(100));
+    const Rect roi(2, 3, 14, 14);
+    RNG rng(2026);
+    rng.fill(parent(roi), RNG::UNIFORM, Scalar::all(0), Scalar::all(50));
+
+    Mat isolated_clone = parent(roi).clone();
+    const Size dsize(isolated_clone.cols / 2 + 1, isolated_clone.rows / 2 + 1);
+
+    Mat dst_clone, dst_submat;
+    pyrDown(isolated_clone, dst_clone, dsize, BORDER_DEFAULT);
+    pyrDown(parent(roi), dst_submat, dsize, BORDER_DEFAULT | BORDER_ISOLATED);
+    EXPECT_EQ(0.0, cvtest::norm(dst_submat, dst_clone, NORM_INF));
+
+    UMat u_parent, u_dst_clone, u_dst_submat;
+    parent.copyTo(u_parent);
+    pyrDown(isolated_clone, u_dst_clone, dsize, BORDER_DEFAULT);
+    pyrDown(u_parent(roi), u_dst_submat, dsize, BORDER_DEFAULT | BORDER_ISOLATED);
+    EXPECT_EQ(0.0, cvtest::norm(u_dst_submat.getMat(ACCESS_READ), u_dst_clone.getMat(ACCESS_READ), NORM_INF));
+    EXPECT_LE(cvtest::norm(u_dst_clone.getMat(ACCESS_READ), dst_clone, NORM_INF), 1.0);
+
+    Mat tmp;
+    EXPECT_THROW(pyrDown(isolated_clone, tmp, dsize, BORDER_CONSTANT | BORDER_ISOLATED), cv::Exception);
+}
+
 }
 }
