@@ -146,6 +146,36 @@ Mat blobFromImagesWithParams(InputArrayOfArrays images, const Image2BlobParams& 
     return blob;
 }
 
+// Portable fallback for depth pairs without a dedicated SIMD kernel: de-interleaves `rows`
+// rows of an HWC image into the NCHW planes dst[0..nch) (each already offset to the first
+// row) and, for float blobs, applies (x - mean) * scale. mean/scale are indexed by source
+// channel (the caller has already swapped them together with dst for R/B swapping).
+template<typename Tinp, typename Tout>
+static void blobFromRowsGeneric(const Tinp* src, size_t srcstep1, Tout* const dst[4],
+                                int rows, int cols, int nch,
+                                const float mean[4], const float scale[4])
+{
+    for (int y = 0; y < rows; ++y)
+    {
+        const Tinp* s = src + (size_t)y * srcstep1;
+        for (int c = 0; c < nch; ++c)
+        {
+            Tout* d = dst[c] + (size_t)y * cols;
+            if constexpr (std::is_same<Tout, float>::value)
+            {
+                const float m = mean[c], sc = scale[c];
+                for (int x = 0; x < cols; ++x)
+                    d[x] = ((float)s[(size_t)x * nch + c] - m) * sc;
+            }
+            else
+            {
+                for (int x = 0; x < cols; ++x)
+                    d[x] = (Tout)s[(size_t)x * nch + c];
+            }
+        }
+    }
+}
+
 template<typename Tinp, typename Tout>
 void blobFromImagesNCHWImpl(const std::vector<Mat>& images, Mat& blob_, const Image2BlobParams& param)
 {
@@ -154,166 +184,72 @@ void blobFromImagesNCHWImpl(const std::vector<Mat>& images, Mat& blob_, const Im
     int wh = w * h;
     int nch = images[0].channels();
     CV_Assert(nch == 1 || nch == 3 || nch == 4);
-    int sz[] = { (int)images.size(), nch, h, w};
-    blob_.create(4, sz, param.ddepth);
-    const bool useFusedKernel =
-            (std::is_same<Tinp, float>::value && std::is_same<Tout, float>::value) ||
-            (std::is_same<Tinp, uint8_t>::value && std::is_same<Tout, float>::value) ||
-            (std::is_same<Tinp, uint8_t>::value && std::is_same<Tout, uint8_t>::value);
-
-    if (useFusedKernel)
-    {
-        for (size_t k = 0; k < images.size(); ++k)
-        {
-            CV_Assert(images[k].depth() == images[0].depth());
-            CV_Assert(images[k].channels() == images[0].channels());
-            CV_Assert(images[k].size() == images[0].size());
-        }
-
-        float mean[4] = {
-            (float)param.mean[0], (float)param.mean[1],
-            (float)param.mean[2], (float)param.mean[3]
-        };
-        float scale[4] = {
-            (float)param.scalefactor[0], (float)param.scalefactor[1],
-            (float)param.scalefactor[2], (float)param.scalefactor[3]
-        };
-        const bool swapRB = param.swapRB && nch > 2;
-        if (swapRB)
-        {
-            std::swap(mean[0], mean[2]);
-            std::swap(scale[0], scale[2]);
-        }
-
-        // Rows of all images form one range. A stripe may cover the end of one image and the
-        // start of the next; each piece is one kernel call on contiguous rows of one image.
-        const int nimages = (int)images.size();
-        parallel_for_(Range(0, nimages * h), [&](const Range& r)
-        {
-            for (int row = r.start; row < r.end; )
-            {
-                const int k = row / h, y = row - k * h;
-                const int rows = std::min(r.end - row, h - y);
-                const Mat& image = images[k];
-
-                Tout* p = blob_.ptr<Tout>() + (size_t)k * nch * wh + (size_t)y * w;
-                Tout* dst[4] = { p, p + wh, p + 2 * wh, p + 3 * wh };
-                if (swapRB)
-                    std::swap(dst[0], dst[2]);
-
-                if (std::is_same<Tinp, float>::value)
-                {
-                    blobFromImage32FDispatch(reinterpret_cast<const float*>(image.ptr<Tinp>(y)),
-                            image.step1(), reinterpret_cast<float* const*>(dst),
-                            rows, w, nch, mean, scale);
-                }
-                else if (std::is_same<Tout, float>::value)
-                {
-                    blobFromImage8U32FDispatch(reinterpret_cast<const uchar*>(image.ptr<Tinp>(y)),
-                            image.step, reinterpret_cast<float* const*>(dst),
-                            rows, w, nch, mean, scale);
-                }
-                else
-                {
-                    // uint8 -> uint8 is a plain channel split into the blob planes
-                    // (mean/scale are rejected for CV_8U blobs by the caller).
-                    Mat planes[4];
-                    for (int c = 0; c < nch; ++c)
-                        planes[c] = Mat(rows, w, CV_8U, dst[c]);
-                    split(image.rowRange(y, y + rows), planes);
-                }
-                row += rows;
-            }
-        }, (double)nimages * wh / (1 << 16));
-        return;
-    }
-
     for (size_t k = 0; k < images.size(); ++k)
     {
         CV_Assert(images[k].depth() == images[0].depth());
         CV_Assert(images[k].channels() == images[0].channels());
         CV_Assert(images[k].size() == images[0].size());
+    }
+    int sz[] = { (int)images.size(), nch, h, w};
+    blob_.create(4, sz, param.ddepth);
 
-        Tout* p_blob = blob_.ptr<Tout>() + k * nch * wh;
-        Tout* p_blob_r = p_blob;
-        Tout* p_blob_g = p_blob + wh;
-        Tout* p_blob_b = p_blob + 2 * wh;
-        Tout* p_blob_a = p_blob + 3 * wh;
+    float mean[4] = {
+        (float)param.mean[0], (float)param.mean[1],
+        (float)param.mean[2], (float)param.mean[3]
+    };
+    float scale[4] = {
+        (float)param.scalefactor[0], (float)param.scalefactor[1],
+        (float)param.scalefactor[2], (float)param.scalefactor[3]
+    };
+    const bool swapRB = param.swapRB && nch > 2;
+    if (swapRB)
+    {
+        std::swap(mean[0], mean[2]);
+        std::swap(scale[0], scale[2]);
+    }
 
-        if (param.swapRB && nch > 2)
-            std::swap(p_blob_r, p_blob_b);
-
-        if (nch == 1)
+    // Rows of all images form one range. A stripe may cover the end of one image and the
+    // start of the next; each piece is one kernel call on contiguous rows of one image.
+    const int nimages = (int)images.size();
+    parallel_for_(Range(0, nimages * h), [&](const Range& r)
+    {
+        for (int row = r.start; row < r.end; )
         {
-            for (size_t i = 0; i < (size_t)h; ++i)
+            const int k = row / h, y = row - k * h;
+            const int rows = std::min(r.end - row, h - y);
+            const Mat& image = images[k];
+
+            Tout* p = blob_.ptr<Tout>() + (size_t)k * nch * wh + (size_t)y * w;
+            Tout* dst[4] = { p, p + wh, p + 2 * wh, p + 3 * wh };
+            if (swapRB)
+                std::swap(dst[0], dst[2]);
+
+            if constexpr (std::is_same<Tinp, float>::value && std::is_same<Tout, float>::value)
             {
-                const Tinp* p_img_row = images[k].ptr<Tinp>(i);
-                for (size_t j = 0; j < (size_t)w; ++j)
-                {
-                    p_blob[i * w + j] = p_img_row[j];
-                }
+                blobFromImage32FDispatch(image.ptr<float>(y), image.step1(), dst,
+                                         rows, w, nch, mean, scale);
             }
-        }
-        else if (nch == 3)
-        {
-            if (images[k].isContinuous())
+            else if constexpr (std::is_same<Tinp, uint8_t>::value && std::is_same<Tout, float>::value)
             {
-                const Tinp* p_src = images[k].ptr<Tinp>();
-                size_t i = 0;
-                for (; i < (size_t)wh; ++i)
-                {
-                    p_blob_r[i] = p_src[i * 3    ];
-                    p_blob_g[i] = p_src[i * 3 + 1];
-                    p_blob_b[i] = p_src[i * 3 + 2];
-                }
+                blobFromImage8U32FDispatch(image.ptr<uchar>(y), image.step, dst,
+                                           rows, w, nch, mean, scale);
+            }
+            else if constexpr (std::is_same<Tinp, uint8_t>::value && std::is_same<Tout, uint8_t>::value)
+            {
+                // uint8 -> uint8 is a plain channel split into the blob planes.
+                Mat planes[4];
+                for (int c = 0; c < nch; ++c)
+                    planes[c] = Mat(rows, w, CV_8U, dst[c]);
+                split(image.rowRange(y, y + rows), planes);
             }
             else
             {
-                for (size_t i = 0; i < (size_t)h; ++i)
-                {
-                    const Tinp* p_img_row = images[k].ptr<Tinp>(i);
-                    for (size_t j = 0; j < (size_t)w; ++j)
-                    {
-                        p_blob_r[i * w + j] = p_img_row[j * 3    ];
-                        p_blob_g[i * w + j] = p_img_row[j * 3 + 1];
-                        p_blob_b[i * w + j] = p_img_row[j * 3 + 2];
-                    }
-                }
+                blobFromRowsGeneric<Tinp, Tout>(image.ptr<Tinp>(y), image.step1(), dst,
+                                                rows, w, nch, mean, scale);
             }
+            row += rows;
         }
-        else // if (nch == 4)
-        {
-            for (size_t i = 0; i < (size_t)h; ++i)
-            {
-                const Tinp* p_img_row = images[k].ptr<Tinp>(i);
-                for (size_t j = 0; j < (size_t)w; ++j)
-                {
-                    p_blob_r[i * w + j] = p_img_row[j * 4    ];
-                    p_blob_g[i * w + j] = p_img_row[j * 4 + 1];
-                    p_blob_b[i * w + j] = p_img_row[j * 4 + 2];
-                    p_blob_a[i * w + j] = p_img_row[j * 4 + 3];
-                }
-            }
-        }
-    }
-
-    if (param.mean == Scalar() && param.scalefactor == Scalar::all(1.0))
-        return;
-    CV_CheckTypeEQ(param.ddepth, CV_32F, "Scaling and mean subtraction is supported only for CV_32F blob depth");
-
-    for (size_t k = 0; k < images.size(); ++k)
-    {
-        for (size_t ch = 0; ch < nch; ++ch)
-        {
-            float cur_mean = param.mean[ch];
-            float cur_scale = param.scalefactor[ch];
-            Tout* p_blob = blob_.ptr<Tout>() + k * nch * wh + ch * wh;
-            for (size_t i = 0; i < wh; ++i)
-            {
-                p_blob[i] = (p_blob[i] - cur_mean) * cur_scale;
-            }
-        }
-    }
+    }, (double)nimages * wh / (1 << 16));
 }
 
 template<typename Tout>
