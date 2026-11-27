@@ -1,4 +1,5 @@
 #include "precomp.hpp"
+#include "phasecorr_internal.hpp"
 #include <cmath>
 
 namespace {
@@ -46,31 +47,6 @@ cv::Mat calculateCrossPowerSpectrum(const cv::Mat& dft1, const cv::Mat& dft2)
     else
         CV_Error(cv::Error::StsNotImplemented, "Only CV_32FC2 and CV_64FC2 types are supported");
     return cps;
-}
-
-void fftshift(cv::Mat& out)
-{
-    const int cx = out.cols / 2;
-    const int cy = out.rows / 2;
-
-    const int left = out.cols - cx;
-    const int top = out.rows - cy;
-
-    cv::Mat shifted(out.size(), out.type());
-
-    out(cv::Rect(0, 0, left, top))
-        .copyTo(shifted(cv::Rect(cx, cy, left, top)));
-
-    out(cv::Rect(left, 0, cx, top))
-        .copyTo(shifted(cv::Rect(0, cy, cx, top)));
-
-    out(cv::Rect(0, top, left, cy))
-        .copyTo(shifted(cv::Rect(cx, 0, left, cy)));
-
-    out(cv::Rect(left, top, cx, cy))
-        .copyTo(shifted(cv::Rect(0, 0, cx, cy)));
-
-    shifted.copyTo(out);
 }
 
 bool isOutOfBounds(const cv::Point2i& peak, const cv::Mat& mat, int size)
@@ -148,7 +124,7 @@ cv::Point2d
     // compute the phase correlation landscape L3
     Mat L3 = calculateCrossPowerSpectrum(image1, image2);
     dft(L3, L3, DFT_INVERSE | DFT_SCALE | DFT_REAL_OUTPUT);
-    fftshift(L3);
+    cv::fftShift(L3);
     Point2d L3mid(L3.cols / 2, L3.rows / 2);
 
     // calculate the maximum correlation location
