@@ -116,12 +116,11 @@ protected:
             DistanceType dist = distance( validDescriptors.ptr<ValueType>(y), calcDescriptors.ptr<ValueType>(y), dimension );
             if (dist == 0)
                 exact_count++;
+            // A NaN distance compares false, so test for the passing case.
+            if (!(dist <= maxDist))
+                failed_count++;
             if( dist > curMaxDist )
-            {
-                if (dist > maxDist)
-                    failed_count++;
                 curMaxDist = dist;
-            }
 #if 0
             if (dist > 0)
             {
@@ -136,7 +135,7 @@ protected:
         float failed_percents = (100 * (float)failed_count / validDescriptors.rows);
         std::stringstream ss;
         ss << "Exact count (dist == 0): " << exact_count << " (" << (int)exact_percents << "%)" << std::endl
-                << "Failed count (dist > " << maxDist << "): " << failed_count << " (" << (int)failed_percents << "%)" << std::endl
+                << "Failed count (dist > " << maxDist << " or NaN): " << failed_count << " (" << (int)failed_percents << "%)" << std::endl
                 << "Max distance between valid and computed descriptors (" << validDescriptors.size() << "): " << curMaxDist;
         EXPECT_LE(failed_percents, 20.0f);
         std::cout << ss.str() << std::endl;
