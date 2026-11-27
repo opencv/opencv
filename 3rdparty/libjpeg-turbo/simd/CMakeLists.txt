@@ -2,7 +2,7 @@ macro(simd_fail message)
   if(REQUIRE_SIMD)
     message(FATAL_ERROR "${message}.")
   else()
-    message(STATUS "${message}.  Performance will suffer.")
+    message(STATUS "libjpeg-turbo(SIMD): ${message}.  Performance will suffer.")
     set(WITH_SIMD 0)
     set(WITH_SIMD 0 PARENT_SCOPE)
     set(SIMD_ARCHITECTURE NONE PARENT_SCOPE)
@@ -10,8 +10,7 @@ macro(simd_fail message)
 endmacro()
 
 
-option(WITH_SIMDE "Use SIMD Everywhere or Emscripten to translate Arm/Neon intrinsics into SIMD intrinsics for other platforms (Experimental)"
-  FALSE)
+set(WITH_SIMDE OFF)
 
 
 ###############################################################################
@@ -344,7 +343,7 @@ endif()
 # and 11.
 if(NOT HAVE_VLD1_S16_X3 OR NOT HAVE_VLD1_U16_X2 OR NOT HAVE_VLD1Q_U8_X4 OR
   (CMAKE_COMPILER_IS_GNUCC AND CMAKE_C_COMPILER_VERSION VERSION_LESS 12.0.0))
-  message(WARNING "The compiler's Arm Neon intrinsics implementation is incomplete or suboptimal.  Performance will suffer.  Use GCC 12 or later or Clang for full performance.")
+  message(STATUS "libjpeg-turbo(SIMD): The compiler's Arm Neon intrinsics implementation is incomplete or suboptimal.  Performance will suffer.  Use GCC 12 or later or Clang for full performance.")
 endif()
 
 endif() # WITH_SIMDE

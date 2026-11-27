@@ -1,13 +1,5 @@
 project(${JPEG_LIBRARY} C)
 
-macro(boolean_number var)
-  if(${var})
-    set(${var} 1 ${ARGN})
-  else()
-    set(${var} 0 ${ARGN})
-  endif()
-endmacro()
-
 ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter -Wsign-compare -Wshorten-64-to-32 -Wimplicit-fallthrough)
 if(APPLE)
   ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-variable) # NEON flags are not used on Mac
@@ -201,15 +193,8 @@ check_type_size("unsigned long" UNSIGNED_LONG)
 
 if(ENABLE_LIBJPEG_TURBO_SIMD)
   add_subdirectory(simd)
-  if(NEON_INTRINSICS)
-    add_definitions(-DNEON_INTRINSICS)
-  endif()
 else()
   set(WITH_SIMD 0)
-  set(SIMD_ARCHITECTURE NONE)
-endif()
-
-if(NOT WITH_SIMD)
   set(SIMD_ARCHITECTURE NONE)
 endif()
 
