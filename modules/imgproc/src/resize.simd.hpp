@@ -2135,11 +2135,6 @@ static inline v_uint32 area_fast_round_div16(const v_uint32& sum)
     return v_shr<4>(v_add(v_add(sum, vx_setall_u32(7)), odd));
 }
 
-static inline v_uint32 area_fast_round_div4(const v_uint32& sum)
-{
-    return v_shr<2>(v_add(sum, vx_setall_u32(2)));
-}
-
 static inline void area_fast_store_bgra(uchar* dst, v_uint32 sb, v_uint32 sg, v_uint32 sr, v_uint32 sa)
 {
     v_uint32 px = v_add(v_add(area_fast_round_div16(sb),
@@ -2683,34 +2678,6 @@ public:
         }
         else if (cn == 3)
         {
-#if CV_SIMD_WIDTH > 64
-            for ( ; dx <= w - 3*VTraits<v_uint8>::vlanes(); dx += 3*VTraits<v_uint8>::vlanes(), S0 += 6*VTraits<v_uint8>::vlanes(), S1 += 6*VTraits<v_uint8>::vlanes(), D += 3*VTraits<v_uint8>::vlanes())
-            {
-                v_uint16 b0, g0, r0, b1, g1, r1;
-                v_load_deinterleave(S0, b0, g0, r0);
-                v_load_deinterleave(S1, b1, g1, r1);
-                v_uint32 masklow = vx_setall_u32(0x00ff);
-                v_uint32 bl = v_add(v_add(v_shr<16>(v_reinterpret_as_u32(b0)), v_and(v_reinterpret_as_u32(b0), masklow)),
-                                    v_add(v_shr<16>(v_reinterpret_as_u32(b1)), v_and(v_reinterpret_as_u32(b1), masklow)));
-                v_uint32 gl = v_add(v_add(v_shr<16>(v_reinterpret_as_u32(g0)), v_and(v_reinterpret_as_u32(g0), masklow)),
-                                    v_add(v_shr<16>(v_reinterpret_as_u32(g1)), v_and(v_reinterpret_as_u32(g1), masklow)));
-                v_uint32 rl = v_add(v_add(v_shr<16>(v_reinterpret_as_u32(r0)), v_and(v_reinterpret_as_u32(r0), masklow)),
-                                    v_add(v_shr<16>(v_reinterpret_as_u32(r1)), v_and(v_reinterpret_as_u32(r1), masklow)));
-                v_load_deinterleave(S0 + 3*VTraits<v_uint16>::vlanes(), b0, g0, r0);
-                v_load_deinterleave(S1 + 3*VTraits<v_uint16>::vlanes(), b1, g1, r1);
-                v_uint32 bh = v_add(v_add(v_shr<16>(v_reinterpret_as_u32(b0)), v_and(v_reinterpret_as_u32(b0), masklow)),
-                                    v_add(v_shr<16>(v_reinterpret_as_u32(b1)), v_and(v_reinterpret_as_u32(b1), masklow)));
-                v_uint32 gh = v_add(v_add(v_shr<16>(v_reinterpret_as_u32(g0)), v_and(v_reinterpret_as_u32(g0), masklow)),
-                                    v_add(v_shr<16>(v_reinterpret_as_u32(g1)), v_and(v_reinterpret_as_u32(g1), masklow)));
-                v_uint32 rh = v_add(v_add(v_shr<16>(v_reinterpret_as_u32(r0)), v_and(v_reinterpret_as_u32(r0), masklow)),
-                                    v_add(v_shr<16>(v_reinterpret_as_u32(r1)), v_and(v_reinterpret_as_u32(r1), masklow)));
-                area_fast_detail::area_fast_store_rgb_rounded(D, area_fast_detail::area_fast_round_div4(bl), area_fast_detail::area_fast_round_div4(gl),
-                                                              area_fast_detail::area_fast_round_div4(rl), VTraits<v_uint32>::vlanes());
-                area_fast_detail::area_fast_store_rgb_rounded(D + 3 * VTraits<v_uint32>::vlanes(), area_fast_detail::area_fast_round_div4(bh),
-                                                              area_fast_detail::area_fast_round_div4(gh), area_fast_detail::area_fast_round_div4(rh),
-                                                              VTraits<v_uint32>::vlanes());
-            }
-#else
             for ( ; dx <= w - 3*VTraits<v_uint8>::vlanes(); dx += 3*VTraits<v_uint8>::vlanes(), S0 += 6*VTraits<v_uint8>::vlanes(), S1 += 6*VTraits<v_uint8>::vlanes(), D += 3*VTraits<v_uint8>::vlanes())
             {
                 v_uint16 t0, t1, t2, t3, t4, t5;
@@ -2757,7 +2724,6 @@ public:
 #endif
                 v_store_interleave(D, v_rshr_pack<2>(bl, bh), v_rshr_pack<2>(gl, gh), v_rshr_pack<2>(rl, rh));
             }
-#endif
         }
         else
         {
