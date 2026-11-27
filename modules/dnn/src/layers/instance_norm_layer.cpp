@@ -5,6 +5,7 @@
 #include "../precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include "./cpu_kernels/fast_norm.hpp"
+#include "layers_common.hpp"
 #include <opencv2/core/hal/intrin.hpp>
 
 // CANN backend
@@ -48,6 +49,12 @@ public:
             //    backendId == DNN_BACKEND_CANN; // not supported due to 1d mat shape issue
     }
 
+    void getTypes(const std::vector<MatType>& inputs, const int requiredOutputs, const int requiredInternals,
+                  std::vector<MatType>& outputs, std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        getTypesWithHalf(inputs, requiredOutputs, requiredInternals, outputs, internals);
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
@@ -86,7 +93,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16F)
+        if (preferableTarget == DNN_TARGET_OPENCL_FP16 && inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;

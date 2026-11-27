@@ -330,6 +330,46 @@ public:
     }
 #endif
 
+    // Global pooling in FP16/BF16 for plain and BLOCK layouts: every lane is reduced over
+    // the spatial plane with a float accumulator. A plain tensor is the C0 == 1 case.
+    template <typename _Tp>
+    void globalPoolHalf(const Mat& src, Mat& dst)
+    {
+        CV_Assert(src.isContinuous() && dst.isContinuous());
+        CV_Assert(type == MAX || type == AVE || type == SUM);
+        if (dst.total() == 0)
+            return;
+        MatShape s = src.shape();
+        CV_Assert(s.dims >= 3);
+        const int C0 = s.layout == DATA_LAYOUT_BLOCK ? s[s.dims - 1] : 1;
+        const int NC = s[0]*s[1];
+        const size_t plane = src.total() / ((size_t)NC*C0);
+        CV_Assert(plane > 0 && dst.total() == (size_t)NC*C0);
+
+        const _Tp* sp = src.ptr<_Tp>();
+        _Tp* dp = dst.ptr<_Tp>();
+        const bool isMax = (type == MAX);
+        const float norm = type == AVE ? 1.f/(float)plane : 1.f;
+
+        parallel_for_(Range(0, NC*C0), [&](const Range& r) {
+            for (int i = r.start; i < r.end; i++) {
+                const int nc = i / C0, c0 = i - nc*C0;
+                const _Tp* p = sp + (size_t)nc*plane*C0 + c0;
+                if (isMax) {
+                    float m = (float)p[0];
+                    for (size_t j = 1; j < plane; j++)
+                        m = std::max(m, (float)p[j*C0]);
+                    dp[i] = _Tp(m);
+                } else {
+                    float acc = 0.f;
+                    for (size_t j = 0; j < plane; j++)
+                        acc += (float)p[j*C0];
+                    dp[i] = _Tp(acc*norm);
+                }
+            }
+        });
+    }
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
@@ -340,7 +380,13 @@ public:
             std::vector<Mat> inputs, outputs;
             inputs_arr.getMatVector(inputs);
             outputs_arr.getMatVector(outputs);
-            globalPoolBlock(inputs[0], outputs[0]);
+            const int d = inputs[0].depth();
+            if (d == CV_16F)
+                globalPoolHalf<hfloat>(inputs[0], outputs[0]);
+            else if (d == CV_16BF)
+                globalPoolHalf<bfloat>(inputs[0], outputs[0]);
+            else
+                globalPoolBlock(inputs[0], outputs[0]);
             return;
         }
 
@@ -349,7 +395,19 @@ public:
             CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                        forward_ocl(inputs_arr, outputs_arr, internals_arr))
         }
-        if (inputs_arr.depth() == CV_16F)
+        const int inpdepth = inputs_arr.depth();
+        if (globalPooling && (inpdepth == CV_16F || inpdepth == CV_16BF))
+        {
+            std::vector<Mat> inps, outs;
+            inputs_arr.getMatVector(inps);
+            outputs_arr.getMatVector(outs);
+            if (inpdepth == CV_16F)
+                globalPoolHalf<hfloat>(inps[0], outs[0]);
+            else
+                globalPoolHalf<bfloat>(inps[0], outs[0]);
+            return;
+        }
+        if (inpdepth == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -1373,8 +1431,9 @@ public:
         CV_Assert(inputs.size());
         if (preferableTarget == DNN_TARGET_OPENCL_FP16)
             CV_CheckType(inputs[0], inputs[0] == CV_16F, "");
-        else
-            CV_CheckType(inputs[0], inputs[0] == CV_32F, "");
+        else  // global half pooling is handled by globalPoolHalf() in forward()
+            CV_CheckType(inputs[0], inputs[0] == CV_32F ||
+                         (globalPooling && (inputs[0] == CV_16F || inputs[0] == CV_16BF)), "");
 
         outputs.push_back(inputs[0]);
         if (type == MAX && requiredOutputs == 2) {

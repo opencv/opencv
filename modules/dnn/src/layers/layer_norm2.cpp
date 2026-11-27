@@ -80,6 +80,12 @@ public:
     }
 #endif
 
+    void getTypes(const std::vector<MatType>& inputs, const int requiredOutputs, const int requiredInternals,
+                  std::vector<MatType>& outputs, std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        getTypesWithHalf(inputs, requiredOutputs, requiredInternals, outputs, internals);
+    }
+
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,
                                  std::vector<MatShape> &outputs,

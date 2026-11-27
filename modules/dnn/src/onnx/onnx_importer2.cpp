@@ -817,7 +817,7 @@ Net ONNXImporter2::parseModel()
         failed.getImpl()->importFailure = sstrm.str();
         return failed;
     }
-    netimpl->prepareForInference();
+    netimpl->prepareForInference(true);
     // ************ uncomment for debugging **********
     //net.dumpToStream(std::cout);
     return net;

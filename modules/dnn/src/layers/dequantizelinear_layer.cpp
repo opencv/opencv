@@ -539,10 +539,11 @@ public:
         return true;
     }
 
-    int getOutType() const
+    // ONNX gives y the type of x_scale. Following enableFP16 instead wrote half even for a
+    // float scale, and E5M2 values (up to 57344) times the scale overflowed it to inf.
+    static int getOutType(int sctype)
     {
-        Net::Impl* netimpl_ = getNetImpl(this);
-        return netimpl_->enableFP16 ? CV_16F : CV_32F;
+        return sctype == CV_16F ? CV_16F : CV_32F;
     }
 
     void getTypes(const std::vector<MatType>& inputs,
@@ -559,7 +560,7 @@ public:
                                      (inputs[2] == CV_16F || inputs[2] == CV_32F);
             CV_Assert(inputs[0] == inputs[2] || wideFp8Pair);
         }
-        outputs.assign(1, getOutType());
+        outputs.assign(1, getOutType(inputs[1]));
     }
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
@@ -579,7 +580,7 @@ public:
         Mat inp = inputs_arr.getMat(0);
         Mat scale = inputs_arr.getMat(1);
         Mat zeropoint;
-        int outtype = getOutType();
+        int outtype = getOutType(scale.type());
         MatShape inpshape = inp.shape();
 
         if (ninputs >= 3) {

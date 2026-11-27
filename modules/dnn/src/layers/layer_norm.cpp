@@ -58,6 +58,12 @@ public:
                (backendId == DNN_BACKEND_CANN && axis != -1); // axis=-1 not supported due to 1d mat shape problem
     }
 
+    void getTypes(const std::vector<MatType>& inputs, const int requiredOutputs, const int requiredInternals,
+                  std::vector<MatType>& outputs, std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        getTypesWithHalf(inputs, requiredOutputs, requiredInternals, outputs, internals);
+    }
+
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,
                                  std::vector<MatShape> &outputs,
@@ -128,7 +134,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16F)
+        if (preferableTarget == DNN_TARGET_OPENCL_FP16 && inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;

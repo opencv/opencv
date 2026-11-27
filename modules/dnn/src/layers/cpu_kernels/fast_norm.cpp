@@ -119,8 +119,10 @@ void fastNorm(const Mat &input, Mat &output, float epsilon, size_t normalized_ax
 
 // Templated on T so CV_64F gets a genuine double accumulator, not a narrowed float one.
 template<typename T>
-static void fastNormMeanInvStdDevImpl(const Mat& input, Mat& mean, Mat& invStdDev, T epsilon, size_t normalized_axis)
+static void fastNormMeanInvStdDevImpl(const Mat& input, Mat& mean, Mat& invStdDev, typename DataType<T>::work_type epsilon, size_t normalized_axis)
 {
+    typedef typename DataType<T>::work_type WT;
+
     CV_Assert(input.isContinuous() && mean.isContinuous() && invStdDev.isContinuous());
 
     const auto input_shape = shape(input);
@@ -128,7 +130,7 @@ static void fastNormMeanInvStdDevImpl(const Mat& input, Mat& mean, Mat& invStdDe
 
     const size_t loops = static_cast<size_t>(total(input_shape, 0, static_cast<int>(normalized_axis)));
     const size_t norm_size = static_cast<size_t>(total(input_shape, static_cast<int>(normalized_axis)));
-    const T inv_norm_size = (T)1 / (T)norm_size;
+    const WT inv_norm_size = (WT)1 / (WT)norm_size;
 
     CV_CheckEQ((size_t)mean.total(), loops, "fastNormMeanInvStdDev: mean output size mismatch");
     CV_CheckEQ((size_t)invStdDev.total(), loops, "fastNormMeanInvStdDev: invStdDev output size mismatch");
@@ -140,7 +142,7 @@ static void fastNormMeanInvStdDevImpl(const Mat& input, Mat& mean, Mat& invStdDe
         for (int i = r.start; i < r.end; ++i)
         {
             const T* x = input_data + norm_size * (size_t)i;
-            T m = 0, mean_square = 0;
+            WT m = 0, mean_square = 0;
             bool simd_done = false;
             if constexpr (std::is_same<T, float>::value) {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -151,16 +153,16 @@ static void fastNormMeanInvStdDevImpl(const Mat& input, Mat& mean, Mat& invStdDe
             if (!simd_done) {
                 for (size_t j = 0; j < norm_size; ++j)
                 {
-                    T v = x[j];
+                    WT v = (WT)x[j];
                     m += v;
                     mean_square += v * v;
                 }
             }
             m *= inv_norm_size;
-            const T var = std::max((T)0, mean_square * inv_norm_size - m * m);
-            const T stdev = std::sqrt(var + epsilon);
-            mean_data[i] = m;
-            invstd_data[i] = (T)1 / stdev;
+            const WT var = std::max((WT)0, mean_square * inv_norm_size - m * m);
+            const WT stdev = std::sqrt(var + epsilon);
+            mean_data[i] = saturate_cast<T>(m);
+            invstd_data[i] = saturate_cast<T>((WT)1 / stdev);
         }
     };
 
@@ -171,25 +173,32 @@ static void fastNormMeanInvStdDevImpl(const Mat& input, Mat& mean, Mat& invStdDe
 void fastNormMeanInvStdDev(const Mat& input, Mat& mean, Mat& invStdDev, float epsilon, size_t normalized_axis)
 {
     int type = input.type();
-    CV_CheckType(type, type == CV_32F || type == CV_64F, "fastNormMeanInvStdDev: unsupported type");
+    CV_CheckType(type, type == CV_32F || type == CV_64F || type == CV_16F || type == CV_16BF,
+                 "fastNormMeanInvStdDev: unsupported type");
     CV_CheckTypeEQ(type, mean.type(), "fastNormMeanInvStdDev: mean must match input type");
     CV_CheckTypeEQ(type, invStdDev.type(), "fastNormMeanInvStdDev: invStdDev must match input type");
 
     if (type == CV_64F)
         fastNormMeanInvStdDevImpl<double>(input, mean, invStdDev, (double)epsilon, normalized_axis);
+    else if (type == CV_16F)
+        fastNormMeanInvStdDevImpl<hfloat>(input, mean, invStdDev, epsilon, normalized_axis);
+    else if (type == CV_16BF)
+        fastNormMeanInvStdDevImpl<bfloat>(input, mean, invStdDev, epsilon, normalized_axis);
     else
         fastNormMeanInvStdDevImpl<float>(input, mean, invStdDev, epsilon, normalized_axis);
 }
 
 // RMSNorm (recenter=false) and LayerNorm/LayerNorm2's no-bias path (recenter=true).
 template<typename T>
-static void fastNormImpl(const Mat &input, const Mat &scale, Mat &output, T epsilon, size_t normalized_axis, bool recenter) {
+static void fastNormImpl(const Mat &input, const Mat &scale, Mat &output, typename DataType<T>::work_type epsilon, size_t normalized_axis, bool recenter) {
+    typedef typename DataType<T>::work_type WT;
+
     const auto input_shape = shape(input);
     CV_CheckLT(normalized_axis, input_shape.size(), "fastNorm: axis out of range");
 
     size_t loops = static_cast<size_t>(total(input_shape, 0, static_cast<int>(normalized_axis))),
            norm_size = static_cast<size_t>(total(input_shape, static_cast<int>(normalized_axis)));
-    T inv_norm_size = (T)1 / (T)norm_size;
+    WT inv_norm_size = (WT)1 / (WT)norm_size;
 
     auto fn = [&](const Range &r) {
         const T *input_data = input.ptr<const T>();
@@ -199,7 +208,7 @@ static void fastNormImpl(const Mat &input, const Mat &scale, Mat &output, T epsi
             const T *x = input_data + norm_size * i;
             T *y = output_data + norm_size * i;
 
-            T mean = 0, mean_square = 0;
+            WT mean = 0, mean_square = 0;
             bool simd_done = false;
             if constexpr (std::is_same<T, float>::value) {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -211,7 +220,7 @@ static void fastNormImpl(const Mat &input, const Mat &scale, Mat &output, T epsi
             }
             if (!simd_done) {
                 for (int j = 0; j < norm_size; j++) {
-                    T v = x[j];
+                    WT v = (WT)x[j];
                     if (recenter)
                         mean += v;
                     mean_square += v * v;
@@ -219,8 +228,8 @@ static void fastNormImpl(const Mat &input, const Mat &scale, Mat &output, T epsi
             }
 
             mean *= inv_norm_size;
-            mean_square = std::sqrt(std::max((T)0, mean_square * inv_norm_size - mean * mean) + epsilon);
-            T inv_stdev = (T)1 / mean_square;
+            mean_square = std::sqrt(std::max((WT)0, mean_square * inv_norm_size - mean * mean) + epsilon);
+            WT inv_stdev = (WT)1 / mean_square;
 
             size_t j = 0;
             if constexpr (std::is_same<T, float>::value) {
@@ -234,7 +243,7 @@ static void fastNormImpl(const Mat &input, const Mat &scale, Mat &output, T epsi
 #endif
             }
             for (; j < norm_size; j++) {
-                y[j] = scale_data[j] * (x[j] - mean) * inv_stdev;
+                y[j] = saturate_cast<T>((WT)scale_data[j] * ((WT)x[j] - mean) * inv_stdev);
             }
         }
     };
@@ -244,26 +253,33 @@ static void fastNormImpl(const Mat &input, const Mat &scale, Mat &output, T epsi
 
 void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, size_t normalized_axis, bool recenter) {
     int type = input.type();
-    CV_CheckType(type, type == CV_32F || type == CV_64F, "fastNorm: unsupported type");
+    CV_CheckType(type, type == CV_32F || type == CV_64F || type == CV_16F || type == CV_16BF,
+                 "fastNorm: unsupported type");
     CV_CheckTypeEQ(type, scale.type(), "fastNorm: scale must match input type");
     CV_CheckTypeEQ(type, output.type(), "fastNorm: output must match input type");
 
     if (type == CV_64F)
         fastNormImpl<double>(input, scale, output, (double)epsilon, normalized_axis, recenter);
+    else if (type == CV_16F)
+        fastNormImpl<hfloat>(input, scale, output, epsilon, normalized_axis, recenter);
+    else if (type == CV_16BF)
+        fastNormImpl<bfloat>(input, scale, output, epsilon, normalized_axis, recenter);
     else
         fastNormImpl<float>(input, scale, output, epsilon, normalized_axis, recenter);
 }
 
 // Full LayerNorm (scale + bias) -- LayerNorm and LayerNorm2's with-bias path.
 template<typename T>
-static void fastNormImpl(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, T epsilon, size_t normalized_axis) {
+static void fastNormImpl(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, typename DataType<T>::work_type epsilon, size_t normalized_axis) {
+    typedef typename DataType<T>::work_type WT;
+
     const auto input_shape = shape(input);
     CV_CheckLT(normalized_axis, input_shape.size(), "fastNorm: axis out of range");
     CV_CheckEQ(scale.total(), bias.total(), "fastNorm: scale and bias should have the same shape");
 
     size_t loops = static_cast<size_t>(total(input_shape, 0, static_cast<int>(normalized_axis))),
            norm_size = static_cast<size_t>(total(input_shape, static_cast<int>(normalized_axis)));
-    T inv_norm_size = (T)1 / (T)norm_size;
+    WT inv_norm_size = (WT)1 / (WT)norm_size;
 
     auto fn = [&](const Range &r) {
         const T *input_data = input.ptr<const T>();
@@ -274,7 +290,7 @@ static void fastNormImpl(const Mat &input, const Mat &scale, const Mat &bias, Ma
             const T *x = input_data + norm_size * i;
             T *y = output_data + norm_size * i;
 
-            T mean = 0, mean_square = 0;
+            WT mean = 0, mean_square = 0;
             bool simd_done = false;
             if constexpr (std::is_same<T, float>::value) {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -284,15 +300,15 @@ static void fastNormImpl(const Mat &input, const Mat &scale, const Mat &bias, Ma
             }
             if (!simd_done) {
                 for (int j = 0; j < norm_size; j++) {
-                    T v = x[j];
+                    WT v = (WT)x[j];
                     mean += v;
                     mean_square += v * v;
                 }
             }
 
             mean *= inv_norm_size;
-            mean_square = std::sqrt(std::max((T)0, mean_square * inv_norm_size - mean * mean) + epsilon);
-            T inv_stdev = (T)1 / mean_square;
+            mean_square = std::sqrt(std::max((WT)0, mean_square * inv_norm_size - mean * mean) + epsilon);
+            WT inv_stdev = (WT)1 / mean_square;
 
             size_t j = 0;
             if constexpr (std::is_same<T, float>::value) {
@@ -307,7 +323,7 @@ static void fastNormImpl(const Mat &input, const Mat &scale, const Mat &bias, Ma
 #endif
             }
             for (; j < norm_size; j++) {
-                y[j] = scale_data[j] * (x[j] - mean) * inv_stdev + bias_data[j];
+                y[j] = saturate_cast<T>((WT)scale_data[j] * ((WT)x[j] - mean) * inv_stdev + (WT)bias_data[j]);
             }
         }
     };
@@ -317,13 +333,18 @@ static void fastNormImpl(const Mat &input, const Mat &scale, const Mat &bias, Ma
 
 void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, float epsilon, size_t normalized_axis) {
     int type = input.type();
-    CV_CheckType(type, type == CV_32F || type == CV_64F, "fastNorm: unsupported type");
+    CV_CheckType(type, type == CV_32F || type == CV_64F || type == CV_16F || type == CV_16BF,
+                 "fastNorm: unsupported type");
     CV_CheckTypeEQ(type, scale.type(), "fastNorm: scale must match input type");
     CV_CheckTypeEQ(type, bias.type(), "fastNorm: bias must match input type");
     CV_CheckTypeEQ(type, output.type(), "fastNorm: output must match input type");
 
     if (type == CV_64F)
         fastNormImpl<double>(input, scale, bias, output, (double)epsilon, normalized_axis);
+    else if (type == CV_16F)
+        fastNormImpl<hfloat>(input, scale, bias, output, epsilon, normalized_axis);
+    else if (type == CV_16BF)
+        fastNormImpl<bfloat>(input, scale, bias, output, epsilon, normalized_axis);
     else
         fastNormImpl<float>(input, scale, bias, output, epsilon, normalized_axis);
 }
@@ -558,7 +579,9 @@ static void fastNormChannelBlockF32(const Mat &input, const Mat &scale, const Ma
 
 // InstanceNorm, BLOCK layout, CV_64F -- scalar counterpart to fastNormChannelBlockF32.
 template<typename T>
-static void fastNormChannelBlockT(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, T epsilon) {
+static void fastNormChannelBlockT(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, typename DataType<T>::work_type epsilon) {
+    typedef typename DataType<T>::work_type WT;
+
     const auto input_shape = shape(input);
     size_t C = (size_t)input_shape.C;
 
@@ -586,18 +609,18 @@ static void fastNormChannelBlockT(const Mat &input, const Mat &scale, const Mat 
     const size_t outStep3 = output.step.p[3] / sizeof(T);
 
     const size_t norm_size = (size_t)H * (size_t)W;
-    const T inv_norm_size = (T)1 / (T)norm_size;
+    const WT inv_norm_size = (WT)1 / (WT)norm_size;
 
     parallel_for_(Range(0, N * C1), [&](const Range& r) {
         const T* inptr0 = (const T*)input.data;
         T* outptr0 = (T*)output.data;
 
-        AutoBuffer<T> sumBuf(C0 * 2);
-        T* sum   = sumBuf.data();
-        T* sqsum = sum + C0;
-        AutoBuffer<T> abBuf(C0 * 2);
-        T* alpha = abBuf.data();
-        T* beta  = alpha + C0;
+        AutoBuffer<WT> sumBuf(C0 * 2);
+        WT* sum   = sumBuf.data();
+        WT* sqsum = sum + C0;
+        AutoBuffer<WT> abBuf(C0 * 2);
+        WT* alpha = abBuf.data();
+        WT* beta  = alpha + C0;
 
         for (int i = r.start; i < r.end; ++i) {
             int n  = i / C1;
@@ -609,11 +632,11 @@ static void fastNormChannelBlockT(const Mat &input, const Mat &scale, const Mat 
             T*       outbase = outptr0 + n * outStep0 + c1 * outStep1;
 
             for (int c0 = 0; c0 < validC0; ++c0) {
-                T s = 0, sq = 0;
+                WT s = 0, sq = 0;
                 for (int h = 0; h < H; ++h) {
                     const T* inrow = inbase + h * inStep2;
                     for (int w = 0; w < W; ++w) {
-                        T v = inrow[w * inStep3 + c0];
+                        WT v = (WT)inrow[w * inStep3 + c0];
                         s += v;
                         sq += v * v;
                     }
@@ -623,20 +646,20 @@ static void fastNormChannelBlockT(const Mat &input, const Mat &scale, const Mat 
             }
 
             for (int c = 0; c < validC0; ++c) {
-                T mean = sum[c] * inv_norm_size;
-                T var = std::max((T)0, sqsum[c] * inv_norm_size - mean * mean);
-                T inv_stdev = (T)1 / std::sqrt(var + epsilon);
-                alpha[c] = scale_data[cbase + c] * inv_stdev;
-                beta[c]  = bias_data[cbase + c] - alpha[c] * mean;
+                WT mean = sum[c] * inv_norm_size;
+                WT var = std::max((WT)0, sqsum[c] * inv_norm_size - mean * mean);
+                WT inv_stdev = (WT)1 / std::sqrt(var + epsilon);
+                alpha[c] = (WT)scale_data[cbase + c] * inv_stdev;
+                beta[c]  = (WT)bias_data[cbase + c] - alpha[c] * mean;
             }
 
             for (int c0 = 0; c0 < validC0; ++c0) {
-                T a = alpha[c0], b = beta[c0];
+                WT a = alpha[c0], b = beta[c0];
                 for (int h = 0; h < H; ++h) {
                     const T* inrow  = inbase + h * inStep2;
                     T*       outrow = outbase + h * outStep2;
                     for (int w = 0; w < W; ++w)
-                        outrow[w * outStep3 + c0] = inrow[w * inStep3 + c0] * a + b;
+                        outrow[w * outStep3 + c0] = saturate_cast<T>((WT)inrow[w * inStep3 + c0] * a + b);
                 }
             }
 
@@ -644,7 +667,7 @@ static void fastNormChannelBlockT(const Mat &input, const Mat &scale, const Mat 
                 for (int h = 0; h < H; ++h) {
                     T* outrow = outbase + h * outStep2;
                     for (int w = 0; w < W; ++w)
-                        outrow[w * outStep3 + c0_pad] = 0;
+                        outrow[w * outStep3 + c0_pad] = saturate_cast<T>(0.f);
                 }
         }
     });
@@ -652,7 +675,9 @@ static void fastNormChannelBlockT(const Mat &input, const Mat &scale, const Mat 
 
 // InstanceNorm, plain NCHW layout.
 template<typename T>
-static void fastNormChannelImpl(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, T epsilon) {
+static void fastNormChannelImpl(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, typename DataType<T>::work_type epsilon) {
+    typedef typename DataType<T>::work_type WT;
+
     const auto input_shape = shape(input);
     size_t C = input_shape[1];
 
@@ -687,12 +712,12 @@ static void fastNormChannelImpl(const Mat &input, const Mat &scale, const Mat &b
                 }
             }
 
-            T mean = (T)(dmean / norm_size);
-            T var = (T)std::max(0., dmean_sq / norm_size - (double)mean * (double)mean);
-            T inv_stdev = (T)1 / std::sqrt(var + epsilon);
+            WT mean = (WT)(dmean / norm_size);
+            WT var = (WT)std::max(0., dmean_sq / norm_size - (double)mean * (double)mean);
+            WT inv_stdev = (WT)1 / std::sqrt(var + epsilon);
 
             size_t c = i % C;
-            T s = scale_data[c] * inv_stdev, b = bias_data[c];
+            WT s = (WT)scale_data[c] * inv_stdev, b = (WT)bias_data[c];
             size_t j = 0;
             if constexpr (std::is_same<T, float>::value) {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -703,7 +728,7 @@ static void fastNormChannelImpl(const Mat &input, const Mat &scale, const Mat &b
 #endif
             }
             for (; j < norm_size; j++) {
-                y[j] = s * (x[j] - mean) + b;
+                y[j] = saturate_cast<T>(s * ((WT)x[j] - mean) + b);
             }
         }
     };
@@ -718,7 +743,8 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
     CV_CheckEQ(bias.total(), C, "fastNormChannel: bias should be a 1d tensor and match the channel of input");
 
     int type = input.type();
-    CV_CheckType(type, type == CV_32F || type == CV_64F, "fastNormChannel: unsupported type");
+    CV_CheckType(type, type == CV_32F || type == CV_64F || type == CV_16F || type == CV_16BF,
+                 "fastNormChannel: unsupported type");
     CV_CheckTypeEQ(type, output.type(), "fastNormChannel: output must match input type");
     CV_CheckTypeEQ(type, scale.type(), "fastNormChannel: scale must match input type");
     CV_CheckTypeEQ(type, bias.type(), "fastNormChannel: bias must match input type");
@@ -726,6 +752,10 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
     if (input_shape.layout == DATA_LAYOUT_BLOCK) {
         if (type == CV_64F)
             fastNormChannelBlockT<double>(input, scale, bias, output, (double)epsilon);
+        else if (type == CV_16F)
+            fastNormChannelBlockT<hfloat>(input, scale, bias, output, epsilon);
+        else if (type == CV_16BF)
+            fastNormChannelBlockT<bfloat>(input, scale, bias, output, epsilon);
         else
             fastNormChannelBlockF32(input, scale, bias, output, epsilon);
         return;
@@ -733,6 +763,10 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
 
     if (type == CV_64F)
         fastNormChannelImpl<double>(input, scale, bias, output, (double)epsilon);
+    else if (type == CV_16F)
+        fastNormChannelImpl<hfloat>(input, scale, bias, output, epsilon);
+    else if (type == CV_16BF)
+        fastNormChannelImpl<bfloat>(input, scale, bias, output, epsilon);
     else
         fastNormChannelImpl<float>(input, scale, bias, output, epsilon);
 }
@@ -910,7 +944,9 @@ static void fastNormGroupBlockF32(const Mat &input, const Mat &scale, const Mat 
 
 // GroupNorm, BLOCK layout, CV_64F -- scalar counterpart to fastNormGroupBlockF32.
 template<typename T>
-static void fastNormGroupBlockT(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, T epsilon, size_t num_groups) {
+static void fastNormGroupBlockT(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, typename DataType<T>::work_type epsilon, size_t num_groups) {
+    typedef typename DataType<T>::work_type WT;
+
     const auto input_shape = shape(input);
     size_t C = (size_t)input_shape.C;
 
@@ -938,15 +974,15 @@ static void fastNormGroupBlockT(const Mat &input, const Mat &scale, const Mat &b
 
     const int channels_per_group = Ci / (int)num_groups;
     const size_t norm_size = (size_t)channels_per_group * (size_t)H * (size_t)W;
-    const T inv_norm_size = (T)1 / (T)norm_size;
+    const WT inv_norm_size = (WT)1 / (WT)norm_size;
 
     parallel_for_(Range(0, N * (int)num_groups), [&](const Range& r) {
         const T* inptr = (const T*)input.data;
         T* outptr = (T*)output.data;
 
-        AutoBuffer<T> buf(C0 * 2);
-        T* alpha = buf.data();
-        T* beta  = alpha + C0;
+        AutoBuffer<WT> buf(C0 * 2);
+        WT* alpha = buf.data();
+        WT* beta  = alpha + C0;
 
         for (int i = r.start; i < r.end; ++i) {
             int n = i / (int)num_groups;
@@ -954,7 +990,7 @@ static void fastNormGroupBlockT(const Mat &input, const Mat &scale, const Mat &b
             int c_start = g * channels_per_group;
             int c_end   = c_start + channels_per_group;
 
-            T group_sum = 0, group_sqsum = 0;
+            WT group_sum = 0, group_sqsum = 0;
             for (int c = c_start; c < c_end; c++) {
                 int c1 = c / C0;
                 int c0 = c % C0;
@@ -962,16 +998,16 @@ static void fastNormGroupBlockT(const Mat &input, const Mat &scale, const Mat &b
                 for (int h = 0; h < H; ++h) {
                     const T* inrow = inbase + h * inStep2;
                     for (int w = 0; w < W; ++w) {
-                        T v = inrow[w * inStep3 + c0];
+                        WT v = (WT)inrow[w * inStep3 + c0];
                         group_sum += v;
                         group_sqsum += v * v;
                     }
                 }
             }
 
-            T mean = group_sum * inv_norm_size;
-            T var  = std::max((T)0, group_sqsum * inv_norm_size - mean * mean);
-            T inv_stdev = (T)1 / std::sqrt(var + epsilon);
+            WT mean = group_sum * inv_norm_size;
+            WT var  = std::max((WT)0, group_sqsum * inv_norm_size - mean * mean);
+            WT inv_stdev = (WT)1 / std::sqrt(var + epsilon);
 
             for (int c1_start = c_start / C0, c1_end_idx = (c_end - 1) / C0 + 1,
                      c1 = c1_start; c1 < c1_end_idx; ++c1) {
@@ -981,20 +1017,20 @@ static void fastNormGroupBlockT(const Mat &input, const Mat &scale, const Mat &b
                 int validC0 = std::min(C0, std::max(0, Ci - cbase));
 
                 for (int c0 = c0_lo; c0 < c0_hi; ++c0) {
-                    alpha[c0] = scale_data[cbase + c0] * inv_stdev;
-                    beta[c0]  = bias_data[cbase + c0] - alpha[c0] * mean;
+                    alpha[c0] = (WT)scale_data[cbase + c0] * inv_stdev;
+                    beta[c0]  = (WT)bias_data[cbase + c0] - alpha[c0] * mean;
                 }
 
                 const T* inbase  = inptr  + n * inStep0 + c1 * inStep1;
                 T*       outbase = outptr + n * outStep0 + c1 * outStep1;
 
                 for (int c0 = c0_lo; c0 < c0_hi; ++c0) {
-                    T a = alpha[c0], b = beta[c0];
+                    WT a = alpha[c0], b = beta[c0];
                     for (int h = 0; h < H; ++h) {
                         const T* inrow  = inbase + h * inStep2;
                         T*       outrow = outbase + h * outStep2;
                         for (int w = 0; w < W; ++w)
-                            outrow[w * outStep3 + c0] = inrow[w * inStep3 + c0] * a + b;
+                            outrow[w * outStep3 + c0] = saturate_cast<T>((WT)inrow[w * inStep3 + c0] * a + b);
                     }
                 }
 
@@ -1002,7 +1038,7 @@ static void fastNormGroupBlockT(const Mat &input, const Mat &scale, const Mat &b
                     for (int h = 0; h < H; ++h) {
                         T* outrow = outbase + h * outStep2;
                         for (int w = 0; w < W; ++w)
-                            outrow[w * outStep3 + c0_pad] = 0;
+                            outrow[w * outStep3 + c0_pad] = saturate_cast<T>(0.f);
                     }
             }
         }
@@ -1011,7 +1047,9 @@ static void fastNormGroupBlockT(const Mat &input, const Mat &scale, const Mat &b
 
 // GroupNorm, plain NCHW layout.
 template<typename T>
-static void fastNormGroupImpl(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, T epsilon, size_t num_groups) {
+static void fastNormGroupImpl(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, typename DataType<T>::work_type epsilon, size_t num_groups) {
+    typedef typename DataType<T>::work_type WT;
+
     const auto input_shape = shape(input);
     size_t C = input_shape[1];
 
@@ -1049,16 +1087,16 @@ static void fastNormGroupImpl(const Mat &input, const Mat &scale, const Mat &bia
                 }
             }
 
-            T mean = (T)(dmean / norm_size);
-            T var = (T)std::max(0., dmean_sq / norm_size - (double)mean * (double)mean);
-            T inv_stdev = (T)1 / std::sqrt(var + epsilon);
+            WT mean = (WT)(dmean / norm_size);
+            WT var = (WT)std::max(0., dmean_sq / norm_size - (double)mean * (double)mean);
+            WT inv_stdev = (WT)1 / std::sqrt(var + epsilon);
 
             // Channel-outer loop avoids a per-element j/step division and lets T=float vectorize below.
             size_t group_idx = i % num_groups * channels_per_group;
             size_t j = 0;
             for (size_t c_idx = 0; c_idx < channels_per_group; c_idx++) {
                 size_t c = group_idx + c_idx;
-                T s = scale_data[c] * inv_stdev, b = bias_data[c];
+                WT s = (WT)scale_data[c] * inv_stdev, b = (WT)bias_data[c];
                 const size_t j_end = j + step;
                 if constexpr (std::is_same<T, float>::value) {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -1069,7 +1107,7 @@ static void fastNormGroupImpl(const Mat &input, const Mat &scale, const Mat &bia
 #endif
                 }
                 for (; j < j_end; j++)
-                    y[j] = s * (x[j] - mean) + b;
+                    y[j] = saturate_cast<T>(s * ((WT)x[j] - mean) + b);
             }
         }
     };
@@ -1085,7 +1123,8 @@ void fastNormGroup(const Mat &input, const Mat &scale, const Mat &bias, Mat &out
     CV_CheckEQ(scale.total(), C, "fastNormGroup: scale should be a 1d tensor and match the channel of input");
 
     int type = input.type();
-    CV_CheckType(type, type == CV_32F || type == CV_64F, "fastNormGroup: unsupported type");
+    CV_CheckType(type, type == CV_32F || type == CV_64F || type == CV_16F || type == CV_16BF,
+                 "fastNormGroup: unsupported type");
     CV_CheckTypeEQ(type, output.type(), "fastNormGroup: output must match input type");
     CV_CheckTypeEQ(type, scale.type(), "fastNormGroup: scale must match input type");
     CV_CheckTypeEQ(type, bias.type(), "fastNormGroup: bias must match input type");
@@ -1093,6 +1132,10 @@ void fastNormGroup(const Mat &input, const Mat &scale, const Mat &bias, Mat &out
     if (input_shape.layout == DATA_LAYOUT_BLOCK) {
         if (type == CV_64F)
             fastNormGroupBlockT<double>(input, scale, bias, output, (double)epsilon, num_groups);
+        else if (type == CV_16F)
+            fastNormGroupBlockT<hfloat>(input, scale, bias, output, epsilon, num_groups);
+        else if (type == CV_16BF)
+            fastNormGroupBlockT<bfloat>(input, scale, bias, output, epsilon, num_groups);
         else
             fastNormGroupBlockF32(input, scale, bias, output, epsilon, num_groups);
         return;
@@ -1100,6 +1143,10 @@ void fastNormGroup(const Mat &input, const Mat &scale, const Mat &bias, Mat &out
 
     if (type == CV_64F)
         fastNormGroupImpl<double>(input, scale, bias, output, (double)epsilon, num_groups);
+    else if (type == CV_16F)
+        fastNormGroupImpl<hfloat>(input, scale, bias, output, epsilon, num_groups);
+    else if (type == CV_16BF)
+        fastNormGroupImpl<bfloat>(input, scale, bias, output, epsilon, num_groups);
     else
         fastNormGroupImpl<float>(input, scale, bias, output, epsilon, num_groups);
 }

@@ -423,6 +423,17 @@ static void storeScalar(_Ts v, int depth, void* value)
     }
 }
 
+void getTypesWithHalf(const std::vector<MatType>& inputs, int requiredOutputs, int requiredInternals,
+                      std::vector<MatType>& outputs, std::vector<MatType>& internals)
+{
+    CV_Assert(inputs.size());
+    for (auto input : inputs)
+        CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_16F || input == CV_16BF || input == CV_8S || input == CV_8U || input == CV_64S, "");
+
+    outputs.assign(requiredOutputs, inputs[0]);
+    internals.assign(requiredInternals, inputs[0]);
+}
+
 void tensorToScalar(const Mat& tensor, int type, void* value)
 {
     CV_Assert(tensor.total() == 1);
