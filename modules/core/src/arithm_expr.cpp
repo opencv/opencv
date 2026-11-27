@@ -1235,27 +1235,6 @@ static constexpr int LOCAL_HDRS = 3;
 static constexpr int LOCAL_CONSTS = 4;
 static constexpr int LOCAL_OPS = 16;
 
-static bool sameUpToSingletonDims(const Mat& src, const MatShape& shape)
-{
-    int i = 0, j = 0;
-    const int nd = (int)shape.size();
-
-    for (;;)
-    {
-        while (i < src.dims && src.size[i] == 1) i++;
-        while (j < nd && shape[j] == 1) j++;
-
-        if (i == src.dims || j == nd)
-            return i == src.dims && j == nd;
-
-        if (src.size[i] != shape[j])
-            return false;
-
-        i++;
-        j++;
-    }
-}
-
 static void createOutputPreservingSingletonDims(
     Mat& dst, const MatShape& shape, int type)
 {
@@ -1266,7 +1245,7 @@ static void createOutputPreservingSingletonDims(
         for (int i = 0; sameShape && i < dst.dims; i++)
             sameShape = dst.size[i] == shape[i];
 
-        if (!sameShape && sameUpToSingletonDims(dst, shape))
+        if (!sameShape && dst.shape().squeeze() == shape.squeeze())
             dst = dst.reshape(CV_MAT_CN(type), shape);
     }
 

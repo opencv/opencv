@@ -610,17 +610,7 @@ static bool outArrayMatches(const _OutputArray& a, const MatShape& shp, int type
 // Same non-singleton extents in the same order, e.g. [128] vs [1,128] or [128,1].
 static bool sameUpToSingletons(const int* a, int na, const MatShape& b)
 {
-    int i = 0, j = 0, nb = (int)b.size();
-    for (;;)
-    {
-        while (i < na && a[i] == 1) i++;
-        while (j < nb && b[j] == 1) j++;
-        if (i == na || j == nb)
-            return i == na && j == nb;
-        if (a[i] != b[j])
-            return false;
-        i++; j++;
-    }
+    return MatShape((size_t)na, a).squeeze() == b.squeeze();
 }
 
 // Reuse a Mat destination when its shape differs from the output only by singleton dims
