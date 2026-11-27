@@ -2110,7 +2110,7 @@ static int area_fast_u8_nxn(const uchar* S, uchar* D, int w, int step, int scale
 }
 #endif
 
-#if CV_SIMD && !CV_NEON
+#if CV_SIMD
 static inline v_uint32 area_fast_byte_sum_u32(v_uint32 v)
 {
     const v_uint32 mask = vx_setall_u32(0xff);
@@ -2142,14 +2142,6 @@ static inline void area_fast_store_bgra(uchar* dst, v_uint32 sb, v_uint32 sg, v_
                         v_add(v_shl<16>(area_fast_round_div16(sr)),
                               v_shl<24>(area_fast_round_div16(sa))));
     v_store(reinterpret_cast<uint32_t*>(dst), px);
-}
-
-static inline void area_fast_store_gray(uchar* dst, const v_uint32& sum, int n)
-{
-    CV_DECL_ALIGNED(64) uint32_t tmp[VTraits<v_uint32>::max_nlanes];
-    v_store(tmp, area_fast_round_div16(sum));
-    for (int i = 0; i < n; ++i)
-        dst[i] = (uchar)tmp[i];
 }
 
 static inline void area_fast_store_rgb_rounded(uchar* dst, const v_uint32& vb, const v_uint32& vg, const v_uint32& vr, int n)
@@ -2228,20 +2220,31 @@ static int area_fast_u8_cn3_4x4(const uchar* S, uchar* D, int w, int step, int d
 static int area_fast_u8_cn1_4x4(const uchar* S, uchar* D, int w, int step, int dx)
 {
     const uchar* rows[4] = { S, S + step, S + 2 * step, S + 3 * step };
-    const int block = area_fast_4x4_pix_block();
+    const int block = VTraits<v_uint16>::vlanes();
+    const v_uint16 mask8 = vx_setall_u16(0xff);
+    const v_uint32 mask16 = vx_setall_u32(0xffff);
 
     for (; dx <= w - block; dx += block)
     {
         const int sx = dx * 4;
-        v_uint32 sum = vx_setzero_u32();
+        // Byte-pair sums of 4 rows fit in u16 (<= 4 * 510).
+        v_uint16 p0 = vx_setzero_u16(), p1 = p0;
         for (int ri = 0; ri < 4; ++ri)
-            sum = v_add(sum, area_fast_plane_row_quads(vx_load(rows[ri] + sx)));
-        area_fast_store_gray(D + dx, sum, block);
+        {
+            v_uint16 r0 = v_reinterpret_as_u16(vx_load(rows[ri] + sx));
+            v_uint16 r1 = v_reinterpret_as_u16(vx_load(rows[ri] + sx + VTraits<v_uint8>::vlanes()));
+            p0 = v_add(p0, v_add(v_shr<8>(r0), v_and(r0, mask8)));
+            p1 = v_add(p1, v_add(v_shr<8>(r1), v_and(r1, mask8)));
+        }
+        v_uint32 q0 = v_reinterpret_as_u32(p0), q1 = v_reinterpret_as_u32(p1);
+        v_uint32 s0 = v_add(v_shr<16>(q0), v_and(q0, mask16));
+        v_uint32 s1 = v_add(v_shr<16>(q1), v_and(q1, mask16));
+        v_pack_store(D + dx, v_pack(area_fast_round_div16(s0), area_fast_round_div16(s1)));
     }
     return dx;
 }
 
-#endif // CV_SIMD && !CV_NEON
+#endif // CV_SIMD
 
 } // namespace area_fast_detail
 
@@ -2265,149 +2268,14 @@ public:
         int dx = 0;
         const uchar* S0 = S, * S1 = S0 + step;
 
-        const uint32x4_t mask = vdupq_n_u32(0xff);
-
-        auto neon_byte_sum_u32 = [&](uint32x4_t v) {
-            return vaddq_u32(vaddq_u32(vshrq_n_u32(v, 24), vandq_u32(vshrq_n_u32(v, 16), mask)),
-                             vaddq_u32(vandq_u32(vshrq_n_u32(v, 8), mask), vandq_u32(v, mask)));
-        };
-        auto neon_plane_row_quads = [&](uint8x16_t plane) {
-            return neon_byte_sum_u32(vreinterpretq_u32_u8(plane));
-        };
-        auto neon_round_div16 = [](uint32x4_t s) {
-            const uint32x4_t odd = vandq_u32(vshrq_n_u32(s, 4), vdupq_n_u32(1));
-            return vshrq_n_u32(vaddq_u32(vaddq_u32(s, vdupq_n_u32(7)), odd), 4);
-        };
-        auto neon_store_bgra4 = [&](uchar* dst, uint32x4_t sb, uint32x4_t sg, uint32x4_t sr, uint32x4_t sa) {
-            uint32x4_t px = vaddq_u32(vaddq_u32(neon_round_div16(sb), vshlq_n_u32(neon_round_div16(sg), 8)),
-                                      vaddq_u32(vshlq_n_u32(neon_round_div16(sr), 16), vshlq_n_u32(neon_round_div16(sa), 24)));
-            vst1q_u32(reinterpret_cast<uint32_t*>(dst), px);
-        };
-
-        if (scale_x == 4 && scale_y == 4 && cn == 1)
+        if (scale_x == 4 && scale_y == 4)
         {
-            const uchar* rows[4] = { S0, S1, S0 + 2 * step, S0 + 3 * step };
-            for (; dx <= w - 8; dx += 8)
-            {
-                const int sx = dx * 4;
-                uint32x4_t sum0 = vdupq_n_u32(0), sum1 = vdupq_n_u32(0);
-                for (int ri = 0; ri < 4; ++ri)
-                {
-                    const uchar* r = rows[ri];
-                    uint32x4_t a0 = vld1q_u32((const uint32_t*)(r + sx));
-                    uint32x4_t a1 = vld1q_u32((const uint32_t*)(r + sx + 16));
-                    sum0 = vaddq_u32(sum0, vaddq_u32(vaddq_u32(vshrq_n_u32(a0, 24), vandq_u32(vshrq_n_u32(a0, 16), mask)),
-                                                     vaddq_u32(vandq_u32(vshrq_n_u32(a0, 8), mask), vandq_u32(a0, mask))));
-                    sum1 = vaddq_u32(sum1, vaddq_u32(vaddq_u32(vshrq_n_u32(a1, 24), vandq_u32(vshrq_n_u32(a1, 16), mask)),
-                                                     vaddq_u32(vandq_u32(vshrq_n_u32(a1, 8), mask), vandq_u32(a1, mask))));
-                }
-                uint16x4_t d0 = vmovn_u32(neon_round_div16(sum0));
-                uint16x4_t d1 = vmovn_u32(neon_round_div16(sum1));
-                vst1_u8(D + dx, vqmovn_u16(vcombine_u16(d0, d1)));
-            }
-            return dx;
-        }
-
-        if (scale_x == 4 && scale_y == 4 && cn == 4)
-        {
-            const uchar* rows[4] = { S0, S1, S0 + 2 * step, S0 + 3 * step };
-            for (; dx <= w - 32; dx += 32)
-            {
-                const int sx = dx * 4;
-                uint32x4_t sb0 = vdupq_n_u32(0), sg0 = sb0, sr0 = sb0, sa0 = sb0;
-                uint32x4_t sb1 = sb0, sg1 = sb0, sr1 = sb0, sa1 = sb0;
-                for (int ri = 0; ri < 4; ++ri)
-                {
-                    uint8x16x4_t p0 = vld4q_u8(rows[ri] + sx);
-                    uint8x16x4_t p1 = vld4q_u8(rows[ri] + sx + 64);
-                    sb0 = vaddq_u32(sb0, neon_plane_row_quads(p0.val[0]));
-                    sg0 = vaddq_u32(sg0, neon_plane_row_quads(p0.val[1]));
-                    sr0 = vaddq_u32(sr0, neon_plane_row_quads(p0.val[2]));
-                    sa0 = vaddq_u32(sa0, neon_plane_row_quads(p0.val[3]));
-                    sb1 = vaddq_u32(sb1, neon_plane_row_quads(p1.val[0]));
-                    sg1 = vaddq_u32(sg1, neon_plane_row_quads(p1.val[1]));
-                    sr1 = vaddq_u32(sr1, neon_plane_row_quads(p1.val[2]));
-                    sa1 = vaddq_u32(sa1, neon_plane_row_quads(p1.val[3]));
-                }
-                neon_store_bgra4(D + dx, sb0, sg0, sr0, sa0);
-                neon_store_bgra4(D + dx + 16, sb1, sg1, sr1, sa1);
-            }
-            for (; dx <= w - 16; dx += 16)
-            {
-                const int sx = dx * 4;
-                uint32x4_t sb = vdupq_n_u32(0), sg = sb, sr = sb, sa = sb;
-                for (int ri = 0; ri < 4; ++ri)
-                {
-                    uint8x16x4_t p = vld4q_u8(rows[ri] + sx);
-                    sb = vaddq_u32(sb, neon_plane_row_quads(p.val[0]));
-                    sg = vaddq_u32(sg, neon_plane_row_quads(p.val[1]));
-                    sr = vaddq_u32(sr, neon_plane_row_quads(p.val[2]));
-                    sa = vaddq_u32(sa, neon_plane_row_quads(p.val[3]));
-                }
-                neon_store_bgra4(D + dx, sb, sg, sr, sa);
-            }
-            return dx;
-        }
-
-        if (scale_x == 4 && scale_y == 4 && cn == 3)
-        {
-            const uchar* rows[4] = { S0, S1, S0 + 2 * step, S0 + 3 * step };
-            for (; dx <= w - 24; dx += 24)
-            {
-                const int sx = dx * 4;
-                uint32x4_t sb0 = vdupq_n_u32(0), sg0 = sb0, sr0 = sb0;
-                uint32x4_t sb1 = sb0, sg1 = sb0, sr1 = sb0;
-                for (int ri = 0; ri < 4; ++ri)
-                {
-                    uint8x16x3_t p0 = vld3q_u8(rows[ri] + sx);
-                    uint8x16x3_t p1 = vld3q_u8(rows[ri] + sx + 48);
-                    sb0 = vaddq_u32(sb0, neon_plane_row_quads(p0.val[0]));
-                    sg0 = vaddq_u32(sg0, neon_plane_row_quads(p0.val[1]));
-                    sr0 = vaddq_u32(sr0, neon_plane_row_quads(p0.val[2]));
-                    sb1 = vaddq_u32(sb1, neon_plane_row_quads(p1.val[0]));
-                    sg1 = vaddq_u32(sg1, neon_plane_row_quads(p1.val[1]));
-                    sr1 = vaddq_u32(sr1, neon_plane_row_quads(p1.val[2]));
-                }
-                uint32_t bv0[4], gv0[4], rv0[4], bv1[4], gv1[4], rv1[4];
-                vst1q_u32(bv0, neon_round_div16(sb0));
-                vst1q_u32(gv0, neon_round_div16(sg0));
-                vst1q_u32(rv0, neon_round_div16(sr0));
-                vst1q_u32(bv1, neon_round_div16(sb1));
-                vst1q_u32(gv1, neon_round_div16(sg1));
-                vst1q_u32(rv1, neon_round_div16(sr1));
-                for (int i = 0; i < 4; ++i)
-                {
-                    D[dx + i * 3 + 0] = (uchar)bv0[i];
-                    D[dx + i * 3 + 1] = (uchar)gv0[i];
-                    D[dx + i * 3 + 2] = (uchar)rv0[i];
-                    D[dx + 12 + i * 3 + 0] = (uchar)bv1[i];
-                    D[dx + 12 + i * 3 + 1] = (uchar)gv1[i];
-                    D[dx + 12 + i * 3 + 2] = (uchar)rv1[i];
-                }
-            }
-            for (; dx <= w - 12; dx += 12)
-            {
-                const int sx = dx * 4;
-                uint32x4_t sb = vdupq_n_u32(0), sg = sb, sr = sb;
-                for (int ri = 0; ri < 4; ++ri)
-                {
-                    uint8x16x3_t p = vld3q_u8(rows[ri] + sx);
-                    sb = vaddq_u32(sb, neon_plane_row_quads(p.val[0]));
-                    sg = vaddq_u32(sg, neon_plane_row_quads(p.val[1]));
-                    sr = vaddq_u32(sr, neon_plane_row_quads(p.val[2]));
-                }
-                uint32_t bv[4], gv[4], rv[4];
-                vst1q_u32(bv, neon_round_div16(sb));
-                vst1q_u32(gv, neon_round_div16(sg));
-                vst1q_u32(rv, neon_round_div16(sr));
-                for (int i = 0; i < 4; ++i)
-                {
-                    D[dx + i * 3 + 0] = (uchar)bv[i];
-                    D[dx + i * 3 + 1] = (uchar)gv[i];
-                    D[dx + i * 3 + 2] = (uchar)rv[i];
-                }
-            }
-            return dx;
+            if (cn == 1)
+                return area_fast_detail::area_fast_u8_cn1_4x4(S, D, w, step, dx);
+            if (cn == 3)
+                return area_fast_detail::area_fast_u8_cn3_4x4(S, D, w, step, dx);
+            if (cn == 4)
+                return area_fast_detail::area_fast_u8_cn4_4x4(S, D, w, step, dx);
         }
 
         if (scale_x != 2 || scale_y != 2)
