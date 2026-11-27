@@ -670,6 +670,23 @@ class JavaWrapperGenerator(object):
         else:
             return cast_from(t)
 
+    def resolveType(self, ctype, fi):
+        if not ctype or ctype in type_dict:
+            return ctype
+        ns_parts = [p for p in fi.namespace.split(".") if p and p != "cv"]
+        cls_parts = [p for p in fi.classpath.split(".") if p]
+        for i in range(len(cls_parts), 0, -1):
+            scope = "_".join(ns_parts + cls_parts[:i])
+            candidate = "%s_%s" % (scope, ctype)
+            if candidate in type_dict:
+                return candidate
+        for i in range(len(ns_parts), 0, -1):
+            scope = "_".join(ns_parts[:i])
+            candidate = "%s_%s" % (scope, ctype)
+            if candidate in type_dict:
+                return candidate
+        return ctype
+
     def gen_func(self, ci, fi, prop_name=''):
         logging.info("%s", fi)
         j_code   = ci.j_code
@@ -697,6 +714,7 @@ class JavaWrapperGenerator(object):
         # java comment
         j_code.write( "\n    //\n    // C++: %s\n    //\n\n" % c_decl )
         # check if we 'know' all the types
+        fi.ctype = self.resolveType(fi.ctype, fi)
         if fi.ctype not in type_dict: # unsupported ret type
             msg = "// Return type '%s' is not supported, skipping the function\n\n" % fi.ctype
             self.skipped_func_list.append(c_decl + "\n" + msg)
@@ -704,6 +722,7 @@ class JavaWrapperGenerator(object):
             logging.info("SKIP:" + c_decl.strip() + "\t due to RET type " + fi.ctype)
             return
         for a in fi.args:
+            a.ctype = self.resolveType(a.ctype, fi)
             if a.ctype not in type_dict:
                 if not a.defval and a.ctype.endswith("*"):
                     a.defval = 0
@@ -847,7 +866,7 @@ class JavaWrapperGenerator(object):
             logging.info("java: " + j_signature)
 
             if j_signature in j_signatures:
-                if args:
+                if args and args[-1].defval:
                     args.pop()
                     continue
                 else:
