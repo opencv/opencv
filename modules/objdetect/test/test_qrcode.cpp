@@ -763,4 +763,49 @@ TEST(Objdetect_QRCode_detect, detect_regression_27783)
     }
 }
 
+// See https://github.com/opencv/opencv/issues/23810
+// In these codes, data modules form the finder pattern ratio both horizontally
+// and vertically, which looked like a fourth finder pattern.
+typedef testing::TestWithParam<std::tuple<std::string, int>> Objdetect_QRCode_detect_regression_23810;
+TEST_P(Objdetect_QRCode_detect_regression_23810, detect)
+{
+    const std::string expect_msg = std::get<0>(GetParam());
+    const int scale = std::get<1>(GetParam());
+    QRCodeEncoder::Params params;
+    params.version = 1;
+    params.correction_level = QRCodeEncoder::CORRECT_LEVEL_H;
+    params.mode = QRCodeEncoder::MODE_NUMERIC;
+    Ptr<QRCodeEncoder> qrcode_enc = QRCodeEncoder::create(params);
+    Mat qrImg, src;
+    qrcode_enc->encode(expect_msg, qrImg);
+    resize(qrImg, src, Size(), scale, scale, INTER_NEAREST);
+    QRCodeDetector qrcode;
+    std::vector<Point> corners;
+    const std::string decoded_msg = qrcode.detectAndDecode(src, corners);
+    EXPECT_EQ(4u, corners.size());
+    EXPECT_EQ(expect_msg, decoded_msg);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode_detect_regression_23810, testing::Combine(
+    testing::Values("33094", "37379", "74397"),
+    testing::Values(4, 8, 24)));
+
+// The second finder pattern search added for #23810 must not find more codes in noise.
+// The first search alone detects 6 of these 50 images.
+TEST(Objdetect_QRCode_detect, detect_regression_23810_noise)
+{
+    RNG rng(777);
+    QRCodeDetector qrcode;
+    int detected = 0;
+    for (int i = 0; i < 50; i++)
+    {
+        Mat src(240, 320, CV_8UC1);
+        rng.fill(src, RNG::UNIFORM, Scalar(0), Scalar(256));
+        std::vector<Point> corners;
+        if (qrcode.detect(src, corners))
+            detected++;
+    }
+    EXPECT_LE(detected, 6);
+}
+
 }} // namespace

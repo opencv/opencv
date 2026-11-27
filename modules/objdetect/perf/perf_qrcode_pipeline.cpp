@@ -198,5 +198,22 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Perf_Objdetect_Not_QRCode,
                               Size(1920, 1080), Size(3840, 2160))
       ));
 
+typedef ::perf::TestBaseWithParam< Size > Perf_Objdetect_QRCode_Uniform_Noise;
+
+// In uniform noise, many lines match the finder pattern ratio, so detect() often
+// runs the second finder pattern search (#23810).
+PERF_TEST_P_(Perf_Objdetect_QRCode_Uniform_Noise, detect)
+{
+    Mat noise(GetParam(), CV_8UC1);
+    theRNG().fill(noise, RNG::UNIFORM, Scalar(0), Scalar(256));
+    std::vector<Point> corners;
+    QRCodeDetector qrcode;
+    TEST_CYCLE() qrcode.detect(noise, corners);
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Perf_Objdetect_QRCode_Uniform_Noise,
+      ::testing::Values(Size(640, 480), Size(1280, 720), Size(1920, 1080)));
+
 }
 } // namespace
