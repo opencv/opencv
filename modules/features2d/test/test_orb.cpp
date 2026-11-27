@@ -219,7 +219,7 @@ TEST(Features2D_ORB, roi_submatrix_padding)
     Mat srcRoi = parent(roi);
     Mat srcClone = srcRoi.clone();
 
-    Ptr<ORB> orb = cv::ORB::create();
+    Ptr<ORB> orb = cv::ORB::create(500, 1.2f, 8, 2);
 
     vector<KeyPoint> kpsRoi, kpsClone;
     Mat descRoi, descClone;
@@ -231,6 +231,8 @@ TEST(Features2D_ORB, roi_submatrix_padding)
         << "Keypoint count differs between submatrix ROI and isolated clone";
     ASSERT_GT(kpsRoi.size(), 0u)
         << "No keypoints were detected in test image";
+    ASSERT_FALSE(descRoi.empty());
+    ASSERT_FALSE(descClone.empty());
 
     for (size_t i = 0; i < kpsRoi.size(); ++i)
     {
@@ -239,11 +241,8 @@ TEST(Features2D_ORB, roi_submatrix_padding)
         EXPECT_EQ(kpsRoi[i].angle, kpsClone[i].angle) << "Keypoint angle mismatch at index " << i;
     }
 
-    if (!descRoi.empty() && !descClone.empty())
-    {
-        EXPECT_EQ(0, cvtest::norm(descRoi, descClone, NORM_INF))
-            << "Descriptors differ between submatrix ROI and isolated clone";
-    }
+    EXPECT_EQ(0, cvtest::norm(descRoi, descClone, NORM_INF))
+        << "Descriptors differ between submatrix ROI and isolated clone";
 }
 
 }} // namespace
