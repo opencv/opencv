@@ -30,8 +30,8 @@ Use ``--exclude`` to skip them.
 
 A full scan of the OpenCV tree found 1,576 hits. ``MULTIPLICATION_SIGN`` is
 down to 146 hits, mostly real ``*`` multiplication or ``*`` inside
-``\texttt{...}`` code. ``TEXT_IN_MATH_MODE`` hit ``\texttt{...}`` 408 of 744
-times, and ``UNNECESSARY_MATH_MODE`` hit many lone Greek letters.
+``\texttt{...}`` code. ``TEXT_IN_MATH_MODE`` often hits ``\texttt{...}``,
+and ``UNNECESSARY_MATH_MODE`` hit many lone Greek letters.
 
 Operator names (``BACKSLASH_NEEDED``)
 -------------------------------------
