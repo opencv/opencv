@@ -66,6 +66,13 @@ class Heap
      * Type T must be comparable.
      */
     std::vector<T> heap;
+
+    /**
+     * Maximum number of elements the heap accepts. Set exactly by
+     * reserve(); tracked separately from the storage capacity, which
+     * never shrinks once it has grown.
+     */
+    int limit_ = 0;
 public:
     /**
      * \brief Constructs a heap with a pre-allocated capacity
@@ -83,7 +90,7 @@ public:
      * \param vec external vector
      */
     Heap(std::vector<T>&& vec)
-        : heap(std::move(vec))
+        : heap(std::move(vec)), limit_((int)heap.capacity())
     {
         std::make_heap(heap.begin(), heap.end(), greater<T>());
     }
@@ -131,6 +138,7 @@ public:
      */
     void reserve(const int capacity)
     {
+        limit_ = capacity;
         heap.reserve(capacity);
     }
 
@@ -145,7 +153,7 @@ public:
     void insert(T value)
     {
         /* If heap is full, then return without adding this element. */
-        if (size() == capacity()) {
+        if (size() >= limit_) {
             return;
         }
 
