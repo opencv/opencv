@@ -266,6 +266,114 @@ TEST(usac_Fundamental, accuracy) {
     }
 }
 
+struct WeightedUsacScene
+{
+    std::vector<cv::Point2d> points1, points2, clean1, clean2;
+};
+
+static WeightedUsacScene makeWeightedUsacScene()
+{
+    cv::RNG rng(262);
+    const double focal = 820.0;
+    const double yaw = 0.075;
+    const cv::Matx33d rotation(std::cos(yaw), 0, std::sin(yaw), 0, 1, 0,
+                                -std::sin(yaw), 0, std::cos(yaw));
+    const cv::Vec3d translation(-0.60, 0.03, 0.02);
+    const auto project = [focal](const cv::Vec3d& point) {
+        return cv::Point2d(focal * point[0] / point[2] + 480, focal * point[1] / point[2] + 360);
+    };
+    WeightedUsacScene scene;
+    for (int i = 0; i < 180 + 100; ++i)
+    {
+        const double x = rng.uniform(-1.9, 1.9);
+        const double y = rng.uniform(-1.3, 1.3);
+        const cv::Vec3d X(x, y, rng.uniform(4., 11.));
+        const cv::Point2d a = project(X);
+        const cv::Point2d b = project(rotation * X + translation);
+        if (i >= 180)
+        {
+            scene.clean1.push_back(a);
+            scene.clean2.push_back(b);
+            continue;
+        }
+        const double dx1 = rng.uniform(-1.8, 1.8);
+        const double dy1 = rng.uniform(-1.8, 1.8);
+        const double dx2 = rng.uniform(-1.8, 1.8);
+        const double dy2 = rng.uniform(-1.8, 1.8);
+        scene.points1.emplace_back(a.x + dx1, a.y + dy1);
+        scene.points2.emplace_back(b.x + dx2, b.y + dy2);
+    }
+    // Correspondences displaced to a different point in each of 50 matches.
+    for (int i = 0; i < 50; i += 2)
+        std::swap(scene.points2[i], scene.points2[i + 1]);
+    return scene;
+}
+
+static cv::UsacParams weightedUsacParams(int subsetSize, bool weighted)
+{
+    cv::UsacParams params;
+    params.threshold = 3.;
+    params.confidence = .99;
+    params.maxIterations = 500;
+    params.randomGeneratorState = 0;
+    params.isParallel = false;
+    params.sampler = cv::SAMPLING_UNIFORM;
+    params.score = weighted ? cv::SCORE_METHOD_MAGSAC : cv::SCORE_METHOD_MSAC;
+    params.loMethod = weighted ? cv::LOCAL_OPTIM_SIGMA : cv::LOCAL_OPTIM_INNER_LO;
+    params.loIterations = 10;
+    params.loSampleSize = subsetSize;
+    params.final_polisher = cv::NONE_POLISHER;
+    return params;
+}
+
+static double cleanSampsonRms(const cv::Mat& F, const WeightedUsacScene& scene)
+{
+    const cv::Matx33d matrix(F);
+    double sum = 0;
+    for (size_t i = 0; i < scene.clean1.size(); ++i)
+    {
+        const cv::Vec3d a(scene.clean1[i].x, scene.clean1[i].y, 1.);
+        const cv::Vec3d b(scene.clean2[i].x, scene.clean2[i].y, 1.);
+        const cv::Vec3d lineB = matrix * a;
+        const cv::Vec3d lineA = matrix.t() * b;
+        const double residual = b.dot(lineB);
+        sum += residual * residual / (lineA[0] * lineA[0] + lineA[1] * lineA[1]
+                                      + lineB[0] * lineB[0] + lineB[1] * lineB[1]);
+    }
+    return std::sqrt(sum / scene.clean1.size());
+}
+
+// Regression for https://github.com/opencv/opencv/issues/27388.
+TEST(usac_Fundamental, sigma_local_optimization_weights)
+{
+    const WeightedUsacScene scene = makeWeightedUsacScene();
+    for (int subsetSize : {30, 180})
+    {
+        SCOPED_TRACE(subsetSize);
+        cv::Mat mask;
+        const cv::Mat F = cv::findFundamentalMat(scene.points1, scene.points2, mask,
+                                                 weightedUsacParams(subsetSize, true));
+        ASSERT_EQ(cv::Size(3, 3), F.size());
+
+        // Unseen, noise-free projections provide a subpixel accuracy check.
+        EXPECT_LT(cleanSampsonRms(F, scene), 0.5);
+    }
+}
+
+TEST(usac_Fundamental, unweighted_local_optimization)
+{
+    const WeightedUsacScene scene = makeWeightedUsacScene();
+    for (int subsetSize : {30, 180})
+    {
+        SCOPED_TRACE(subsetSize);
+        cv::Mat mask;
+        const cv::Mat F = cv::findFundamentalMat(scene.points1, scene.points2, mask,
+                                                 weightedUsacParams(subsetSize, false));
+        ASSERT_EQ(cv::Size(3, 3), F.size());
+        EXPECT_LT(cleanSampsonRms(F, scene), 1.25);
+    }
+}
+
 TEST(usac_Fundamental, regression_19639)
 {
     double x_[] = {

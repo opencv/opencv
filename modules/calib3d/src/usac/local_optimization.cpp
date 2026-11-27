@@ -346,6 +346,7 @@ private:
     Ptr<RandomGenerator> random_generator_smaller_subset;
     int points_size, max_lo_iters, non_min_sample_size, current_ransac_iter;
     std::vector<double> weights;
+    std::vector<double> weights_by_point, sample_weights;
     std::vector<int> inliers;
     std::vector<cv::Mat> models;
     double inlier_threshold_sqr;
@@ -364,7 +365,11 @@ public:
         models = std::vector<cv::Mat>(estimator_->getMaxNumberOfSolutions());
         points_size = quality_->getPointsSize();
         inlier_threshold_sqr = inlier_threshold_sqr_;
-        if (weight_fnc != nullptr) weights = std::vector<double>(points_size);
+        if (weight_fnc != nullptr) {
+            weights.resize(points_size);
+            weights_by_point.resize(points_size);
+            sample_weights.resize(non_min_sample_size);
+        }
         random_generator_smaller_subset = nullptr;
         updated_lo = update_lo_;
     }
@@ -374,10 +379,16 @@ public:
         new_model_score = best_model_score;
         best_model.copyTo(new_model);
 
-        int num_inliers;
-        if (weights.empty())
-            num_inliers = Quality::getInliers(error, best_model, inliers, inlier_threshold_sqr);
-        else num_inliers = weight_fnc->getInliersWeights(error->getErrors(best_model), inliers, weights);
+        auto update_inliers = [&]() {
+            if (weights.empty())
+                return Quality::getInliers(error, best_model, inliers, inlier_threshold_sqr);
+            const int count = weight_fnc->getInliersWeights(error->getErrors(best_model), inliers, weights);
+            // The sampler permutes inliers, so store each weight under its point ID.
+            for (int i = 0; i < count; ++i)
+                weights_by_point[inliers[i]] = weights[i];
+            return count;
+        };
+        int num_inliers = update_inliers();
         auto update_generator = [&] (int num_inls) {
             if (num_inls <= non_min_sample_size) {
                 // add new random generator if number of inliers is fewer than non-minimal sample size
@@ -395,11 +406,15 @@ public:
 
         int max_lo_iters_ = max_lo_iters, last_update = 0, last_inliers_update = 0;
         for (int iter = 0; iter < max_lo_iters_; iter++) {
-            int num_models;
-            if (num_inliers <= non_min_sample_size)
-                 num_models = estimator->estimate(new_model, random_generator_smaller_subset->generateUniqueRandomSubset(inliers, num_inliers),
-                        random_generator_smaller_subset->getSubsetSize(), models, weights);
-            else num_models = estimator->estimate(new_model, random_generator->generateUniqueRandomSubset(inliers, num_inliers), non_min_sample_size, models, weights);
+            const bool use_smaller_subset = num_inliers <= non_min_sample_size;
+            const auto& generator = use_smaller_subset ? random_generator_smaller_subset : random_generator;
+            const int sample_size = use_smaller_subset ? generator->getSubsetSize() : non_min_sample_size;
+            const auto& sample = generator->generateUniqueRandomSubset(inliers, num_inliers);
+            if (!sample_weights.empty()) {
+                for (int i = 0; i < sample_size; ++i)
+                    sample_weights[i] = weights_by_point[sample[i]];
+            }
+            const int num_models = estimator->estimate(new_model, sample, sample_size, models, sample_weights);
             for (int m = 0; m < num_models; m++) {
                 const auto score = quality->getScore(models[m]);
                 if (score.isBetter(new_model_score)) {
@@ -416,9 +431,7 @@ public:
                     if (score.inlier_number >= best_model_score.inlier_number ||
                         score.inlier_number > non_min_sample_size) {
                         // update inliers if new model has more than previous best model
-                        if (weights.empty())
-                            num_inliers = Quality::getInliers(error, best_model, inliers, inlier_threshold_sqr);
-                        else num_inliers = weight_fnc->getInliersWeights(error->getErrors(best_model), inliers, weights);
+                        num_inliers = update_inliers();
                         if (!update_generator(num_inliers))
                             return true;
                     }
