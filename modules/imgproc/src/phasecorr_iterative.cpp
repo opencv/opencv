@@ -50,20 +50,27 @@ cv::Mat calculateCrossPowerSpectrum(const cv::Mat& dft1, const cv::Mat& dft2)
 
 void fftshift(cv::Mat& out)
 {
-    int cx = out.cols / 2;
-    int cy = out.rows / 2;
-    cv::Mat q0(out, cv::Rect(0, 0, cx, cy));
-    cv::Mat q1(out, cv::Rect(cx, 0, cx, cy));
-    cv::Mat q2(out, cv::Rect(0, cy, cx, cy));
-    cv::Mat q3(out, cv::Rect(cx, cy, cx, cy));
+    const int cx = out.cols / 2;
+    const int cy = out.rows / 2;
 
-    cv::Mat tmp;
-    q0.copyTo(tmp);
-    q3.copyTo(q0);
-    tmp.copyTo(q3);
-    q1.copyTo(tmp);
-    q2.copyTo(q1);
-    tmp.copyTo(q2);
+    const int left = out.cols - cx;
+    const int top = out.rows - cy;
+
+    cv::Mat shifted(out.size(), out.type());
+
+    out(cv::Rect(0, 0, left, top))
+        .copyTo(shifted(cv::Rect(cx, cy, left, top)));
+
+    out(cv::Rect(left, 0, cx, top))
+        .copyTo(shifted(cv::Rect(0, cy, cx, top)));
+
+    out(cv::Rect(0, top, left, cy))
+        .copyTo(shifted(cv::Rect(cx, 0, left, cy)));
+
+    out(cv::Rect(left, top, cx, cy))
+        .copyTo(shifted(cv::Rect(0, 0, cx, cy)));
+
+    shifted.copyTo(out);
 }
 
 bool isOutOfBounds(const cv::Point2i& peak, const cv::Mat& mat, int size)
