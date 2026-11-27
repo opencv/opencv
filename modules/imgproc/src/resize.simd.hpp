@@ -47,6 +47,18 @@ static inline int resizeNN_vec_end(const int* x_ofs, int width, int row_bytes, i
     return end;
 }
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+// Stores the lanes of a and b interleaved (a0 b0 a1 b1 ...) as two vectors.
+template<typename T, typename VT>
+static inline void zip_store(T* D, const VT& a, const VT& b)
+{
+    VT lo, hi;
+    v_zip(a, b, lo, hi);
+    v_store(D, lo);
+    v_store(D + VTraits<VT>::vlanes(), hi);
+}
+#endif
+
 #if CV_AVX_512VBMI
 // When the 64 byte offsets span at most 256 bytes, one 256-byte source window permuted with
 // vpermb (v512_lut with byte indices) replaces the per-index LUT. The window is slid back
@@ -217,6 +229,56 @@ static CV_ALWAYS_INLINE void resizeNN_row_px12(uchar* D, const uchar* S, const i
     }
 }
 
+static inline void resizeNN_row(uchar* D, const uchar* S, const int* x_ofs, int width,
+                                int pix_size, int row_bytes, int vend)
+{
+    int x = 0;
+    switch( pix_size )
+    {
+    case 1:
+        resizeNN_row_u8(D, S, x_ofs, width, row_bytes, vend);
+        break;
+    case 2:
+        resizeNN_row_u16(D, S, x_ofs, width, vend);
+        break;
+    case 3:
+        resizeNN_row_px3(D, S, x_ofs, width);
+        break;
+    case 4:
+        resizeNN_row_u32(D, S, x_ofs, width);
+        break;
+    case 6:
+        for( ; x < width; x++, D += 6 )
+        {
+            const ushort* _tS = (const ushort*)(S + x_ofs[x]);
+            ushort* _tD = (ushort*)D;
+            _tD[0] = _tS[0]; _tD[1] = _tS[1]; _tD[2] = _tS[2];
+        }
+        break;
+    case 8:
+        resizeNN_row_u64(D, S, x_ofs, width);
+        break;
+    case 12:
+        resizeNN_row_px12(D, S, x_ofs, width, vend);
+        break;
+    case 16:
+        for( ; x < width; x++ )
+        {
+            const int* _tS = (const int*)(S + x_ofs[x]);
+            int* _tD = (int*)(D + x * 16);
+            _tD[0] = _tS[0]; _tD[1] = _tS[1]; _tD[2] = _tS[2]; _tD[3] = _tS[3];
+        }
+        break;
+    default:
+        for( x = 0; x < width; x++, D += pix_size )
+        {
+            const uchar* _tS = S + x_ofs[x];
+            for (int k = 0; k < pix_size; k++)
+                D[k] = _tS[k];
+        }
+    }
+}
+
 static inline void interpolateCubic( float x, float* coeffs )
 {
     const float A = -0.75f;
@@ -316,52 +378,7 @@ public:
             prev_sy = sy;
 
             const uchar* S = src.ptr(sy);
-            int x = 0;
-
-            switch( pix_size )
-            {
-            case 1:
-                resizeNN_row_u8(D, S, x_ofs, width, row_bytes, vend);
-                break;
-            case 2:
-                resizeNN_row_u16(D, S, x_ofs, width, vend);
-                break;
-            case 3:
-                resizeNN_row_px3(D, S, x_ofs, width);
-                break;
-            case 4:
-                resizeNN_row_u32(D, S, x_ofs, width);
-                break;
-            case 6:
-                for( ; x < width; x++, D += 6 )
-                {
-                    const ushort* _tS = (const ushort*)(S + x_ofs[x]);
-                    ushort* _tD = (ushort*)D;
-                    _tD[0] = _tS[0]; _tD[1] = _tS[1]; _tD[2] = _tS[2];
-                }
-                break;
-            case 8:
-                resizeNN_row_u64(D, S, x_ofs, width);
-                break;
-            case 12:
-                resizeNN_row_px12(D, S, x_ofs, width, vend);
-                break;
-            case 16:
-                for( ; x < width; x++ )
-                {
-                    const int* _tS = (const int*)(S + x_ofs[x]);
-                    int* _tD = (int*)(D + x * 16);
-                    _tD[0] = _tS[0]; _tD[1] = _tS[1]; _tD[2] = _tS[2]; _tD[3] = _tS[3];
-                }
-                break;
-            default:
-                for( x = 0; x < width; x++, D += pix_size )
-                {
-                    const uchar* _tS = S + x_ofs[x];
-                    for (int k = 0; k < pix_size; k++)
-                        D[k] = _tS[k];
-                }
-            }
+            resizeNN_row(D, S, x_ofs, width, pix_size, row_bytes, vend);
         }
     }
 
@@ -426,11 +443,27 @@ static inline void nn_bitexact_row_cn3_up2(uchar* D, const uchar* S, int sw)
     }
 }
 
+template<typename T>
+static inline void nn_bitexact_row_up2(T* D, const T* S, int width)
+{
+    int x = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    typedef decltype(vx_load(S)) VT;
+    const int n = VTraits<VT>::vlanes();
+    for (; x <= width - 2 * n; x += 2 * n)
+    {
+        const VT s = vx_load(S + (x >> 1));
+        zip_store(D + x, s, s);
+    }
+#endif
+    for (; x < width; x++)
+        D[x] = S[x >> 1];
+}
+
 class resizeNN_bitexact2xUpInvoker_ : public ParallelLoopBody
 {
 public:
-    resizeNN_bitexact2xUpInvoker_(const Mat& _src, Mat& _dst, const int* _sx_ofs) :
-        src(_src), dst(_dst), sx_ofs(_sx_ofs) {}
+    resizeNN_bitexact2xUpInvoker_(const Mat& _src, Mat& _dst) : src(_src), dst(_dst) {}
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
@@ -442,78 +475,27 @@ public:
             const int sy = std::min(y >> 1, sh - 1);
             uchar* D = dst.ptr(y);
             const uchar* S = src.ptr(sy);
-            int x = 0;
 
             if (pix_size == 1)
-            {
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-                const int vl8 = VTraits<v_uint8>::vlanes();
-                for (; x <= width - 2 * vl8; x += 2 * vl8)
-                {
-                    v_uint8 s = vx_load(S + (x >> 1)), lo, hi;
-                    v_zip(s, s, lo, hi);
-                    v_store(D + x, lo);
-                    v_store(D + x + vl8, hi);
-                }
-#endif
-                for (; x < width; x++)
-                    D[x] = S[sx_ofs[x]];
-            }
+                nn_bitexact_row_up2(D, S, width);
             else if (pix_size == 2)
-            {
-                const ushort* S16 = (const ushort*)S;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-                const int vl16 = VTraits<v_uint16>::vlanes();
-                for (; x <= width - 2 * vl16; x += 2 * vl16)
-                {
-                    v_uint16 s = vx_load(S16 + (x >> 1)), lo, hi;
-                    v_zip(s, s, lo, hi);
-                    v_store((ushort*)D + x, lo);
-                    v_store((ushort*)D + x + vl16, hi);
-                }
-#endif
-                for (; x < width; x++)
-                    ((ushort*)D)[x] = S16[sx_ofs[x]];
-            }
+                nn_bitexact_row_up2((ushort*)D, (const ushort*)S, width);
             else if (pix_size == 3)
-            {
                 nn_bitexact_row_cn3_up2(D, S, src.cols);
-            }
             else if (pix_size == 4)
-            {
-                const uint32_t* S32 = (const uint32_t*)S;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-                const int vl32 = VTraits<v_uint32>::vlanes();
-                for (; x <= width - 2 * vl32; x += 2 * vl32)
-                {
-                    v_uint32 s = vx_load(S32 + (x >> 1)), lo, hi;
-                    v_zip(s, s, lo, hi);
-                    v_store((uint32_t*)D + x, lo);
-                    v_store((uint32_t*)D + x + vl32, hi);
-                }
-#endif
-                for (; x < width; x++)
-                    ((uint32_t*)D)[x] = S32[sx_ofs[x]];
-            }
+                nn_bitexact_row_up2((uint32_t*)D, (const uint32_t*)S, width);
         }
     }
 
 private:
     const Mat& src;
     Mat& dst;
-    const int* sx_ofs;
 };
 
 static void resizeNN_bitexact2xUp_(const Mat& src, Mat& dst)
 {
-    const int dw = dst.cols;
-    AutoBuffer<int> _sx_ofs(dw);
-    int* sx_ofs = _sx_ofs.data();
-    for (int x = 0; x < dw; x++)
-        sx_ofs[x] = x >> 1;
-
     Range range(0, dst.rows);
-    resizeNN_bitexact2xUpInvoker_ invoker(src, dst, sx_ofs);
+    resizeNN_bitexact2xUpInvoker_ invoker(src, dst);
     parallel_for_(range, invoker, dst.total() / (double)(1 << 16));
 }
 
@@ -538,43 +520,7 @@ public:
             int sy = std::min(_sy, ssize.height-1);
             const uchar* S = src.ptr(sy);
 
-            int x = 0;
-            switch( pix_size )
-            {
-            case 1:
-                resizeNN_row_u8(D, S, x_ofs, dsize.width, row_bytes, vend);
-                break;
-            case 2:
-                resizeNN_row_u16(D, S, x_ofs, dsize.width, vend);
-                break;
-            case 3:
-                resizeNN_row_px3(D, S, x_ofs, dsize.width);
-                break;
-            case 4:
-                resizeNN_row_u32(D, S, x_ofs, dsize.width);
-                break;
-            case 6:
-                for( ; x < dsize.width; x++, D += 6 )
-                {
-                    const ushort* _tS = (const ushort*)(S + x_ofs[x]);
-                    ushort* _tD = (ushort*)D;
-                    _tD[0] = _tS[0]; _tD[1] = _tS[1]; _tD[2] = _tS[2];
-                }
-                break;
-            case 8:
-                resizeNN_row_u64(D, S, x_ofs, dsize.width);
-                break;
-            case 12:
-                resizeNN_row_px12(D, S, x_ofs, dsize.width, vend);
-                break;
-            default:
-                for( x = 0; x < dsize.width; x++, D += pix_size )
-                {
-                    const uchar* _tS = S + x_ofs[x];
-                    for (int k = 0; k < pix_size; k++)
-                        D[k] = _tS[k];
-                }
-            }
+            resizeNN_row(D, S, x_ofs, dsize.width, pix_size, row_bytes, vend);
         }
     }
 private:
@@ -1117,52 +1063,30 @@ typedef VResizeNoVec VResizeLanczos4Vec_32f;
 
 #if CV_SIMD  // fixed-width 128-bit kernels; not valid for scalable backends (RVV)
 
-static int hresize_linear_u8_cn1(const uchar** src, int** dst, int count,
-                                 const int* xofs, const short* alpha, int xmax)
+// Loads the 8 source pairs (left, right) for 8 destination elements as 16-bit lanes.
+template<int cn>
+static inline void hresize_linear_u8_load(const uchar* S, const int* xofs, v_int16x8& lo, v_int16x8& hi)
 {
-    const int step = 8;
-    const int len0 = xmax & -step;
-    int dx = 0, k = 0;
-
-    for( ; k <= count - 2; k += 2 )
+    v_uint16x8 l, h;
+    if( cn == 1 )
+        v_expand(v_lut_pairs(S, xofs), l, h);
+    else if( cn == 2 )
     {
-        const uchar *S0 = src[k];
-        int *D0 = dst[k];
-        const uchar *S1 = src[k + 1];
-        int *D1 = dst[k + 1];
-
-        for( dx = 0; dx < len0; dx += step )
-        {
-            v_int16x8 al = v_load((const short*)(alpha + dx * 2));
-            v_int16x8 ah = v_load((const short*)(alpha + dx * 2 + 8));
-            v_uint16x8 sl, sh;
-            v_expand(v_lut_pairs(S0, xofs + dx), sl, sh);
-            v_store(D0 + dx, v_dotprod(v_reinterpret_as_s16(sl), al));
-            v_store(D0 + dx + 4, v_dotprod(v_reinterpret_as_s16(sh), ah));
-            v_expand(v_lut_pairs(S1, xofs + dx), sl, sh);
-            v_store(D1 + dx, v_dotprod(v_reinterpret_as_s16(sl), al));
-            v_store(D1 + dx + 4, v_dotprod(v_reinterpret_as_s16(sh), ah));
-        }
+        int ofs[4] = { xofs[0], xofs[2], xofs[4], xofs[6] };
+        v_expand(v_interleave_pairs(v_lut_quads(S, ofs)), l, h);
     }
-    for( ; k < count; k++ )
+    else
     {
-        const uchar *S = src[k];
-        int *D = dst[k];
-        for( dx = 0; dx < len0; dx += step )
-        {
-            v_int16x8 al = v_load((const short*)(alpha + dx * 2));
-            v_int16x8 ah = v_load((const short*)(alpha + dx * 2 + 8));
-            v_uint16x8 sl, sh;
-            v_expand(v_lut_pairs(S, xofs + dx), sl, sh);
-            v_store(D + dx, v_dotprod(v_reinterpret_as_s16(sl), al));
-            v_store(D + dx + 4, v_dotprod(v_reinterpret_as_s16(sh), ah));
-        }
+        l = v_interleave_quads(v_load_expand(S + xofs[0]));
+        h = v_interleave_quads(v_load_expand(S + xofs[4]));
     }
-    return dx;
+    lo = v_reinterpret_as_s16(l);
+    hi = v_reinterpret_as_s16(h);
 }
 
-static int hresize_linear_u8_cn2(const uchar** src, int** dst, int count,
-                                 const int* xofs, const short* alpha, int xmax)
+template<int cn>
+static int hresize_linear_u8(const uchar** src, int** dst, int count,
+                             const int* xofs, const short* alpha, int xmax)
 {
     const int step = 8;
     const int len0 = xmax & -step;
@@ -1170,23 +1094,19 @@ static int hresize_linear_u8_cn2(const uchar** src, int** dst, int count,
 
     for( ; k <= count - 2; k += 2 )
     {
-        const uchar *S0 = src[k];
-        int *D0 = dst[k];
-        const uchar *S1 = src[k + 1];
-        int *D1 = dst[k + 1];
-
+        const uchar *S0 = src[k], *S1 = src[k + 1];
+        int *D0 = dst[k], *D1 = dst[k + 1];
         for( dx = 0; dx < len0; dx += step )
         {
-            int ofs[4] = { xofs[dx], xofs[dx + 2], xofs[dx + 4], xofs[dx + 6] };
-            v_int16x8 al = v_load((const short*)(alpha + dx * 2));
-            v_int16x8 ah = v_load((const short*)(alpha + dx * 2 + 8));
-            v_uint16x8 sl, sh;
-            v_expand(v_interleave_pairs(v_lut_quads(S0, ofs)), sl, sh);
-            v_store(D0 + dx, v_dotprod(v_reinterpret_as_s16(sl), al));
-            v_store(D0 + dx + 4, v_dotprod(v_reinterpret_as_s16(sh), ah));
-            v_expand(v_interleave_pairs(v_lut_quads(S1, ofs)), sl, sh);
-            v_store(D1 + dx, v_dotprod(v_reinterpret_as_s16(sl), al));
-            v_store(D1 + dx + 4, v_dotprod(v_reinterpret_as_s16(sh), ah));
+            v_int16x8 al = v_load(alpha + dx * 2);
+            v_int16x8 ah = v_load(alpha + dx * 2 + 8);
+            v_int16x8 sl, sh;
+            hresize_linear_u8_load<cn>(S0, xofs + dx, sl, sh);
+            v_store(D0 + dx, v_dotprod(sl, al));
+            v_store(D0 + dx + 4, v_dotprod(sh, ah));
+            hresize_linear_u8_load<cn>(S1, xofs + dx, sl, sh);
+            v_store(D1 + dx, v_dotprod(sl, al));
+            v_store(D1 + dx + 4, v_dotprod(sh, ah));
         }
     }
     for( ; k < count; k++ )
@@ -1195,13 +1115,12 @@ static int hresize_linear_u8_cn2(const uchar** src, int** dst, int count,
         int *D = dst[k];
         for( dx = 0; dx < len0; dx += step )
         {
-            int ofs[4] = { xofs[dx], xofs[dx + 2], xofs[dx + 4], xofs[dx + 6] };
-            v_int16x8 al = v_load((const short*)(alpha + dx * 2));
-            v_int16x8 ah = v_load((const short*)(alpha + dx * 2 + 8));
-            v_uint16x8 sl, sh;
-            v_expand(v_interleave_pairs(v_lut_quads(S, ofs)), sl, sh);
-            v_store(D + dx, v_dotprod(v_reinterpret_as_s16(sl), al));
-            v_store(D + dx + 4, v_dotprod(v_reinterpret_as_s16(sh), ah));
+            v_int16x8 al = v_load(alpha + dx * 2);
+            v_int16x8 ah = v_load(alpha + dx * 2 + 8);
+            v_int16x8 sl, sh;
+            hresize_linear_u8_load<cn>(S, xofs + dx, sl, sh);
+            v_store(D + dx, v_dotprod(sl, al));
+            v_store(D + dx + 4, v_dotprod(sh, ah));
         }
     }
     return dx;
@@ -1238,45 +1157,6 @@ static int hresize_linear_u8_cn3(const uchar** src, int** dst, int count,
         }
     }
     CV_DbgAssert(dx < dmax);
-    return dx;
-}
-
-static int hresize_linear_u8_cn4(const uchar** src, int** dst, int count,
-                                 const int* xofs, const short* alpha, int xmax)
-{
-    const int step = 8;
-    const int len0 = xmax & -step;
-    int dx = 0, k = 0;
-
-    for( ; k <= count - 2; k += 2 )
-    {
-        const uchar *S0 = src[k];
-        int *D0 = dst[k];
-        const uchar *S1 = src[k + 1];
-        int *D1 = dst[k + 1];
-
-        for( dx = 0; dx < len0; dx += step )
-        {
-            v_int16x8 a0 = v_load((const short*)(alpha + dx * 2));
-            v_int16x8 a1 = v_load((const short*)(alpha + dx * 2 + 8));
-            v_store(D0 + dx, v_dotprod(v_reinterpret_as_s16(v_interleave_quads(v_load_expand(S0 + xofs[dx]))), a0));
-            v_store(D0 + dx + 4, v_dotprod(v_reinterpret_as_s16(v_interleave_quads(v_load_expand(S0 + xofs[dx + 4]))), a1));
-            v_store(D1 + dx, v_dotprod(v_reinterpret_as_s16(v_interleave_quads(v_load_expand(S1 + xofs[dx]))), a0));
-            v_store(D1 + dx + 4, v_dotprod(v_reinterpret_as_s16(v_interleave_quads(v_load_expand(S1 + xofs[dx + 4]))), a1));
-        }
-    }
-    for( ; k < count; k++ )
-    {
-        const uchar *S = src[k];
-        int *D = dst[k];
-        for( dx = 0; dx < len0; dx += step )
-        {
-            v_int16x8 a0 = v_load((const short*)(alpha + dx * 2));
-            v_int16x8 a1 = v_load((const short*)(alpha + dx * 2 + 8));
-            v_store(D + dx, v_dotprod(v_reinterpret_as_s16(v_interleave_quads(v_load_expand(S + xofs[dx]))), a0));
-            v_store(D + dx + 4, v_dotprod(v_reinterpret_as_s16(v_interleave_quads(v_load_expand(S + xofs[dx + 4]))), a1));
-        }
-    }
     return dx;
 }
 
@@ -1334,13 +1214,13 @@ struct HResizeLinearVecU8
         const short* alpha/*[xmax]*/, int /*smax*/, int dmax, int cn, int /*xmin*/, int xmax) const
     {
         if( cn == 1 )
-            return hresize_linear_u8_cn1(src, dst, count, xofs, alpha, xmax);
+            return hresize_linear_u8<1>(src, dst, count, xofs, alpha, xmax);
         if( cn == 2 )
-            return hresize_linear_u8_cn2(src, dst, count, xofs, alpha, xmax);
+            return hresize_linear_u8<2>(src, dst, count, xofs, alpha, xmax);
         if( cn == 3 )
             return hresize_linear_u8_cn3(src, dst, count, xofs, alpha, dmax, cn, xmax);
         if( cn == 4 )
-            return hresize_linear_u8_cn4(src, dst, count, xofs, alpha, xmax);
+            return hresize_linear_u8<4>(src, dst, count, xofs, alpha, xmax);
         return 0;
     }
 };
@@ -3531,25 +3411,12 @@ static inline void linear2x_core_u8(const v_uint8& ul, const v_uint8& uc, const 
 // Interleave even/odd output pixels of cn bytes each and store 2*vlanes bytes.
 static inline void linear2x_store_pair(uchar* D, const v_uint8& e, const v_uint8& o, int cn)
 {
-    const int n = VTraits<v_uint8>::vlanes();
     if( cn == 1 )
-    {
-        v_uint8 lo, hi;
-        v_zip(e, o, lo, hi);
-        v_store(D, lo); v_store(D + n, hi);
-    }
+        zip_store(D, e, o);
     else if( cn == 2 )
-    {
-        v_uint16 lo, hi;
-        v_zip(v_reinterpret_as_u16(e), v_reinterpret_as_u16(o), lo, hi);
-        v_store(D, v_reinterpret_as_u8(lo)); v_store(D + n, v_reinterpret_as_u8(hi));
-    }
+        zip_store((ushort*)D, v_reinterpret_as_u16(e), v_reinterpret_as_u16(o));
     else
-    {
-        v_uint32 lo, hi;
-        v_zip(v_reinterpret_as_u32(e), v_reinterpret_as_u32(o), lo, hi);
-        v_store(D, v_reinterpret_as_u8(lo)); v_store(D + n, v_reinterpret_as_u8(hi));
-    }
+        zip_store((uint32_t*)D, v_reinterpret_as_u32(e), v_reinterpret_as_u32(o));
 }
 
 static inline void linear2x_block_packed(v_uint8& e0, v_uint8& o0, v_uint8& e1, v_uint8& o1,
