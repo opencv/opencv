@@ -2140,185 +2140,6 @@ static inline v_uint32 area_fast_scale_round(const v_uint32& sum, float inv_area
     return vx_load(r);
 }
 
-static inline void area_fast_round_store_u8(uchar* dst, const v_uint32& sums, int n, int area)
-{
-    CV_DECL_ALIGNED(64) uint32_t s[VTraits<v_uint32>::max_nlanes];
-    v_store(s, sums);
-    for (int i = 0; i < n; ++i)
-        dst[i] = area_fast_round<uchar>((int)s[i], area);
-}
-
-static inline void area_fast_round_store_u8(uchar* dst, const v_uint16& sums, int n, int area)
-{
-    if (area == 4)
-    {
-        v_rshr_pack_store<2>(dst, sums);
-        return;
-    }
-    CV_DECL_ALIGNED(64) uint16_t s[VTraits<v_uint16>::max_nlanes];
-    v_store(s, sums);
-    for (int i = 0; i < n; ++i)
-        dst[i] = area_fast_round<uchar>((int)s[i], area);
-}
-
-static inline void area_fast_round_store_u16(ushort* dst, const v_uint32& sums, int n, int area)
-{
-    if (area == 4)
-    {
-        v_rshr_pack_store<2>(dst, sums);
-        return;
-    }
-    CV_DECL_ALIGNED(64) uint32_t s[VTraits<v_uint32>::max_nlanes];
-    v_store(s, sums);
-    for (int i = 0; i < n; ++i)
-        dst[i] = area_fast_round<ushort>((int)s[i], area);
-}
-
-static inline v_uint8 area_fast_round_pack_u8_u16(const v_uint16& lo, const v_uint16& hi, int area)
-{
-    if (area == 4)
-        return v_rshr_pack<2>(lo, hi);
-    const int n = VTraits<v_uint16>::vlanes();
-    CV_DECL_ALIGNED(64) uint16_t sl[VTraits<v_uint16>::max_nlanes];
-    CV_DECL_ALIGNED(64) uint16_t sh[VTraits<v_uint16>::max_nlanes];
-    CV_DECL_ALIGNED(64) uchar r[VTraits<v_uint8>::max_nlanes];
-    v_store(sl, lo);
-    v_store(sh, hi);
-    for (int i = 0; i < n; ++i)
-        r[i] = area_fast_round<uchar>((int)sl[i], area);
-    for (int i = 0; i < n; ++i)
-        r[i + n] = area_fast_round<uchar>((int)sh[i], area);
-    return vx_load(r);
-}
-
-static inline v_uint32 area_fast_scale_round_u16(const v_uint32& sum, int area)
-{
-    if (area == 4)
-    {
-        CV_DECL_ALIGNED(64) ushort tmp[VTraits<v_uint16>::max_nlanes];
-        v_rshr_pack_store<2>(tmp, sum);
-        return vx_load_expand(tmp);
-    }
-    CV_DECL_ALIGNED(64) uint32_t s[VTraits<v_uint32>::max_nlanes];
-    CV_DECL_ALIGNED(64) uint32_t r[VTraits<v_uint32>::max_nlanes];
-    const int n = VTraits<v_uint32>::vlanes();
-    v_store(s, sum);
-    for (int i = 0; i < n; ++i)
-        r[i] = (uint32_t)area_fast_round<ushort>((int)s[i], area);
-    return vx_load(r);
-}
-
-static inline void area_fast_round_store_rgb_u16(ushort* dst, v_uint32 sb, v_uint32 sg, v_uint32 sr, int n, int area)
-{
-    if (area == 4)
-    {
-        CV_DECL_ALIGNED(64) ushort b[16], g[16], r[16];
-        v_rshr_pack_store<2>(b, sb);
-        v_rshr_pack_store<2>(g, sg);
-        v_rshr_pack_store<2>(r, sr);
-        ushort* p = dst;
-        for (int i = 0; i < n; ++i)
-        {
-            p[0] = b[i];
-            p[1] = g[i];
-            p[2] = r[i];
-            p += 3;
-        }
-        return;
-    }
-    CV_DECL_ALIGNED(64) uint32_t b[16], g[16], r[16];
-    v_store(b, area_fast_scale_round_u16(sb, area));
-    v_store(g, area_fast_scale_round_u16(sg, area));
-    v_store(r, area_fast_scale_round_u16(sr, area));
-    ushort* p = dst;
-    for (int i = 0; i < n; ++i)
-    {
-        p[0] = (ushort)b[i];
-        p[1] = (ushort)g[i];
-        p[2] = (ushort)r[i];
-        p += 3;
-    }
-}
-
-static inline v_uint16 area_fast_round_pack_u16_u32(const v_uint32& lo, const v_uint32& hi, int area)
-{
-    if (area == 4)
-        return v_rshr_pack<2>(lo, hi);
-    const int n = VTraits<v_uint32>::vlanes();
-    CV_DECL_ALIGNED(64) uint32_t sl[VTraits<v_uint32>::max_nlanes];
-    CV_DECL_ALIGNED(64) uint32_t sh[VTraits<v_uint32>::max_nlanes];
-    CV_DECL_ALIGNED(64) ushort r[VTraits<v_uint16>::max_nlanes];
-    v_store(sl, lo);
-    v_store(sh, hi);
-    for (int i = 0; i < n; ++i)
-        r[i] = area_fast_round<ushort>((int)sl[i], area);
-    for (int i = 0; i < n; ++i)
-        r[i + n] = area_fast_round<ushort>((int)sh[i], area);
-    return vx_load(r);
-}
-
-static inline void area_fast_round_store_s16(short* dst, const v_int32& sums, int n, int area)
-{
-    if (area == 4)
-    {
-        v_rshr_pack_store<2>(dst, sums);
-        return;
-    }
-    CV_DECL_ALIGNED(64) int32_t s[VTraits<v_int32>::max_nlanes];
-    v_store(s, sums);
-    for (int i = 0; i < n; ++i)
-        dst[i] = area_fast_round<short>(s[i], area);
-}
-
-static inline void area_fast_round_store_rgb_s16(short* dst, v_int32 sb, v_int32 sg, v_int32 sr, int n, int area)
-{
-    if (area == 4)
-    {
-        CV_DECL_ALIGNED(64) short b[16], g[16], r[16];
-        v_rshr_pack_store<2>(b, sb);
-        v_rshr_pack_store<2>(g, sg);
-        v_rshr_pack_store<2>(r, sr);
-        short* p = dst;
-        for (int i = 0; i < n; ++i)
-        {
-            p[0] = b[i];
-            p[1] = g[i];
-            p[2] = r[i];
-            p += 3;
-        }
-        return;
-    }
-    CV_DECL_ALIGNED(64) int32_t b[16], g[16], r[16];
-    v_store(b, sb);
-    v_store(g, sg);
-    v_store(r, sr);
-    short* p = dst;
-    for (int i = 0; i < n; ++i)
-    {
-        p[0] = area_fast_round<short>(b[i], area);
-        p[1] = area_fast_round<short>(g[i], area);
-        p[2] = area_fast_round<short>(r[i], area);
-        p += 3;
-    }
-}
-
-static inline v_int16 area_fast_round_pack_s16_s32(const v_int32& lo, const v_int32& hi, int area)
-{
-    if (area == 4)
-        return v_rshr_pack<2>(lo, hi);
-    const int n = VTraits<v_int32>::vlanes();
-    CV_DECL_ALIGNED(64) int32_t sl[VTraits<v_int32>::max_nlanes];
-    CV_DECL_ALIGNED(64) int32_t sh[VTraits<v_int32>::max_nlanes];
-    CV_DECL_ALIGNED(64) short r[VTraits<v_int16>::max_nlanes];
-    v_store(sl, lo);
-    v_store(sh, hi);
-    for (int i = 0; i < n; ++i)
-        r[i] = area_fast_round<short>(sl[i], area);
-    for (int i = 0; i < n; ++i)
-        r[i + n] = area_fast_round<short>(sh[i], area);
-    return vx_load(r);
-}
-
 static inline void area_fast_store_bgra(uchar* dst, v_uint32 sb, v_uint32 sg, v_uint32 sr, v_uint32 sa)
 {
     const float inv_area = 1.f / 16;
@@ -2356,21 +2177,6 @@ static inline void area_fast_store_rgb_scaled(uchar* dst, v_uint32 sb, v_uint32 
         p[1] = (uchar)g[i];
         p[2] = (uchar)r[i];
         p += 3;
-    }
-}
-
-static inline void area_fast_store_bgra_scaled(uchar* dst, v_uint32 sb, v_uint32 sg, v_uint32 sr, v_uint32 sa, int n, int area)
-{
-    const float inv_area = 1.f / area;
-    CV_DECL_ALIGNED(64) uint32_t b[16], g[16], r[16], a[16];
-    v_store(b, area_fast_scale_round(sb, inv_area));
-    v_store(g, area_fast_scale_round(sg, inv_area));
-    v_store(r, area_fast_scale_round(sr, inv_area));
-    v_store(a, area_fast_scale_round(sa, inv_area));
-    for (int i = 0; i < n; ++i)
-    {
-        uint32_t px = b[i] | (g[i] << 8) | (r[i] << 16) | (a[i] << 24);
-        reinterpret_cast<uint32_t*>(dst)[i] = px;
     }
 }
 
@@ -2881,8 +2687,7 @@ public:
             {
                 v_uint16 r0 = v_reinterpret_as_u16(vx_load(S0));
                 v_uint16 r1 = v_reinterpret_as_u16(vx_load(S1));
-                area_fast_detail::area_fast_round_store_u8(D, v_add(v_add(v_add(v_shr<8>(r0), v_and(r0, masklow)), v_shr<8>(r1)), v_and(r1, masklow)),
-                                         VTraits<v_uint16>::vlanes(), 4);
+                v_rshr_pack_store<2>(D, v_add(v_add(v_add(v_shr<8>(r0), v_and(r0, masklow)), v_shr<8>(r1)), v_and(r1, masklow)));
             }
         }
         else if (cn == 3)
@@ -2956,7 +2761,7 @@ public:
                 v_zip(s0, s3, t0, t1); v_zip(s1, s4, t2, t3); v_zip(s2, s5, t4, t5);
                 bh = v_add(t0, t3); gh = v_add(t1, t4); rh = v_add(t2, t5);
 #endif
-                v_store_interleave(D, area_fast_detail::area_fast_round_pack_u8_u16(bl, bh, 4), area_fast_detail::area_fast_round_pack_u8_u16(gl, gh, 4), area_fast_detail::area_fast_round_pack_u8_u16(rl, rh, 4));
+                v_store_interleave(D, v_rshr_pack<2>(bl, bh), v_rshr_pack<2>(gl, gh), v_rshr_pack<2>(rl, rh));
             }
 #endif
         }
@@ -2974,8 +2779,8 @@ public:
                 v_expand(v_reinterpret_as_u8(r01), r01l, r01h);
                 v_expand(v_reinterpret_as_u8(r10), r10l, r10h);
                 v_expand(v_reinterpret_as_u8(r11), r11l, r11h);
-                v_store(D, area_fast_detail::area_fast_round_pack_u8_u16(v_add(v_add(v_add(r00l, r01l), r10l), r11l),
-                                                       v_add(v_add(v_add(r00h, r01h), r10h), r11h), 4));
+                v_store(D, v_rshr_pack<2>(v_add(v_add(v_add(r00l, r01l), r10l), r11l),
+                                          v_add(v_add(v_add(r00h, r01h), r10h), r11h)));
             }
         }
 
@@ -3020,8 +2825,7 @@ public:
             {
                 v_uint32 r0 = v_reinterpret_as_u32(vx_load(S0));
                 v_uint32 r1 = v_reinterpret_as_u32(vx_load(S1));
-                area_fast_detail::area_fast_round_store_u16(D, v_add(v_add(v_add(v_shr<16>(r0), v_and(r0, masklow)), v_shr<16>(r1)), v_and(r1, masklow)),
-                                          VTraits<v_uint32>::vlanes(), 4);
+                v_rshr_pack_store<2>(D, v_add(v_add(v_add(v_shr<16>(r0), v_and(r0, masklow)), v_shr<16>(r1)), v_and(r1, masklow)));
             }
         }
         else if (cn == 3)
@@ -3034,10 +2838,10 @@ public:
                 v_expand(vx_load(S0), r0, r1);
                 v_expand(vx_load(S1), r2, r3);
                 r0 = v_add(r0, r2); r1 = v_add(r1, r3);
-                area_fast_detail::area_fast_round_store_u16(D, v_add(r0, v_rotate_left<1>(r1, r0)), 2, 4);
+                v_rshr_pack_store<2>(D, v_add(r0, v_rotate_left<1>(r1, r0)));
             }
 #else
-                area_fast_detail::area_fast_round_store_u16(D, v_add(v_add(v_add(v_load_expand(S0), v_load_expand(S0 + 3)), v_load_expand(S1)), v_load_expand(S1 + 3)), 2, 4);
+                v_rshr_pack_store<2>(D, v_add(v_add(v_add(v_load_expand(S0), v_load_expand(S0 + 3)), v_load_expand(S1)), v_load_expand(S1 + 3)));
 #endif
 #elif CV_SIMD_WIDTH == 32 || CV_SIMD_WIDTH == 64
             for ( ; dx <= w - 3*VTraits<v_uint16>::vlanes(); dx += 3*VTraits<v_uint16>::vlanes(), S0 += 6*VTraits<v_uint16>::vlanes(), S1 += 6*VTraits<v_uint16>::vlanes(), D += 3*VTraits<v_uint16>::vlanes())
@@ -3076,7 +2880,7 @@ public:
                 v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
                 bh = v_add(s0, s3); gh = v_add(s1, s4); rh = v_add(s2, s5);
 #endif
-                v_store_interleave(D, area_fast_detail::area_fast_round_pack_u16_u32(bl, bh, 4), area_fast_detail::area_fast_round_pack_u16_u32(gl, gh, 4), area_fast_detail::area_fast_round_pack_u16_u32(rl, rh, 4));
+                v_store_interleave(D, v_rshr_pack<2>(bl, bh), v_rshr_pack<2>(gl, gh), v_rshr_pack<2>(rl, rh));
             }
 #elif CV_SIMD_WIDTH >= 64
             v_uint32 masklow = vx_setall_u32(0x0000ffff);
@@ -3093,8 +2897,7 @@ public:
                 v_uint32 bh = (v_reinterpret_as_u32(b0) >> 16) + (v_reinterpret_as_u32(b0) & masklow) + (v_reinterpret_as_u32(b1) >> 16) + (v_reinterpret_as_u32(b1) & masklow);
                 v_uint32 gh = (v_reinterpret_as_u32(g0) >> 16) + (v_reinterpret_as_u32(g0) & masklow) + (v_reinterpret_as_u32(g1) >> 16) + (v_reinterpret_as_u32(g1) & masklow);
                 v_uint32 rh = (v_reinterpret_as_u32(r0) >> 16) + (v_reinterpret_as_u32(r0) & masklow) + (v_reinterpret_as_u32(r1) >> 16) + (v_reinterpret_as_u32(r1) & masklow);
-                area_fast_detail::area_fast_round_store_rgb_u16(D, bl, gl, rl, VTraits<v_uint32>::vlanes(), 4);
-                area_fast_detail::area_fast_round_store_rgb_u16(D + 3 * VTraits<v_uint32>::vlanes(), bh, gh, rh, VTraits<v_uint32>::vlanes(), 4);
+                v_store_interleave(D, v_rshr_pack<2>(bl, bh), v_rshr_pack<2>(gl, gh), v_rshr_pack<2>(rl, rh));
             }
 #endif
         }
@@ -3113,7 +2916,7 @@ public:
                 v_expand(v_reinterpret_as_u16(r01), r01l, r01h);
                 v_expand(v_reinterpret_as_u16(r10), r10l, r10h);
                 v_expand(v_reinterpret_as_u16(r11), r11l, r11h);
-                v_store(D, area_fast_detail::area_fast_round_pack_u16_u32(v_add(r00l, r01l, r10l, r11l), v_add(r00h, r01h, r10h, r11h), 4));
+                v_store(D, v_rshr_pack<2>(v_add(r00l, r01l, r10l, r11l), v_add(r00h, r01h, r10h, r11h)));
             }
 #else
             for ( ; dx <= w - VTraits<v_uint32>::vlanes(); dx += VTraits<v_uint32>::vlanes(), S0 += VTraits<v_uint16>::vlanes(), S1 += VTraits<v_uint16>::vlanes(), D += VTraits<v_uint32>::vlanes())
@@ -3130,7 +2933,7 @@ public:
                 v_recombine(r0, r1, t0, t1);
                 v_d = v_add(t0, t1);
 #endif
-                area_fast_detail::area_fast_round_store_u16(D, v_d, VTraits<v_uint32>::vlanes(), 4);
+                v_rshr_pack_store<2>(D, v_d);
             }
 #endif
         }
@@ -3166,15 +2969,14 @@ public:
             {
                 v_int32 r0 = v_reinterpret_as_s32(vx_load(S0));
                 v_int32 r1 = v_reinterpret_as_s32(vx_load(S1));
-                area_fast_detail::area_fast_round_store_s16(D, v_add(v_add(v_add(v_shr<16>(r0), v_shr<16>(v_shl<16>(v_and(r0, masklow)))), v_shr<16>(r1)), v_shr<16>(v_shl<16>(v_and(r1, masklow)))),
-                                          VTraits<v_int32>::vlanes(), 4);
+                v_rshr_pack_store<2>(D, v_add(v_add(v_add(v_shr<16>(r0), v_shr<16>(v_shl<16>(v_and(r0, masklow)))), v_shr<16>(r1)), v_shr<16>(v_shl<16>(v_and(r1, masklow)))));
             }
         }
         else if (cn == 3)
         {
 #if CV_SIMD_WIDTH == 16
             for ( ; dx <= w - 4; dx += 3, S0 += 6, S1 += 6, D += 3)
-                area_fast_detail::area_fast_round_store_s16(D, v_add(v_add(v_add(v_load_expand(S0), v_load_expand(S0 + 3)), v_load_expand(S1)), v_load_expand(S1 + 3)), 2, 4);
+                v_rshr_pack_store<2>(D, v_add(v_add(v_add(v_load_expand(S0), v_load_expand(S0 + 3)), v_load_expand(S1)), v_load_expand(S1 + 3)));
 #elif CV_SIMD_WIDTH == 32 || CV_SIMD_WIDTH == 64
             for ( ; dx <= w - 3*VTraits<v_int16>::vlanes(); dx += 3*VTraits<v_int16>::vlanes(), S0 += 6*VTraits<v_int16>::vlanes(), S1 += 6*VTraits<v_int16>::vlanes(), D += 3*VTraits<v_int16>::vlanes())
             {
@@ -3212,7 +3014,7 @@ public:
                 v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
                 bh = v_add(s0, s3); gh = v_add(s1, s4); rh = v_add(s2, s5);
 #endif
-                v_store_interleave(D, area_fast_detail::area_fast_round_pack_s16_s32(bl, bh, 4), area_fast_detail::area_fast_round_pack_s16_s32(gl, gh, 4), area_fast_detail::area_fast_round_pack_s16_s32(rl, rh, 4));
+                v_store_interleave(D, v_rshr_pack<2>(bl, bh), v_rshr_pack<2>(gl, gh), v_rshr_pack<2>(rl, rh));
             }
 #elif CV_SIMD_WIDTH >= 64
             for ( ; dx <= w - 3*VTraits<v_int16>::vlanes(); dx += 3*VTraits<v_int16>::vlanes(), S0 += 6*VTraits<v_int16>::vlanes(), S1 += 6*VTraits<v_int16>::vlanes(), D += 3*VTraits<v_int16>::vlanes())
@@ -3228,8 +3030,7 @@ public:
                 v_int32 bh = (v_reinterpret_as_s32(b0) >> 16) + ((v_reinterpret_as_s32(b0) << 16) >> 16) + (v_reinterpret_as_s32(b1) >> 16) + ((v_reinterpret_as_s32(b1) << 16) >> 16);
                 v_int32 gh = (v_reinterpret_as_s32(g0) >> 16) + ((v_reinterpret_as_s32(g0) << 16) >> 16) + (v_reinterpret_as_s32(g1) >> 16) + ((v_reinterpret_as_s32(g1) << 16) >> 16);
                 v_int32 rh = (v_reinterpret_as_s32(r0) >> 16) + ((v_reinterpret_as_s32(r0) << 16) >> 16) + (v_reinterpret_as_s32(r1) >> 16) + ((v_reinterpret_as_s32(r1) << 16) >> 16);
-                area_fast_detail::area_fast_round_store_rgb_s16(D, bl, gl, rl, VTraits<v_int32>::vlanes(), 4);
-                area_fast_detail::area_fast_round_store_rgb_s16(D + 3 * VTraits<v_int32>::vlanes(), bh, gh, rh, VTraits<v_int32>::vlanes(), 4);
+                v_store_interleave(D, v_rshr_pack<2>(bl, bh), v_rshr_pack<2>(gl, gh), v_rshr_pack<2>(rl, rh));
             }
 #endif
         }
@@ -3248,7 +3049,7 @@ public:
                 v_expand(v_reinterpret_as_s16(r01), r01l, r01h);
                 v_expand(v_reinterpret_as_s16(r10), r10l, r10h);
                 v_expand(v_reinterpret_as_s16(r11), r11l, r11h);
-                v_store(D, area_fast_detail::area_fast_round_pack_s16_s32(v_add(r00l, r01l, r10l, r11l), v_add(r00h, r01h, r10h, r11h), 4));
+                v_store(D, v_rshr_pack<2>(v_add(r00l, r01l, r10l, r11l), v_add(r00h, r01h, r10h, r11h)));
 #else
                 v_int32 r0, r1, r2, r3;
                 r0 = v_add(vx_load_expand(S0), vx_load_expand(S1));
@@ -3263,7 +3064,7 @@ public:
                 v_recombine(r0, r1, t0, t1); v_recombine(r2, r3, t2, t3);
                 dl = v_add(t0, t1); dh = v_add(t2, t3);
 #endif
-                v_store(D, area_fast_detail::area_fast_round_pack_s16_s32(dl, dh, 4));
+                v_store(D, v_rshr_pack<2>(dl, dh));
 #endif
             }
         }
