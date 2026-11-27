@@ -1,43 +1,7 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
-//
-//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
-//
-//  By downloading, copying, installing or using the software you agree to this license.
-//  If you do not agree to this license, do not download, install,
-//  copy or use the software.
-//
-//
-//                           License Agreement
-//                For Open Source Computer Vision Library
-//
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 // Copyright (C) 2025-2026, Advanced Micro Devices, all rights reserved.
-// Third party copyrights are property of their respective owners.
-//
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistribution's of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//
-//   * Redistribution's in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//
-//   * The name of the copyright holders may not be used to endorse or promote products
-//     derived from this software without specific prior written permission.
-//
-// This software is provided by the copyright holders and contributors "as is" and
-// any express or implied warranties, including, but not limited to, the implied
-// warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
-// indirect, incidental, special, exemplary, or consequential damages
-// (including, but not limited to, procurement of substitute goods or services;
-// loss of use, data, or profits; or business interruption) however caused
-// and on any theory of liability, whether in contract, strict liability,
-// or tort (including negligence or otherwise) arising in any way out of
-// the use of this software, even if advised of the possibility of such damage.
-//
-//M*/
 
 // 2D (row+column combined) Sum3x3 / Sum5x5 filters for boxFilter / blur.
 // These are SIMD-optimized rowColumnFilter implementations that process
@@ -60,31 +24,25 @@ static inline v_int32 scaleSameType(const v_int32& s, double, const v_float32& v
 template<typename ET, typename AT>
 static inline ET scaleSum(AT s, double scale) { return saturate_cast<ET>(s * scale); }
 
-// Rows and x range of one call for a (2R+1)x(2R+1) kernel: output rows start at dstRow0
-// (src row 0 is the first tap row), and the first/last R columns are left to the caller.
+// Rows and x range of one call for a (2R+1)x(2R+1) kernel. The caller peels the image
+// border rows, so every call produces 'height' output rows starting at dst row 0 (src row 0
+// is the first tap row), and the first/last R columns are left to the caller.
 template<int R>
 struct BoxFilter2DRange
 {
-    BoxFilter2DRange( int width, int height, int yidx, int wholeHeight, int cn )
-    {
-        int yTopOffset = yidx > R - 1 ? 0 : R;
-        int yBottomOffset = yidx + height + R - 1 < wholeHeight ? 0 : R;
-        rows = height - yTopOffset - yBottomOffset;
-        dstRow0 = yTopOffset;
-        xbegin = R*cn;
-        xend = (width - R)*cn;
-    }
-    int rows, dstRow0, xbegin, xend;
+    BoxFilter2DRange( int width, int height, int cn )
+        : rows(height), xbegin(R*cn), xend((width - R)*cn) {}
+    int rows, xbegin, xend;
 };
 
 // Moves the last vector strip back so it ends at xend. It then overlaps the previous strip,
-// which is only allowed when there is one and the filter is not running in place.
+// which is fine because the caller never runs the filter in place.
 template<int R>
-static inline bool boxFilter2DStrip( int& x, int step, const BoxFilter2DRange<R>& r, bool inplace )
+static inline bool boxFilter2DStrip( int& x, int step, const BoxFilter2DRange<R>& r )
 {
     if( x > r.xend - step )
     {
-        if( x == r.xbegin || inplace )
+        if( x == r.xbegin )
             return false;
         x = r.xend - step;
     }
@@ -168,7 +126,7 @@ static inline void boxFilter2DTail( const uchar* src, uchar* dst, int src_stride
             AT sum = b[1] + b[0];
             for( int k = 2; k <= 2*R; k++ )
                 sum += b[k];
-            ((ET*)(dst + (ptrdiff_t)(r.dstRow0 + j)*dst_stride))[x] = out(sum);
+            ((ET*)(dst + (ptrdiff_t)j*dst_stride))[x] = out(sum);
             for( int k = 0; k < 2*R; k++ )
                 b[k] = b[k + 1];
         }
@@ -190,10 +148,10 @@ struct Sum3x3 :
     }
     virtual void reset() CV_OVERRIDE { }
 
-    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
+    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
-        const BoxFilter2DRange<1> r(width, height, yidx, wholeHeight, cn);
+        const BoxFilter2DRange<1> r(width, height, cn);
         int x = r.xbegin;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -209,7 +167,7 @@ struct Sum3x3 :
 
         for (; x < r.xend; x += (VECSZ_2))
         {
-            if( !boxFilter2DStrip(x, VECSZ_2, r, src == dst) )
+            if( !boxFilter2DStrip(x, VECSZ_2, r) )
                 break;
             const ET* src_0 = src_ptr + x ;
             const ET* src_1 = src_0 + src_inc;
@@ -223,7 +181,7 @@ struct Sum3x3 :
 
             for (int j = 0; j < r.rows; j++)
             {
-                ET* dstx = (ET*)(dst + (ptrdiff_t)(r.dstRow0 + j)*dst_stride);
+                ET* dstx = (ET*)(dst + (ptrdiff_t)j*dst_stride);
                 dstx += x;
                 b00   = v_add(b00, b10);
                 b00v1 = v_add(b00v1, b10v1);
@@ -278,10 +236,10 @@ struct Sum3x3_8u :
     }
     virtual void reset() CV_OVERRIDE { }
 
-    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
+    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
-        const BoxFilter2DRange<1> r(width, height, yidx, wholeHeight, cn);
+        const BoxFilter2DRange<1> r(width, height, cn);
         int x = r.xbegin;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -294,7 +252,7 @@ struct Sum3x3_8u :
 
         for (; x < r.xend; x += VECSZ8)
         {
-            if( !boxFilter2DStrip(x, VECSZ8, r, src == dst) )
+            if( !boxFilter2DStrip(x, VECSZ8, r) )
                 break;
             const uchar* src_0 = src + x;
             const uchar* src_1 = src_0 + src_inc;
@@ -306,7 +264,7 @@ struct Sum3x3_8u :
 
             for (int j = 0; j < r.rows; j++)
             {
-                uchar* dstx = dst + (ptrdiff_t)(r.dstRow0 + j)*dst_stride + x;
+                uchar* dstx = dst + (ptrdiff_t)j*dst_stride + x;
 
                 v_uint16 r2_lo, r2_hi;
                 boxRowSumExpand<1>(src_2, cn, r2_lo, r2_hi);
@@ -358,10 +316,10 @@ struct Sum3x3sameType :
     }
 #endif
 
-    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
+    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
-        const BoxFilter2DRange<1> r(width, height, yidx, wholeHeight, cn);
+        const BoxFilter2DRange<1> r(width, height, cn);
         int x = r.xbegin;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -381,7 +339,7 @@ struct Sum3x3sameType :
         const ET* src_ptr = (const ET*)src;
         for (; x < r.xend; x += (VECSZ_4))
         {
-            if( !boxFilter2DStrip(x, VECSZ_4, r, src == dst) )
+            if( !boxFilter2DStrip(x, VECSZ_4, r) )
                 break;
             const ET* src_0 = src_ptr +x ;
             const ET* src_1 = src_0 + src_inc;
@@ -393,7 +351,7 @@ struct Sum3x3sameType :
 
             for (int j = 0; j < r.rows; j++)
             {
-                ET* dstx = (ET*)(dst + (ptrdiff_t)(r.dstRow0 + j)*dst_stride);
+                ET* dstx = (ET*)(dst + (ptrdiff_t)j*dst_stride);
                 loadRowAdd(src_2, VECSZ, cn, b2, b2v1, b2v2, b2v3);
                 src_2 += src_inc;
 
@@ -439,10 +397,10 @@ struct Sum5x5 :
     }
     virtual void reset() CV_OVERRIDE { }
 
-    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
+    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
-        const BoxFilter2DRange<2> r(width, height, yidx, wholeHeight, cn);
+        const BoxFilter2DRange<2> r(width, height, cn);
         int x = r.xbegin;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -457,7 +415,7 @@ struct Sum5x5 :
 
         for (; x < r.xend; x += VECSZ)
         {
-            if( !boxFilter2DStrip(x, VECSZ, r, src == dst) )
+            if( !boxFilter2DStrip(x, VECSZ, r) )
                 break;
             const ET* src_0 = src_ptr + x;
             const ET* src_1 = src_0 + src_inc;
@@ -469,7 +427,7 @@ struct Sum5x5 :
             boxRowSumExpand<2>(src_1, cn, b10, b11);
             boxRowSumExpand<2>(src_2, cn, b20, b21);
             boxRowSumExpand<2>(src_3, cn, b30, b31);
-            ET* dstx = (ET*)(dst + (ptrdiff_t)r.dstRow0*dst_stride);
+            ET* dstx = (ET*)dst;
             dstx += x;
 
             VFT bsum0, bsum1, b0, b1;
@@ -518,10 +476,10 @@ struct Sum5x5_8u :
     }
     virtual void reset() CV_OVERRIDE { }
 
-    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
+    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
-        const BoxFilter2DRange<2> r(width, height, yidx, wholeHeight, cn);
+        const BoxFilter2DRange<2> r(width, height, cn);
         int x = r.xbegin;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -535,11 +493,11 @@ struct Sum5x5_8u :
 
         for (; x < r.xend; x += VECSZ8)
         {
-            if( !boxFilter2DStrip(x, VECSZ8, r, src == dst) )
+            if( !boxFilter2DStrip(x, VECSZ8, r) )
                 break;
             const uchar* src_0 = src + x;
             const uchar* src_4 = src_0 + src_inc*4;
-            uchar* dstx = dst + (ptrdiff_t)r.dstRow0*dst_stride + x;
+            uchar* dstx = dst + x;
 
             v_uint16 r0_lo, r0_hi, r1_lo, r1_hi, r2_lo, r2_hi, r3_lo, r3_hi;
             boxRowSumExpand<2>(src_0, cn, r0_lo, r0_hi);
@@ -600,10 +558,10 @@ struct Sum5x5sameType :
         rv3 = BoxTaps<2>::vsum<BoxLoad>(src + VECSZ*3, cn);
     }
 #endif
-    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
+    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
-        const BoxFilter2DRange<2> r(width, height, yidx, wholeHeight, cn);
+        const BoxFilter2DRange<2> r(width, height, cn);
         int x = r.xbegin;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -616,7 +574,7 @@ struct Sum5x5sameType :
         const int VECSZ_4 = VECSZ<<2;
         for (; x < r.xend; x += VECSZ_4)
         {
-            if( !boxFilter2DStrip(x, VECSZ_4, r, src == dst) )
+            if( !boxFilter2DStrip(x, VECSZ_4, r) )
                 break;
             const ET* src_0 = ((const ET*)src) + x;
             const ET* src_1 = src_0 + src_inc;
@@ -643,7 +601,7 @@ struct Sum5x5sameType :
 
             for (int j = 0; j < r.rows; j++)
             {
-                ET* dstx = (ET*)(dst + (ptrdiff_t)(r.dstRow0 + j)*dst_stride);
+                ET* dstx = (ET*)(dst + (ptrdiff_t)j*dst_stride);
                 VET b4, b4v1, b4v2, b4v3;
                 // row 4
                 loadRowAdd(src_4, VECSZ, cn, b4, b4v1, b4v2, b4v3);

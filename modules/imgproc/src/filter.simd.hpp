@@ -409,7 +409,7 @@ static int proceedRowColumnSeparable(FilterEngine& this_, const uchar* src, int 
                 const int yd = top + b*band;
                 const uchar* srcBand = src + (ptrdiff_t)(roiY + yd - kx - y0)*srcstep;
                 rowColumnFilter(srcBand, dst + (ptrdiff_t)yd*dststep, srcstep, dststep, width,
-                                std::min(band, inner - b*band), roiY + yd, wholeHeight, cn);
+                                std::min(band, inner - b*band), cn);
             }
         }, nstripes);
     }
@@ -474,48 +474,29 @@ int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, in
     uchar* ringBuf = alignPtr(&this_.ringBuf[0], VEC_ALIGN);
     uchar* srcRow = &this_.srcRow[0];
 
-    if(isSep)
+    // Separable: row-filter each source row into the ring buffer, column-filter at the end.
+    // Non-separable (filter2D): copy the bordered row into the ring buffer, filter2D at the end.
+    for(;; dst += dststep*i, dy += i)
     {
-        // Streamlined separable path: no rowColumnFilter.
-        for(;; dst += dststep*i, dy += i)
-        {
-            int dcount = getNextBatchCount(this_, bufRows, kheight, ay, count);
+        int dcount = getNextBatchCount(this_, bufRows, kheight, ay, count);
 
-            for( ; dcount-- > 0; src += srcstep )
-            {
-                int bi = (this_.startY - startY0 + this_.rowCount) % bufRows;
-                uchar* brow = ringBuf + bi*bufStep;
-                incrementRowCount(this_, bufRows);
-                fillRowData(srcRow, src, width1, _dx1, _dx2, esz, makeBorder, btab, btab_esz);
+        for( ; dcount-- > 0; src += srcstep )
+        {
+            int bi = (this_.startY - startY0 + this_.rowCount) % bufRows;
+            uchar* brow = ringBuf + bi*bufStep;
+            incrementRowCount(this_, bufRows);
+            fillRowData(isSep ? srcRow : brow, src, width1, _dx1, _dx2, esz, makeBorder, btab, btab_esz);
+            if( isSep )
                 (*this_.rowFilter)(srcRow, brow, width, CV_MAT_CN(this_.srcType));
-            }
-            fillBrows(this_, brows, i, (this_.dstY + dy + this_.roi.y - ay),  bufRows, dy, kheight);
-            if( i < kheight )
-                break;
-            i -= kheight - 1;
+        }
+        fillBrows(this_, brows, i, (this_.dstY + dy + this_.roi.y - ay),  bufRows, dy, kheight);
+        if( i < kheight )
+            break;
+        i -= kheight - 1;
+        if( isSep )
             (*this_.columnFilter)((const uchar**)brows, dst, dststep, i, this_.roi.width*cn);
-        }
-    }
-    else
-    {
-        // Non-separable (filter2D) path.
-        for(;; dst += dststep*i, dy += i)
-        {
-            int dcount = getNextBatchCount(this_, bufRows, kheight, ay, count);
-
-            for( ; dcount-- > 0; src += srcstep )
-            {
-                int bi = (this_.startY - startY0 + this_.rowCount) % bufRows;
-                uchar* brow = ringBuf + bi*bufStep;
-                incrementRowCount(this_, bufRows);
-                fillRowData(brow, src, width1, _dx1, _dx2, esz, makeBorder, btab, btab_esz);
-            }
-            fillBrows(this_, brows, i, (this_.dstY + dy + this_.roi.y - ay),  bufRows, dy, kheight);
-            if( i < kheight )
-                break;
-            i -= kheight - 1;
+        else
             (*this_.filter2D)((const uchar**)brows, dst, dststep, i, this_.roi.width, cn);
-        }
     }
 
     this_.dstY += dy;
@@ -2370,7 +2351,7 @@ struct SymmRowSmallVec_32f
         const float* kx = kernel.ptr<float>() + _ksize/2;
         width *= cn;
 
-        if( symmetrical)
+        if( symmetrical )
         {
             if( _ksize == 3 )
             {
