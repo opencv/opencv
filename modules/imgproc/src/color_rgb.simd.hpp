@@ -103,6 +103,18 @@ struct v_set<float>
     }
 };
 
+// Vector kernels cover a row remainder by rewinding the final block so it ends at n,
+// which re-reads source pixels that were already visited. That is only safe when the
+// source row and destination row byte ranges are disjoint; otherwise an earlier store may
+// have overwritten bytes the re-read needs. For overlapping buffers the tail is finished
+// by the scalar loop instead, which reads each pixel before writing it. Overlapping
+// conversion is therefore supported only for dst <= src.
+static inline bool rgbRowsDisjoint(const void* src, size_t srcBytes, const void* dst, size_t dstBytes)
+{
+    const uintptr_t s0 = (uintptr_t)src, d0 = (uintptr_t)dst;
+    return (s0 + srcBytes <= d0) || (d0 + dstBytes <= s0);
+}
+
 template<typename _Tp>
 struct RGB2RGB
 {
@@ -547,6 +559,8 @@ struct RGB5x52Gray
     {
         int gb = greenBits;
         int i = 0;
+        const bool disjoint = rgbRowsDisjoint(src, (size_t)n*sizeof(ushort), dst, (size_t)n);
+        CV_UNUSED(disjoint);
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int vsize = VTraits<v_uint16>::vlanes();
 
@@ -561,7 +575,7 @@ struct RGB5x52Gray
             i += vsize, src += vsize*sizeof(ushort), dst += vsize)
         {
             if ( i > n - vsize ) {
-                if (i == 0 || src == dst) {
+                if (i == 0 || !disjoint) {
                     break;
                 }
                 int backup = i - (n - vsize);
@@ -677,6 +691,8 @@ struct RGB2Gray<float>
     void operator()(const float * src, float * dst, int n) const
     {
         int scn = srccn, i = 0;
+        const bool disjoint = rgbRowsDisjoint(src, (size_t)n*scn*sizeof(float), dst, (size_t)n*sizeof(float));
+        CV_UNUSED(disjoint);
         float cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -686,7 +702,7 @@ struct RGB2Gray<float>
             i += vsize, src += vsize*scn, dst += vsize)
         {
             if ( i > n - vsize ) {
-                if (i == 0 || src == dst) {
+                if (i == 0 || !disjoint) {
                     break;
                 }
                 int backup = i - (n - vsize);
@@ -746,16 +762,7 @@ struct RGB2Gray<uchar>
         short cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
         int i = 0;
 
-        // The vector kernels cover a remainder by rewinding the final block so it ends at
-        // n, which re-reads source pixels already visited. If the destination overlaps the
-        // source (identical or partially overlapping storage) an earlier store may have
-        // overwritten bytes that re-read needs. Rewind only when the two byte ranges are
-        // disjoint; otherwise finish the remainder with the scalar loop, which reads each
-        // pixel before it can be overwritten.
-        const bool disjoint = [&]() {
-            const uintptr_t s0 = (uintptr_t)src, d0 = (uintptr_t)dst;
-            return (s0 + (uintptr_t)n * (uintptr_t)scn <= d0) || (d0 + (uintptr_t)n <= s0);
-        }();
+        const bool disjoint = rgbRowsDisjoint(src, (size_t)n*scn*sizeof(uchar), dst, (size_t)n*sizeof(uchar));
         CV_UNUSED(disjoint);
 
 #if CV_AVX512_SKX
@@ -828,7 +835,7 @@ struct RGB2Gray<uchar>
              i += vsize, src += scn*vsize, dst += vsize)
         {
             if ( i > n - vsize ) {
-                // Do not rewind over overlapping buffers; the scalar loop below finishes.
+                // Overlapping buffers: do not rewind; the scalar loop below finishes.
                 if (i == 0 || !disjoint) {
                     break;
                 }
@@ -933,6 +940,8 @@ struct RGB2Gray<ushort>
         int scn = srccn;
         short cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
         int i = 0;
+        const bool disjoint = rgbRowsDisjoint(src, (size_t)n*scn*sizeof(ushort), dst, (size_t)n*sizeof(ushort));
+        CV_UNUSED(disjoint);
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int vsize = VTraits<v_uint16>::vlanes();
@@ -946,7 +955,7 @@ struct RGB2Gray<ushort>
                  i += vsize, src += scn*vsize, dst += vsize)
             {
                 if ( i > n - vsize ) {
-                    if (i == 0 || src == dst) {
+                    if (i == 0 || !disjoint) {
                         break;
                     }
                     int backup = i - (n - vsize);
@@ -991,7 +1000,7 @@ struct RGB2Gray<ushort>
              i += vsize, src += scn*vsize, dst += vsize)
         {
             if ( i > n - vsize ) {
-                if (i == 0 || src == dst) {
+                if (i == 0 || !disjoint) {
                     break;
                 }
                 int backup = i - (n - vsize);
