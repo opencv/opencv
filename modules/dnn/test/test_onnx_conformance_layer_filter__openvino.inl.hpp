@@ -111,11 +111,19 @@ CASE(test_add_uint8)
 #endif
 CASE(test_affine_grid_3d)
     SKIP;
+CASE(test_affine_grid_3d_expanded)
+    SKIP;
 CASE(test_affine_grid_3d_align_corners)
+    SKIP;
+CASE(test_affine_grid_3d_align_corners_expanded)
     SKIP;
 CASE(test_affine_grid_2d)
     SKIP;
+CASE(test_affine_grid_2d_expanded)
+    SKIP;
 CASE(test_affine_grid_2d_align_corners)
+    SKIP;
+CASE(test_affine_grid_2d_align_corners_expanded)
     SKIP;
 CASE(test_and2d)
     // no filter
