@@ -286,6 +286,32 @@ OCL_TEST_P(CornerHarris, Mat)
     }
 }
 
+// Apertures without an OpenCL kernel must reach the CPU without an exception that CV_OCL_RUN swallows
+OCL_TEST(Corner, aperture_0_and_9_raise_no_error)
+{
+    Mat src(64, 64, CV_8UC1);
+    randu(src, 0, 256);
+    UMat usrc, udst;
+    src.copyTo(usrc);
+
+    // opencv_ts's handler has a non-null userdata; restore both
+    int errors = 0;
+    void* prevUserdata = NULL;
+    ErrorCallback prev = redirectError(
+        [](int, const char*, const char*, const char*, int, void* counter) -> int {
+            ++*static_cast<int*>(counter);
+            return 0;
+        }, &errors, &prevUserdata);
+    for (int apertureSize : {0, 9})
+    {
+        OCL_ON(cv::cornerMinEigenVal(usrc, udst, 3, apertureSize));
+        OCL_ON(cv::cornerHarris(usrc, udst, 3, apertureSize, 0.04));
+    }
+    redirectError(prev, prevUserdata);
+
+    EXPECT_EQ(0, errors);
+}
+
 //////////////////////////////// preCornerDetect //////////////////////////////////////////
 
 typedef ImgprocTestBase PreCornerDetect;

@@ -357,10 +357,9 @@ static bool extractCovData(InputArray _src, UMat & Dx, UMat & Dy, int depth,
 
         return k.run(2, globalsize, localsize, false);
     }
-    else
-        spatialGradient(_src, Dx, Dy, aperture_size > 0 ? aperture_size : FILTER_SCHARR, borderType, CV_32F, scale);
 
-    return true;
+    // No OpenCL kernel for this aperture or image size: the caller runs its CPU implementation
+    return false;
 }
 
 static bool ocl_cornerMinEigenValVecs(InputArray _src, OutputArray _dst, int block_size,
