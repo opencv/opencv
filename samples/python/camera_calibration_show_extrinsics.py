@@ -200,7 +200,7 @@ def main():
     from mpl_toolkits.mplot3d import Axes3D  # pylint: disable=unused-variable
 
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot(1, 1, 1, projection='3d')
     ax.set_aspect("auto")
 
     cam_width = args.cam_width
