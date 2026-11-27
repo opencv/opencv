@@ -5,7 +5,7 @@
  * Copyright (C) 1991-1998, Thomas G. Lane.
  * Modification developed 2002-2018 by Guido Vollbeding.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2015, 2020, 2022, D. R. Commander.
+ * Copyright (C) 2015, 2020, 2022, 2026, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -30,7 +30,7 @@
  *
  * We also provide IDCT routines with various output sample block sizes for
  * direct resolution reduction or enlargement without additional resampling:
- * NxN (N=1...16) pixels for one 8x8 input DCT block.
+ * NxN (N=1...16) samples for one 8x8 input DCT block.
  *
  * For N<8 we simply take the corresponding low-frequency coefficients of
  * the 8x8 input DCT block and apply an NxN point IDCT on the sub-block
@@ -157,12 +157,34 @@
 #endif
 
 
+/* When decompressing an 8-bit-per-sample lossy JPEG image, we allow the caller
+ * to request 12-bit-per-sample output in order to facilitate shadow recovery
+ * in underexposed images.  This is accomplished by using the 12-bit-per-sample
+ * decompression pipeline and multiplying the DCT coefficients from the
+ * 8-bit-per-sample JPEG image by 16 (the equivalent of left shifting by 4
+ * bits.)
+ */
+
+#if BITS_IN_JSAMPLE == 12
+#define SCALING_FACTOR \
+  JLONG scaling_factor = (cinfo->master->jpeg_data_precision == 8 && \
+                          cinfo->data_precision == 12 ? 16 : 1);
+#else
+#define SCALING_FACTOR
+#endif
+
+
 /* Dequantize a coefficient by multiplying it by the multiplier-table
  * entry; produce an int result.  In this module, both inputs and result
  * are 16 bits or less, so either int or short multiply will work.
  */
 
+#if BITS_IN_JSAMPLE == 8
 #define DEQUANTIZE(coef, quantval)  (((ISLOW_MULT_TYPE)(coef)) * (quantval))
+#else
+#define DEQUANTIZE(coef, quantval) \
+  (((ISLOW_MULT_TYPE)(coef)) * (quantval) * scaling_factor)
+#endif
 
 
 /*
@@ -185,6 +207,7 @@ _jpeg_idct_islow(j_decompress_ptr cinfo, jpeg_component_info *compptr,
   int ctr;
   int workspace[DCTSIZE2];      /* buffers data between passes */
   SHIFT_TEMPS
+  SCALING_FACTOR
 
   /* Pass 1: process columns from input, store into work array. */
   /* Note results are scaled up by sqrt(8) compared to a true IDCT; */
@@ -438,6 +461,7 @@ _jpeg_idct_7x7(j_decompress_ptr cinfo, jpeg_component_info *compptr,
   int ctr;
   int workspace[7 * 7];         /* buffers data between passes */
   SHIFT_TEMPS
+  SCALING_FACTOR
 
   /* Pass 1: process columns from input, store into work array. */
 
@@ -587,6 +611,7 @@ _jpeg_idct_6x6(j_decompress_ptr cinfo, jpeg_component_info *compptr,
   int ctr;
   int workspace[6 * 6];         /* buffers data between passes */
   SHIFT_TEMPS
+  SCALING_FACTOR
 
   /* Pass 1: process columns from input, store into work array. */
 
@@ -708,6 +733,7 @@ _jpeg_idct_5x5(j_decompress_ptr cinfo, jpeg_component_info *compptr,
   int ctr;
   int workspace[5 * 5];         /* buffers data between passes */
   SHIFT_TEMPS
+  SCALING_FACTOR
 
   /* Pass 1: process columns from input, store into work array. */
 
@@ -822,6 +848,7 @@ _jpeg_idct_3x3(j_decompress_ptr cinfo, jpeg_component_info *compptr,
   int ctr;
   int workspace[3 * 3];         /* buffers data between passes */
   SHIFT_TEMPS
+  SCALING_FACTOR
 
   /* Pass 1: process columns from input, store into work array. */
 
@@ -913,6 +940,7 @@ _jpeg_idct_9x9(j_decompress_ptr cinfo, jpeg_component_info *compptr,
   int ctr;
   int workspace[8 * 9];         /* buffers data between passes */
   SHIFT_TEMPS
+  SCALING_FACTOR
 
   /* Pass 1: process columns from input, store into work array. */
 
@@ -1085,6 +1113,7 @@ _jpeg_idct_10x10(j_decompress_ptr cinfo, jpeg_component_info *compptr,
   int ctr;
   int workspace[8 * 10];        /* buffers data between passes */
   SHIFT_TEMPS
+  SCALING_FACTOR
 
   /* Pass 1: process columns from input, store into work array. */
 
@@ -1280,6 +1309,7 @@ _jpeg_idct_11x11(j_decompress_ptr cinfo, jpeg_component_info *compptr,
   int ctr;
   int workspace[8 * 11];        /* buffers data between passes */
   SHIFT_TEMPS
+  SCALING_FACTOR
 
   /* Pass 1: process columns from input, store into work array. */
 
@@ -1474,6 +1504,7 @@ _jpeg_idct_12x12(j_decompress_ptr cinfo, jpeg_component_info *compptr,
   int ctr;
   int workspace[8 * 12];        /* buffers data between passes */
   SHIFT_TEMPS
+  SCALING_FACTOR
 
   /* Pass 1: process columns from input, store into work array. */
 
@@ -1690,6 +1721,7 @@ _jpeg_idct_13x13(j_decompress_ptr cinfo, jpeg_component_info *compptr,
   int ctr;
   int workspace[8 * 13];        /* buffers data between passes */
   SHIFT_TEMPS
+  SCALING_FACTOR
 
   /* Pass 1: process columns from input, store into work array. */
 
@@ -1918,6 +1950,7 @@ _jpeg_idct_14x14(j_decompress_ptr cinfo, jpeg_component_info *compptr,
   int ctr;
   int workspace[8 * 14];        /* buffers data between passes */
   SHIFT_TEMPS
+  SCALING_FACTOR
 
   /* Pass 1: process columns from input, store into work array. */
 
@@ -2144,6 +2177,7 @@ _jpeg_idct_15x15(j_decompress_ptr cinfo, jpeg_component_info *compptr,
   int ctr;
   int workspace[8 * 15];        /* buffers data between passes */
   SHIFT_TEMPS
+  SCALING_FACTOR
 
   /* Pass 1: process columns from input, store into work array. */
 
@@ -2386,6 +2420,7 @@ _jpeg_idct_16x16(j_decompress_ptr cinfo, jpeg_component_info *compptr,
   int ctr;
   int workspace[8 * 16];        /* buffers data between passes */
   SHIFT_TEMPS
+  SCALING_FACTOR
 
   /* Pass 1: process columns from input, store into work array. */
 

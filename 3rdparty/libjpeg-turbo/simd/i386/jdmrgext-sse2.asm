@@ -1,8 +1,8 @@
 ;
-; Merged upsampling/color conversion (SSE2)
+; Merged Upsampling/Color Conversion (32-bit SSE2)
 ;
 ; Copyright 2009, 2012 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2012, 2016, 2024, D. R. Commander.
+; Copyright (C) 2012, 2016, 2024-2025, D. R. Commander.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
 ; Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -20,8 +20,7 @@
 ; jsimd_h2v1_merged_upsample_sse2(JDIMENSION output_width,
 ;                                 JSAMPIMAGE input_buf,
 ;                                 JDIMENSION in_row_group_ctr,
-;                                 JSAMPARRAY output_buf);
-;
+;                                 JSAMPARRAY output_buf)
 
 %define output_width(b)      (b) + 8    ; JDIMENSION output_width
 %define input_buf(b)         (b) + 12   ; JSAMPIMAGE input_buf
@@ -30,20 +29,20 @@
 
 %define original_ebp  ebp + 0
 %define wk(i)         ebp - (WK_NUM - (i)) * SIZEOF_XMMWORD
-                                        ; xmmword wk[WK_NUM]
+                      ; xmmword wk[WK_NUM]
 %define WK_NUM        3
-%define gotptr        wk(0) - SIZEOF_POINTER  ; void * gotptr
+%define gotptr        wk(0) - SIZEOF_POINTER  ; void *gotptr
 
     align       32
     GLOBAL_FUNCTION(jsimd_h2v1_merged_upsample_sse2)
 
 EXTN(jsimd_h2v1_merged_upsample_sse2):
     push        ebp
-    mov         eax, esp                     ; eax = original ebp
+    mov         eax, esp                ; eax = original ebp
     sub         esp, byte 4
     and         esp, byte (-SIZEOF_XMMWORD)  ; align to 128 bits
     mov         [esp], eax
-    mov         ebp, esp                     ; ebp = aligned ebp
+    mov         ebp, esp                ; ebp = aligned ebp
     lea         esp, [wk(0)]
     PUSHPIC     eax                     ; make a room for GOT address
     push        ebx
@@ -63,14 +62,14 @@ EXTN(jsimd_h2v1_merged_upsample_sse2):
 
     mov         edi, JSAMPIMAGE [input_buf(eax)]
     mov         ecx, JDIMENSION [in_row_group_ctr(eax)]
-    mov         esi, JSAMPARRAY [edi+0*SIZEOF_JSAMPARRAY]
-    mov         ebx, JSAMPARRAY [edi+1*SIZEOF_JSAMPARRAY]
-    mov         edx, JSAMPARRAY [edi+2*SIZEOF_JSAMPARRAY]
+    mov         esi, JSAMPARRAY [edi + 0 * SIZEOF_JSAMPARRAY]
+    mov         ebx, JSAMPARRAY [edi + 1 * SIZEOF_JSAMPARRAY]
+    mov         edx, JSAMPARRAY [edi + 2 * SIZEOF_JSAMPARRAY]
     mov         edi, JSAMPARRAY [output_buf(eax)]
-    mov         esi, JSAMPROW [esi+ecx*SIZEOF_JSAMPROW]  ; inptr0
-    mov         ebx, JSAMPROW [ebx+ecx*SIZEOF_JSAMPROW]  ; inptr1
-    mov         edx, JSAMPROW [edx+ecx*SIZEOF_JSAMPROW]  ; inptr2
-    mov         edi, JSAMPROW [edi]                      ; outptr
+    mov         esi, JSAMPROW [esi + ecx * SIZEOF_JSAMPROW]  ; inptr0
+    mov         ebx, JSAMPROW [ebx + ecx * SIZEOF_JSAMPROW]  ; inptr1
+    mov         edx, JSAMPROW [edx + ecx * SIZEOF_JSAMPROW]  ; inptr2
+    mov         edi, JSAMPROW [edi]                          ; outptr
 
     pop         ecx                     ; col
 
@@ -78,19 +77,19 @@ EXTN(jsimd_h2v1_merged_upsample_sse2):
 .columnloop:
     MOVPIC      eax, POINTER [gotptr]   ; load GOT address (eax)
 
-    movdqa      xmm6, XMMWORD [ebx]     ; xmm6=Cb(0123456789ABCDEF)
-    movdqa      xmm7, XMMWORD [edx]     ; xmm7=Cr(0123456789ABCDEF)
+    movdqa      xmm6, XMMWORD [ebx]     ; xmm6 = Cb(0123456789abcdef)
+    movdqa      xmm7, XMMWORD [edx]     ; xmm7 = Cr(0123456789abcdef)
 
-    pxor        xmm1, xmm1              ; xmm1=(all 0's)
+    pxor        xmm1, xmm1              ; xmm1 = (all 0's)
     pcmpeqw     xmm3, xmm3
-    psllw       xmm3, 7                 ; xmm3={0xFF80 0xFF80 0xFF80 0xFF80 ..}
+    psllw       xmm3, 7             ; xmm3 = { 0xFF80 0xFF80 0xFF80 0xFF80 .. }
 
     movdqa      xmm4, xmm6
-    punpckhbw   xmm6, xmm1              ; xmm6=Cb(89ABCDEF)=CbH
-    punpcklbw   xmm4, xmm1              ; xmm4=Cb(01234567)=CbL
+    punpckhbw   xmm6, xmm1              ; xmm6 = Cb(89abcdef) = CbH
+    punpcklbw   xmm4, xmm1              ; xmm4 = Cb(01234567) = CbL
     movdqa      xmm0, xmm7
-    punpckhbw   xmm7, xmm1              ; xmm7=Cr(89ABCDEF)=CrH
-    punpcklbw   xmm0, xmm1              ; xmm0=Cr(01234567)=CrL
+    punpckhbw   xmm7, xmm1              ; xmm7 = Cr(89abcdef) = CrH
+    punpcklbw   xmm0, xmm1              ; xmm0 = Cr(01234567) = CrL
 
     paddw       xmm6, xmm3
     paddw       xmm4, xmm3
@@ -107,165 +106,203 @@ EXTN(jsimd_h2v1_merged_upsample_sse2):
     ; G = Y - 0.34414 * Cb + 0.28586 * Cr - Cr
     ; B = Y - 0.22800 * Cb + Cb + Cb
 
-    movdqa      xmm5, xmm6              ; xmm5=CbH
-    movdqa      xmm2, xmm4              ; xmm2=CbL
-    paddw       xmm6, xmm6              ; xmm6=2*CbH
-    paddw       xmm4, xmm4              ; xmm4=2*CbL
-    movdqa      xmm1, xmm7              ; xmm1=CrH
-    movdqa      xmm3, xmm0              ; xmm3=CrL
-    paddw       xmm7, xmm7              ; xmm7=2*CrH
-    paddw       xmm0, xmm0              ; xmm0=2*CrL
+    movdqa      xmm5, xmm6              ; xmm5 = CbH
+    movdqa      xmm2, xmm4              ; xmm2 = CbL
+    paddw       xmm6, xmm6              ; xmm6 = 2 * CbH
+    paddw       xmm4, xmm4              ; xmm4 = 2 * CbL
+    movdqa      xmm1, xmm7              ; xmm1 = CrH
+    movdqa      xmm3, xmm0              ; xmm3 = CrL
+    paddw       xmm7, xmm7              ; xmm7 = 2 * CrH
+    paddw       xmm0, xmm0              ; xmm0 = 2 * CrL
 
-    pmulhw      xmm6, [GOTOFF(eax,PW_MF0228)]  ; xmm6=(2*CbH * -FIX(0.22800))
-    pmulhw      xmm4, [GOTOFF(eax,PW_MF0228)]  ; xmm4=(2*CbL * -FIX(0.22800))
-    pmulhw      xmm7, [GOTOFF(eax,PW_F0402)]   ; xmm7=(2*CrH * FIX(0.40200))
-    pmulhw      xmm0, [GOTOFF(eax,PW_F0402)]   ; xmm0=(2*CrL * FIX(0.40200))
+    pmulhw      xmm6, [GOTOFF(eax, PW_MF0228)]
+                ; xmm6 = (2 * CbH * -FIX(0.22800))
+    pmulhw      xmm4, [GOTOFF(eax, PW_MF0228)]
+                ; xmm4 = (2 * CbL * -FIX(0.22800))
+    pmulhw      xmm7, [GOTOFF(eax, PW_F0402)]
+                ; xmm7 = (2 * CrH * FIX(0.40200))
+    pmulhw      xmm0, [GOTOFF(eax, PW_F0402)]
+                ; xmm0 = (2 * CrL * FIX(0.40200))
 
-    paddw       xmm6, [GOTOFF(eax,PW_ONE)]
-    paddw       xmm4, [GOTOFF(eax,PW_ONE)]
-    psraw       xmm6, 1                 ; xmm6=(CbH * -FIX(0.22800))
-    psraw       xmm4, 1                 ; xmm4=(CbL * -FIX(0.22800))
-    paddw       xmm7, [GOTOFF(eax,PW_ONE)]
-    paddw       xmm0, [GOTOFF(eax,PW_ONE)]
-    psraw       xmm7, 1                 ; xmm7=(CrH * FIX(0.40200))
-    psraw       xmm0, 1                 ; xmm0=(CrL * FIX(0.40200))
+    paddw       xmm6, [GOTOFF(eax, PW_ONE)]
+    paddw       xmm4, [GOTOFF(eax, PW_ONE)]
+    psraw       xmm6, 1                 ; xmm6 = (CbH * -FIX(0.22800))
+    psraw       xmm4, 1                 ; xmm4 = (CbL * -FIX(0.22800))
+    paddw       xmm7, [GOTOFF(eax, PW_ONE)]
+    paddw       xmm0, [GOTOFF(eax, PW_ONE)]
+    psraw       xmm7, 1                 ; xmm7 = (CrH * FIX(0.40200))
+    psraw       xmm0, 1                 ; xmm0 = (CrL * FIX(0.40200))
 
     paddw       xmm6, xmm5
     paddw       xmm4, xmm2
-    paddw       xmm6, xmm5              ; xmm6=(CbH * FIX(1.77200))=(B-Y)H
-    paddw       xmm4, xmm2              ; xmm4=(CbL * FIX(1.77200))=(B-Y)L
-    paddw       xmm7, xmm1              ; xmm7=(CrH * FIX(1.40200))=(R-Y)H
-    paddw       xmm0, xmm3              ; xmm0=(CrL * FIX(1.40200))=(R-Y)L
+    paddw       xmm6, xmm5             ; xmm6 = (CbH * FIX(1.77200)) = (B - Y)H
+    paddw       xmm4, xmm2             ; xmm4 = (CbL * FIX(1.77200)) = (B - Y)L
+    paddw       xmm7, xmm1             ; xmm7 = (CrH * FIX(1.40200)) = (R - Y)H
+    paddw       xmm0, xmm3             ; xmm0 = (CrL * FIX(1.40200)) = (R - Y)L
 
-    movdqa      XMMWORD [wk(0)], xmm6   ; wk(0)=(B-Y)H
-    movdqa      XMMWORD [wk(1)], xmm7   ; wk(1)=(R-Y)H
+    movdqa      XMMWORD [wk(0)], xmm6   ; wk(0) = (B - Y)H
+    movdqa      XMMWORD [wk(1)], xmm7   ; wk(1) = (R - Y)H
 
     movdqa      xmm6, xmm5
     movdqa      xmm7, xmm2
     punpcklwd   xmm5, xmm1
     punpckhwd   xmm6, xmm1
-    pmaddwd     xmm5, [GOTOFF(eax,PW_MF0344_F0285)]
-    pmaddwd     xmm6, [GOTOFF(eax,PW_MF0344_F0285)]
+    pmaddwd     xmm5, [GOTOFF(eax, PW_MF0344_F0285)]
+    pmaddwd     xmm6, [GOTOFF(eax, PW_MF0344_F0285)]
     punpcklwd   xmm2, xmm3
     punpckhwd   xmm7, xmm3
-    pmaddwd     xmm2, [GOTOFF(eax,PW_MF0344_F0285)]
-    pmaddwd     xmm7, [GOTOFF(eax,PW_MF0344_F0285)]
+    pmaddwd     xmm2, [GOTOFF(eax, PW_MF0344_F0285)]
+    pmaddwd     xmm7, [GOTOFF(eax, PW_MF0344_F0285)]
 
-    paddd       xmm5, [GOTOFF(eax,PD_ONEHALF)]
-    paddd       xmm6, [GOTOFF(eax,PD_ONEHALF)]
+    paddd       xmm5, [GOTOFF(eax, PD_ONEHALF)]
+    paddd       xmm6, [GOTOFF(eax, PD_ONEHALF)]
     psrad       xmm5, SCALEBITS
     psrad       xmm6, SCALEBITS
-    paddd       xmm2, [GOTOFF(eax,PD_ONEHALF)]
-    paddd       xmm7, [GOTOFF(eax,PD_ONEHALF)]
+    paddd       xmm2, [GOTOFF(eax, PD_ONEHALF)]
+    paddd       xmm7, [GOTOFF(eax, PD_ONEHALF)]
     psrad       xmm2, SCALEBITS
     psrad       xmm7, SCALEBITS
 
-    packssdw    xmm5, xmm6              ; xmm5=CbH*-FIX(0.344)+CrH*FIX(0.285)
-    packssdw    xmm2, xmm7              ; xmm2=CbL*-FIX(0.344)+CrL*FIX(0.285)
-    psubw       xmm5, xmm1              ; xmm5=CbH*-FIX(0.344)+CrH*-FIX(0.714)=(G-Y)H
-    psubw       xmm2, xmm3              ; xmm2=CbL*-FIX(0.344)+CrL*-FIX(0.714)=(G-Y)L
+    packssdw    xmm5, xmm6
+                ; xmm5 = CbH * -FIX(0.344) + CrH * FIX(0.285)
+    packssdw    xmm2, xmm7
+                ; xmm2 = CbL * -FIX(0.344) + CrL * FIX(0.285)
+    psubw       xmm5, xmm1
+                ; xmm5 = CbH * -FIX(0.344) + CrH * -FIX(0.714) = (G - Y)H
+    psubw       xmm2, xmm3
+                ; xmm2 = CbL * -FIX(0.344) + CrL * -FIX(0.714) = (G - Y)L
 
-    movdqa      XMMWORD [wk(2)], xmm5   ; wk(2)=(G-Y)H
+    movdqa      XMMWORD [wk(2)], xmm5   ; wk(2) = (G - Y)H
 
     mov         al, 2                   ; Yctr
     jmp         short .Yloop_1st
     ALIGNX      16, 7
 
 .Yloop_2nd:
-    movdqa      xmm0, XMMWORD [wk(1)]   ; xmm0=(R-Y)H
-    movdqa      xmm2, XMMWORD [wk(2)]   ; xmm2=(G-Y)H
-    movdqa      xmm4, XMMWORD [wk(0)]   ; xmm4=(B-Y)H
+    movdqa      xmm0, XMMWORD [wk(1)]   ; xmm0 = (R - Y)H
+    movdqa      xmm2, XMMWORD [wk(2)]   ; xmm2 = (G - Y)H
+    movdqa      xmm4, XMMWORD [wk(0)]   ; xmm4 = (B - Y)H
     ALIGNX      16, 7
 
 .Yloop_1st:
-    movdqa      xmm7, XMMWORD [esi]     ; xmm7=Y(0123456789ABCDEF)
+    movdqa      xmm7, XMMWORD [esi]     ; xmm7 = Y(0123456789abcdef)
 
     pcmpeqw     xmm6, xmm6
-    psrlw       xmm6, BYTE_BIT          ; xmm6={0xFF 0x00 0xFF 0x00 ..}
-    pand        xmm6, xmm7              ; xmm6=Y(02468ACE)=YE
-    psrlw       xmm7, BYTE_BIT          ; xmm7=Y(13579BDF)=YO
+    psrlw       xmm6, BYTE_BIT          ; xmm6 = { 0xFF 0x00 0xFF 0x00 .. }
+    pand        xmm6, xmm7              ; xmm6 = Y(02468ace) = YE
+    psrlw       xmm7, BYTE_BIT          ; xmm7 = Y(13579bdf) = YO
 
-    movdqa      xmm1, xmm0              ; xmm1=xmm0=(R-Y)(L/H)
-    movdqa      xmm3, xmm2              ; xmm3=xmm2=(G-Y)(L/H)
-    movdqa      xmm5, xmm4              ; xmm5=xmm4=(B-Y)(L/H)
+    movdqa      xmm1, xmm0              ; xmm1 = xmm0 = (R - Y)(L / H)
+    movdqa      xmm3, xmm2              ; xmm3 = xmm2 = (G - Y)(L / H)
+    movdqa      xmm5, xmm4              ; xmm5 = xmm4 = (B - Y)(L / H)
 
-    paddw       xmm0, xmm6              ; xmm0=((R-Y)+YE)=RE=R(02468ACE)
-    paddw       xmm1, xmm7              ; xmm1=((R-Y)+YO)=RO=R(13579BDF)
-    packuswb    xmm0, xmm0              ; xmm0=R(02468ACE********)
-    packuswb    xmm1, xmm1              ; xmm1=R(13579BDF********)
+    paddw       xmm0, xmm6           ; xmm0 = ((R - Y) + YE) = RE = R(02468ace)
+    paddw       xmm1, xmm7           ; xmm1 = ((R - Y) + YO) = RO = R(13579bdf)
+    packuswb    xmm0, xmm0           ; xmm0 = R(02468ace********)
+    packuswb    xmm1, xmm1           ; xmm1 = R(13579bdf********)
 
-    paddw       xmm2, xmm6              ; xmm2=((G-Y)+YE)=GE=G(02468ACE)
-    paddw       xmm3, xmm7              ; xmm3=((G-Y)+YO)=GO=G(13579BDF)
-    packuswb    xmm2, xmm2              ; xmm2=G(02468ACE********)
-    packuswb    xmm3, xmm3              ; xmm3=G(13579BDF********)
+    paddw       xmm2, xmm6           ; xmm2 = ((G - Y) + YE) = GE = G(02468ace)
+    paddw       xmm3, xmm7           ; xmm3 = ((G - Y) + YO) = GO = G(13579bdf)
+    packuswb    xmm2, xmm2           ; xmm2 = G(02468ace********)
+    packuswb    xmm3, xmm3           ; xmm3 = G(13579bdf********)
 
-    paddw       xmm4, xmm6              ; xmm4=((B-Y)+YE)=BE=B(02468ACE)
-    paddw       xmm5, xmm7              ; xmm5=((B-Y)+YO)=BO=B(13579BDF)
-    packuswb    xmm4, xmm4              ; xmm4=B(02468ACE********)
-    packuswb    xmm5, xmm5              ; xmm5=B(13579BDF********)
+    paddw       xmm4, xmm6           ; xmm4 = ((B - Y) + YE) = BE = B(02468ace)
+    paddw       xmm5, xmm7           ; xmm5 = ((B - Y) + YO) = BO = B(13579bdf)
+    packuswb    xmm4, xmm4           ; xmm4 = B(02468ace********)
+    packuswb    xmm5, xmm5           ; xmm5 = B(13579bdf********)
 
 %if RGB_PIXELSIZE == 3  ; ---------------
 
-    ; xmmA=(00 02 04 06 08 0A 0C 0E **), xmmB=(01 03 05 07 09 0B 0D 0F **)
-    ; xmmC=(10 12 14 16 18 1A 1C 1E **), xmmD=(11 13 15 17 19 1B 1D 1F **)
-    ; xmmE=(20 22 24 26 28 2A 2C 2E **), xmmF=(21 23 25 27 29 2B 2D 2F **)
-    ; xmmG=(** ** ** ** ** ** ** ** **), xmmH=(** ** ** ** ** ** ** ** **)
+    ; NOTE: The values of RGB_RED, RGB_GREEN, and RGB_BLUE determine the
+    ; mapping of components A, B, and C to red, green, and blue.
+    ;
+    ; xmmA = (A0 A2 A4 A6 A8 Aa Ac Ae) = AE
+    ; xmmB = (A1 A3 A5 A7 A9 Ab Ad Af) = AO
+    ; xmmC = (B0 B2 B4 B6 B8 Ba Bc Be) = BE
+    ; xmmD = (B1 B3 B5 B7 B9 Bb Bd Bf) = BO
+    ; xmmE = (C0 C2 C4 C6 C8 Ca Cc Ce) = CE
+    ; xmmF = (C1 C3 C5 C7 C9 Cb Cd Cf) = CO
+    ; xmmG = (** ** ** ** ** ** ** **)
+    ; xmmH = (** ** ** ** ** ** ** **)
 
-    punpcklbw   xmmA, xmmC        ; xmmA=(00 10 02 12 04 14 06 16 08 18 0A 1A 0C 1C 0E 1E)
-    punpcklbw   xmmE, xmmB        ; xmmE=(20 01 22 03 24 05 26 07 28 09 2A 0B 2C 0D 2E 0F)
-    punpcklbw   xmmD, xmmF        ; xmmD=(11 21 13 23 15 25 17 27 19 29 1B 2B 1D 2D 1F 2F)
+    punpcklbw   xmmA, xmmC
+                ; xmmA = (A0 B0 A2 B2 A4 B4 A6 B6 A8 B8 Aa Ba Ac Bc Ae Be)
+    punpcklbw   xmmE, xmmB
+                ; xmmE = (C0 A1 C2 A3 C4 A5 C6 A7 C8 A9 Ca Ab Cc Ad Ce Af)
+    punpcklbw   xmmD, xmmF
+                ; xmmD = (B1 C1 B3 C3 B5 C5 B7 C7 B9 C9 Bb Cb Bd Cd Bf Cf)
 
     movdqa      xmmG, xmmA
     movdqa      xmmH, xmmA
-    punpcklwd   xmmA, xmmE        ; xmmA=(00 10 20 01 02 12 22 03 04 14 24 05 06 16 26 07)
-    punpckhwd   xmmG, xmmE        ; xmmG=(08 18 28 09 0A 1A 2A 0B 0C 1C 2C 0D 0E 1E 2E 0F)
+    punpcklwd   xmmA, xmmE
+                ; xmmA = (A0 B0 C0 A1 A2 B2 C2 A3 A4 B4 C4 A5 A6 B6 C6 A7)
+    punpckhwd   xmmG, xmmE
+                ; xmmG = (A8 B8 C8 A9 Aa Ba Ca Ab Ac Bc Cc Ad Ae Be Ce Af)
 
-    psrldq      xmmH, 2           ; xmmH=(02 12 04 14 06 16 08 18 0A 1A 0C 1C 0E 1E -- --)
-    psrldq      xmmE, 2           ; xmmE=(22 03 24 05 26 07 28 09 2A 0B 2C 0D 2E 0F -- --)
+    psrldq      xmmH, 2
+                ; xmmH = (A2 B2 A4 B4 A6 B6 A8 B8 Aa Ba Ac Bc Ae Be -- --)
+    psrldq      xmmE, 2
+                ; xmmE = (C2 A3 C4 A5 C6 A7 C8 A9 Ca Ab Cc Ad Ce Af -- --)
 
     movdqa      xmmC, xmmD
     movdqa      xmmB, xmmD
-    punpcklwd   xmmD, xmmH        ; xmmD=(11 21 02 12 13 23 04 14 15 25 06 16 17 27 08 18)
-    punpckhwd   xmmC, xmmH        ; xmmC=(19 29 0A 1A 1B 2B 0C 1C 1D 2D 0E 1E 1F 2F -- --)
+    punpcklwd   xmmD, xmmH
+                ; xmmD = (B1 C1 A2 B2 B3 C3 A4 B4 B5 C5 A6 B6 B7 C7 A8 B8)
+    punpckhwd   xmmC, xmmH
+                ; xmmC = (B9 C9 Aa Ba Bb Cb Ac Bc Bd Cd Ae Be Bf Cf -- --)
 
-    psrldq      xmmB, 2           ; xmmB=(13 23 15 25 17 27 19 29 1B 2B 1D 2D 1F 2F -- --)
+    psrldq      xmmB, 2
+                ; xmmB = (B3 C3 B5 C5 B7 C7 B9 C9 Bb Cb Bd Cd Bf Cf -- --)
 
     movdqa      xmmF, xmmE
-    punpcklwd   xmmE, xmmB        ; xmmE=(22 03 13 23 24 05 15 25 26 07 17 27 28 09 19 29)
-    punpckhwd   xmmF, xmmB        ; xmmF=(2A 0B 1B 2B 2C 0D 1D 2D 2E 0F 1F 2F -- -- -- --)
+    punpcklwd   xmmE, xmmB
+                ; xmmE = (C2 A3 B3 C3 C4 A5 B5 C5 C6 A7 B7 C7 C8 A9 B9 C9)
+    punpckhwd   xmmF, xmmB
+                ; xmmF = (Ca Ab Bb Cb Cc Ad Bd Cd Ce Af Bf Cf -- -- -- --)
 
-    pshufd      xmmH, xmmA, 0x4E  ; xmmH=(04 14 24 05 06 16 26 07 00 10 20 01 02 12 22 03)
+    pshufd      xmmH, xmmA, 0x4E
+                ; xmmH = (A4 B4 C4 A5 A6 B6 C6 A7 A0 B0 C0 A1 A2 B2 C2 A3)
     movdqa      xmmB, xmmE
-    punpckldq   xmmA, xmmD        ; xmmA=(00 10 20 01 11 21 02 12 02 12 22 03 13 23 04 14)
-    punpckldq   xmmE, xmmH        ; xmmE=(22 03 13 23 04 14 24 05 24 05 15 25 06 16 26 07)
-    punpckhdq   xmmD, xmmB        ; xmmD=(15 25 06 16 26 07 17 27 17 27 08 18 28 09 19 29)
+    punpckldq   xmmA, xmmD
+                ; xmmA = (A0 B0 C0 A1 B1 C1 A2 B2 A2 B2 C2 A3 B3 C3 A4 B4)
+    punpckldq   xmmE, xmmH
+                ; xmmE = (C2 A3 B3 C3 A4 B4 C4 A5 C4 A5 B5 C5 A6 B6 C6 A7)
+    punpckhdq   xmmD, xmmB
+                ; xmmD = (B5 C5 A6 B6 C6 A7 B7 C7 B7 C7 A8 B8 C8 A9 B9 C9)
 
-    pshufd      xmmH, xmmG, 0x4E  ; xmmH=(0C 1C 2C 0D 0E 1E 2E 0F 08 18 28 09 0A 1A 2A 0B)
+    pshufd      xmmH, xmmG, 0x4E
+                ; xmmH = (Ac Bc Cc Ad Ae Be Ce Af A8 B8 C8 A9 Aa Ba Ca Ab)
     movdqa      xmmB, xmmF
-    punpckldq   xmmG, xmmC        ; xmmG=(08 18 28 09 19 29 0A 1A 0A 1A 2A 0B 1B 2B 0C 1C)
-    punpckldq   xmmF, xmmH        ; xmmF=(2A 0B 1B 2B 0C 1C 2C 0D 2C 0D 1D 2D 0E 1E 2E 0F)
-    punpckhdq   xmmC, xmmB        ; xmmC=(1D 2D 0E 1E 2E 0F 1F 2F 1F 2F -- -- -- -- -- --)
+    punpckldq   xmmG, xmmC
+                ; xmmG = (A8 B8 C8 A9 B9 C9 Aa Ba Aa Ba Ca Ab Bb Cb Ac Bc)
+    punpckldq   xmmF, xmmH
+                ; xmmF = (Ca Ab Bb Cb Ac Bc Cc Ad Cc Ad Bd Cd Ae Be Ce Af)
+    punpckhdq   xmmC, xmmB
+                ; xmmC = (Bd Cd Ae Be Ce Af Bf Cf Bf Cf -- -- -- -- -- --)
 
-    punpcklqdq  xmmA, xmmE        ; xmmA=(00 10 20 01 11 21 02 12 22 03 13 23 04 14 24 05)
-    punpcklqdq  xmmD, xmmG        ; xmmD=(15 25 06 16 26 07 17 27 08 18 28 09 19 29 0A 1A)
-    punpcklqdq  xmmF, xmmC        ; xmmF=(2A 0B 1B 2B 0C 1C 2C 0D 1D 2D 0E 1E 2E 0F 1F 2F)
+    punpcklqdq  xmmA, xmmE
+                ; xmmA = (A0 B0 C0 A1 B1 C1 A2 B2 C2 A3 B3 C3 A4 B4 C4 A5)
+    punpcklqdq  xmmD, xmmG
+                ; xmmD = (B5 C5 A6 B6 C6 A7 B7 C7 A8 B8 C8 A9 B9 C9 Aa Ba)
+    punpcklqdq  xmmF, xmmC
+                ; xmmF = (Ca Ab Bb Cb Ac Bc Cc Ad Bd Cd Ae Be Ce Af Bf Cf)
 
     cmp         ecx, byte SIZEOF_XMMWORD
     jb          short .column_st32
 
-    test        edi, SIZEOF_XMMWORD-1
+    test        edi, SIZEOF_XMMWORD - 1
     jnz         short .out1
     ; --(aligned)-------------------
-    movntdq     XMMWORD [edi+0*SIZEOF_XMMWORD], xmmA
-    movntdq     XMMWORD [edi+1*SIZEOF_XMMWORD], xmmD
-    movntdq     XMMWORD [edi+2*SIZEOF_XMMWORD], xmmF
+    movntdq     XMMWORD [edi + 0 * SIZEOF_XMMWORD], xmmA
+    movntdq     XMMWORD [edi + 1 * SIZEOF_XMMWORD], xmmD
+    movntdq     XMMWORD [edi + 2 * SIZEOF_XMMWORD], xmmF
     jmp         short .out0
 .out1:  ; --(unaligned)-----------------
-    movdqu      XMMWORD [edi+0*SIZEOF_XMMWORD], xmmA
-    movdqu      XMMWORD [edi+1*SIZEOF_XMMWORD], xmmD
-    movdqu      XMMWORD [edi+2*SIZEOF_XMMWORD], xmmF
+    movdqu      XMMWORD [edi + 0 * SIZEOF_XMMWORD], xmmA
+    movdqu      XMMWORD [edi + 1 * SIZEOF_XMMWORD], xmmD
+    movdqu      XMMWORD [edi + 2 * SIZEOF_XMMWORD], xmmF
 .out0:
-    add         edi, byte RGB_PIXELSIZE*SIZEOF_XMMWORD  ; outptr
+    add         edi, byte RGB_PIXELSIZE * SIZEOF_XMMWORD  ; outptr
     sub         ecx, byte SIZEOF_XMMWORD
     jz          near .endcolumn
 
@@ -279,20 +316,20 @@ EXTN(jsimd_h2v1_merged_upsample_sse2):
     ALIGNX      16, 7
 
 .column_st32:
-    lea         ecx, [ecx+ecx*2]            ; imul ecx, RGB_PIXELSIZE
-    cmp         ecx, byte 2*SIZEOF_XMMWORD
+    lea         ecx, [ecx + ecx * 2]          ; imul ecx, RGB_PIXELSIZE
+    cmp         ecx, byte 2 * SIZEOF_XMMWORD
     jb          short .column_st16
-    movdqu      XMMWORD [edi+0*SIZEOF_XMMWORD], xmmA
-    movdqu      XMMWORD [edi+1*SIZEOF_XMMWORD], xmmD
-    add         edi, byte 2*SIZEOF_XMMWORD  ; outptr
+    movdqu      XMMWORD [edi + 0 * SIZEOF_XMMWORD], xmmA
+    movdqu      XMMWORD [edi + 1 * SIZEOF_XMMWORD], xmmD
+    add         edi, byte 2 * SIZEOF_XMMWORD  ; outptr
     movdqa      xmmA, xmmF
-    sub         ecx, byte 2*SIZEOF_XMMWORD
+    sub         ecx, byte 2 * SIZEOF_XMMWORD
     jmp         short .column_st15
 .column_st16:
     cmp         ecx, byte SIZEOF_XMMWORD
     jb          short .column_st15
-    movdqu      XMMWORD [edi+0*SIZEOF_XMMWORD], xmmA
-    add         edi, byte SIZEOF_XMMWORD    ; outptr
+    movdqu      XMMWORD [edi + 0 * SIZEOF_XMMWORD], xmmA
+    add         edi, byte SIZEOF_XMMWORD      ; outptr
     movdqa      xmmA, xmmD
     sub         ecx, byte SIZEOF_XMMWORD
 .column_st15:
@@ -333,54 +370,73 @@ EXTN(jsimd_h2v1_merged_upsample_sse2):
 %else  ; RGB_PIXELSIZE == 4 ; -----------
 
 %ifdef RGBX_FILLER_0XFF
-    pcmpeqb     xmm6, xmm6              ; xmm6=XE=X(02468ACE********)
-    pcmpeqb     xmm7, xmm7              ; xmm7=XO=X(13579BDF********)
+    pcmpeqb     xmm6, xmm6              ; xmm6 = XE = X(02468ace********)
+    pcmpeqb     xmm7, xmm7              ; xmm7 = XO = X(13579bdf********)
 %else
-    pxor        xmm6, xmm6              ; xmm6=XE=X(02468ACE********)
-    pxor        xmm7, xmm7              ; xmm7=XO=X(13579BDF********)
+    pxor        xmm6, xmm6              ; xmm6 = XE = X(02468ace********)
+    pxor        xmm7, xmm7              ; xmm7 = XO = X(13579bdf********)
 %endif
-    ; xmmA=(00 02 04 06 08 0A 0C 0E **), xmmB=(01 03 05 07 09 0B 0D 0F **)
-    ; xmmC=(10 12 14 16 18 1A 1C 1E **), xmmD=(11 13 15 17 19 1B 1D 1F **)
-    ; xmmE=(20 22 24 26 28 2A 2C 2E **), xmmF=(21 23 25 27 29 2B 2D 2F **)
-    ; xmmG=(30 32 34 36 38 3A 3C 3E **), xmmH=(31 33 35 37 39 3B 3D 3F **)
+    ; NOTE: The values of RGB_RED, RGB_GREEN, and RGB_BLUE determine the
+    ; mapping of components A, B, C, and D to red, green, and blue.
+    ;
+    ; xmmA = (A0 A2 A4 A6 A8 Aa Ac Ae) = AE
+    ; xmmB = (A1 A3 A5 A7 A9 Ab Ad Af) = AO
+    ; xmmC = (B0 B2 B4 B6 B8 Ba Bc Be) = BE
+    ; xmmD = (B1 B3 B5 B7 B9 Bb Bd Bf) = BO
+    ; xmmE = (C0 C2 C4 C6 C8 Ca Cc Ce) = CE
+    ; xmmF = (C1 C3 C5 C7 C9 Cb Cd Cf) = CO
+    ; xmmG = (D0 D2 D4 D6 D8 Da Dc De) = DE
+    ; xmmH = (D1 D3 D5 D7 D9 Db Dd Df) = DO
 
-    punpcklbw   xmmA, xmmC  ; xmmA=(00 10 02 12 04 14 06 16 08 18 0A 1A 0C 1C 0E 1E)
-    punpcklbw   xmmE, xmmG  ; xmmE=(20 30 22 32 24 34 26 36 28 38 2A 3A 2C 3C 2E 3E)
-    punpcklbw   xmmB, xmmD  ; xmmB=(01 11 03 13 05 15 07 17 09 19 0B 1B 0D 1D 0F 1F)
-    punpcklbw   xmmF, xmmH  ; xmmF=(21 31 23 33 25 35 27 37 29 39 2B 3B 2D 3D 2F 3F)
+    punpcklbw   xmmA, xmmC
+                ; xmmA = (A0 B0 A2 B2 A4 B4 A6 B6 A8 B8 Aa Ba Ac Bc Ae Be)
+    punpcklbw   xmmE, xmmG
+                ; xmmE = (C0 D0 C2 D2 C4 D4 C6 D6 C8 D8 Ca Da Cc Dc Ce De)
+    punpcklbw   xmmB, xmmD
+                ; xmmB = (A1 B1 A3 B3 A5 B5 A7 B7 A9 B9 Ab Bb Ad Bd Af Bf)
+    punpcklbw   xmmF, xmmH
+                ; xmmF = (C1 D1 C3 D3 C5 D5 C7 D7 C9 D9 Cb Db Cd Dd Cf Df)
 
     movdqa      xmmC, xmmA
-    punpcklwd   xmmA, xmmE  ; xmmA=(00 10 20 30 02 12 22 32 04 14 24 34 06 16 26 36)
-    punpckhwd   xmmC, xmmE  ; xmmC=(08 18 28 38 0A 1A 2A 3A 0C 1C 2C 3C 0E 1E 2E 3E)
+    punpcklwd   xmmA, xmmE
+                ; xmmA = (A0 B0 C0 D0 A2 B2 C2 D2 A4 B4 C4 D4 A6 B6 C6 D6)
+    punpckhwd   xmmC, xmmE
+                ; xmmC = (A8 B8 C8 D8 Aa Ba Ca Da Ac Bc Cc Dc Ae Be Ce De)
     movdqa      xmmG, xmmB
-    punpcklwd   xmmB, xmmF  ; xmmB=(01 11 21 31 03 13 23 33 05 15 25 35 07 17 27 37)
-    punpckhwd   xmmG, xmmF  ; xmmG=(09 19 29 39 0B 1B 2B 3B 0D 1D 2D 3D 0F 1F 2F 3F)
+    punpcklwd   xmmB, xmmF
+                ; xmmB = (A1 B1 C1 D1 A3 B3 C3 D3 A5 B5 C5 D5 A7 B7 C7 D7)
+    punpckhwd   xmmG, xmmF
+                ; xmmG = (A9 B9 C9 D9 Ab Bb Cb Db Ad Bd Cd Dd Af Bf Cf Df)
 
     movdqa      xmmD, xmmA
-    punpckldq   xmmA, xmmB  ; xmmA=(00 10 20 30 01 11 21 31 02 12 22 32 03 13 23 33)
-    punpckhdq   xmmD, xmmB  ; xmmD=(04 14 24 34 05 15 25 35 06 16 26 36 07 17 27 37)
+    punpckldq   xmmA, xmmB
+                ; xmmA = (A0 B0 C0 D0 A1 B1 C1 D1 A2 B2 C2 D2 A3 B3 C3 D3)
+    punpckhdq   xmmD, xmmB
+                ; xmmD = (A4 B4 C4 D4 A5 B5 C5 D5 A6 B6 C6 D6 A7 B7 C7 D7)
     movdqa      xmmH, xmmC
-    punpckldq   xmmC, xmmG  ; xmmC=(08 18 28 38 09 19 29 39 0A 1A 2A 3A 0B 1B 2B 3B)
-    punpckhdq   xmmH, xmmG  ; xmmH=(0C 1C 2C 3C 0D 1D 2D 3D 0E 1E 2E 3E 0F 1F 2F 3F)
+    punpckldq   xmmC, xmmG
+                ; xmmC = (A8 B8 C8 D8 A9 B9 C9 D9 Aa Ba Ca Da Ab Bb Cb Db)
+    punpckhdq   xmmH, xmmG
+                ; xmmH = (Ac Bc Cc Dc Ad Bd Cd Dd Ae Be Ce De Af Bf Cf Df)
 
     cmp         ecx, byte SIZEOF_XMMWORD
     jb          short .column_st32
 
-    test        edi, SIZEOF_XMMWORD-1
+    test        edi, SIZEOF_XMMWORD - 1
     jnz         short .out1
     ; --(aligned)-------------------
-    movntdq     XMMWORD [edi+0*SIZEOF_XMMWORD], xmmA
-    movntdq     XMMWORD [edi+1*SIZEOF_XMMWORD], xmmD
-    movntdq     XMMWORD [edi+2*SIZEOF_XMMWORD], xmmC
-    movntdq     XMMWORD [edi+3*SIZEOF_XMMWORD], xmmH
+    movntdq     XMMWORD [edi + 0 * SIZEOF_XMMWORD], xmmA
+    movntdq     XMMWORD [edi + 1 * SIZEOF_XMMWORD], xmmD
+    movntdq     XMMWORD [edi + 2 * SIZEOF_XMMWORD], xmmC
+    movntdq     XMMWORD [edi + 3 * SIZEOF_XMMWORD], xmmH
     jmp         short .out0
 .out1:  ; --(unaligned)-----------------
-    movdqu      XMMWORD [edi+0*SIZEOF_XMMWORD], xmmA
-    movdqu      XMMWORD [edi+1*SIZEOF_XMMWORD], xmmD
-    movdqu      XMMWORD [edi+2*SIZEOF_XMMWORD], xmmC
-    movdqu      XMMWORD [edi+3*SIZEOF_XMMWORD], xmmH
+    movdqu      XMMWORD [edi + 0 * SIZEOF_XMMWORD], xmmA
+    movdqu      XMMWORD [edi + 1 * SIZEOF_XMMWORD], xmmD
+    movdqu      XMMWORD [edi + 2 * SIZEOF_XMMWORD], xmmC
+    movdqu      XMMWORD [edi + 3 * SIZEOF_XMMWORD], xmmH
 .out0:
-    add         edi, byte RGB_PIXELSIZE*SIZEOF_XMMWORD  ; outptr
+    add         edi, byte RGB_PIXELSIZE * SIZEOF_XMMWORD  ; outptr
     sub         ecx, byte SIZEOF_XMMWORD
     jz          near .endcolumn
 
@@ -394,30 +450,30 @@ EXTN(jsimd_h2v1_merged_upsample_sse2):
     ALIGNX      16, 7
 
 .column_st32:
-    cmp         ecx, byte SIZEOF_XMMWORD/2
+    cmp         ecx, byte SIZEOF_XMMWORD / 2
     jb          short .column_st16
-    movdqu      XMMWORD [edi+0*SIZEOF_XMMWORD], xmmA
-    movdqu      XMMWORD [edi+1*SIZEOF_XMMWORD], xmmD
-    add         edi, byte 2*SIZEOF_XMMWORD  ; outptr
+    movdqu      XMMWORD [edi + 0 * SIZEOF_XMMWORD], xmmA
+    movdqu      XMMWORD [edi + 1 * SIZEOF_XMMWORD], xmmD
+    add         edi, byte 2 * SIZEOF_XMMWORD  ; outptr
     movdqa      xmmA, xmmC
     movdqa      xmmD, xmmH
-    sub         ecx, byte SIZEOF_XMMWORD/2
+    sub         ecx, byte SIZEOF_XMMWORD / 2
 .column_st16:
-    cmp         ecx, byte SIZEOF_XMMWORD/4
+    cmp         ecx, byte SIZEOF_XMMWORD / 4
     jb          short .column_st15
-    movdqu      XMMWORD [edi+0*SIZEOF_XMMWORD], xmmA
-    add         edi, byte SIZEOF_XMMWORD    ; outptr
+    movdqu      XMMWORD [edi + 0 * SIZEOF_XMMWORD], xmmA
+    add         edi, byte SIZEOF_XMMWORD      ; outptr
     movdqa      xmmA, xmmD
-    sub         ecx, byte SIZEOF_XMMWORD/4
+    sub         ecx, byte SIZEOF_XMMWORD / 4
 .column_st15:
     ; Store two pixels (8 bytes) of xmmA to the output when it has enough
     ; space.
-    cmp         ecx, byte SIZEOF_XMMWORD/8
+    cmp         ecx, byte SIZEOF_XMMWORD / 8
     jb          short .column_st7
     movq        XMM_MMWORD [edi], xmmA
-    add         edi, byte SIZEOF_XMMWORD/8*4
-    sub         ecx, byte SIZEOF_XMMWORD/8
-    psrldq      xmmA, SIZEOF_XMMWORD/8*4
+    add         edi, byte SIZEOF_XMMWORD / 8 * 4
+    sub         ecx, byte SIZEOF_XMMWORD / 8
+    psrldq      xmmA, SIZEOF_XMMWORD / 8 * 4
 .column_st7:
     ; Store one pixel (4 bytes) of xmmA to the output when it has enough
     ; space.
@@ -449,8 +505,7 @@ EXTN(jsimd_h2v1_merged_upsample_sse2):
 ; jsimd_h2v2_merged_upsample_sse2(JDIMENSION output_width,
 ;                                 JSAMPIMAGE input_buf,
 ;                                 JDIMENSION in_row_group_ctr,
-;                                 JSAMPARRAY output_buf);
-;
+;                                 JSAMPARRAY output_buf)
 
 %define output_width(b)      (b) + 8    ; JDIMENSION output_width
 %define input_buf(b)         (b) + 12   ; JSAMPIMAGE input_buf
@@ -473,11 +528,11 @@ EXTN(jsimd_h2v2_merged_upsample_sse2):
 
     mov         edi, JSAMPIMAGE [input_buf(ebp)]
     mov         ecx, JDIMENSION [in_row_group_ctr(ebp)]
-    mov         esi, JSAMPARRAY [edi+0*SIZEOF_JSAMPARRAY]
-    mov         ebx, JSAMPARRAY [edi+1*SIZEOF_JSAMPARRAY]
-    mov         edx, JSAMPARRAY [edi+2*SIZEOF_JSAMPARRAY]
+    mov         esi, JSAMPARRAY [edi + 0 * SIZEOF_JSAMPARRAY]
+    mov         ebx, JSAMPARRAY [edi + 1 * SIZEOF_JSAMPARRAY]
+    mov         edx, JSAMPARRAY [edi + 2 * SIZEOF_JSAMPARRAY]
     mov         edi, JSAMPARRAY [output_buf(ebp)]
-    lea         esi, [esi+ecx*SIZEOF_JSAMPROW]
+    lea         esi, [esi + ecx * SIZEOF_JSAMPROW]
 
     push        edx                     ; inptr2
     push        ebx                     ; inptr1
@@ -493,12 +548,12 @@ EXTN(jsimd_h2v2_merged_upsample_sse2):
 
     add         esi, byte SIZEOF_JSAMPROW  ; inptr01
     add         edi, byte SIZEOF_JSAMPROW  ; outptr1
-    mov         POINTER [ebx+0*SIZEOF_POINTER], esi
-    mov         POINTER [ebx-1*SIZEOF_POINTER], edi
+    mov         POINTER [ebx + 0 * SIZEOF_POINTER], esi
+    mov         POINTER [ebx - 1 * SIZEOF_POINTER], edi
 
     call        near EXTN(jsimd_h2v1_merged_upsample_sse2)
 
-    add         esp, byte 7*SIZEOF_DWORD
+    add         esp, byte 7 * SIZEOF_DWORD
 
     pop         edi
     pop         esi

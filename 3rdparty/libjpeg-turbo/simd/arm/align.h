@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020, Arm Limited.  All Rights Reserved.
+ * Copyright (C) 2020, Arm Limited.
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages

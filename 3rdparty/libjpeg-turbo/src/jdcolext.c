@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1997, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2009, 2011, 2015, 2022-2023, D. R. Commander.
+ * Copyright (C) 2009, 2011, 2015, 2022-2023, 2025, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -28,9 +28,8 @@
 
 INLINE
 LOCAL(void)
-ycc_rgb_convert_internal(j_decompress_ptr cinfo, _JSAMPIMAGE input_buf,
-                         JDIMENSION input_row, _JSAMPARRAY output_buf,
-                         int num_rows)
+ycc_rgb_convert(j_decompress_ptr cinfo, _JSAMPIMAGE input_buf,
+                JDIMENSION input_row, _JSAMPARRAY output_buf, int num_rows)
 {
 #if BITS_IN_JSAMPLE != 16
   my_cconvert_ptr cconvert = (my_cconvert_ptr)cinfo->cconvert;
@@ -85,9 +84,8 @@ ycc_rgb_convert_internal(j_decompress_ptr cinfo, _JSAMPIMAGE input_buf,
 
 INLINE
 LOCAL(void)
-gray_rgb_convert_internal(j_decompress_ptr cinfo, _JSAMPIMAGE input_buf,
-                          JDIMENSION input_row, _JSAMPARRAY output_buf,
-                          int num_rows)
+gray_rgb_convert(j_decompress_ptr cinfo, _JSAMPIMAGE input_buf,
+                 JDIMENSION input_row, _JSAMPARRAY output_buf, int num_rows)
 {
   register _JSAMPROW inptr, outptr;
   register JDIMENSION col;
@@ -115,9 +113,8 @@ gray_rgb_convert_internal(j_decompress_ptr cinfo, _JSAMPIMAGE input_buf,
 
 INLINE
 LOCAL(void)
-rgb_rgb_convert_internal(j_decompress_ptr cinfo, _JSAMPIMAGE input_buf,
-                         JDIMENSION input_row, _JSAMPARRAY output_buf,
-                         int num_rows)
+rgb_rgb_convert(j_decompress_ptr cinfo, _JSAMPIMAGE input_buf,
+                JDIMENSION input_row, _JSAMPARRAY output_buf, int num_rows)
 {
   register _JSAMPROW inptr0, inptr1, inptr2;
   register _JSAMPROW outptr;

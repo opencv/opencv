@@ -1,5 +1,5 @@
 ;
-; Colorspace conversion (SSE2)
+; YCbCr-to-RGB Color Conversion (32-bit SSE2)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
 ; Copyright (C) 2009, 2016, 2024, D. R. Commander.

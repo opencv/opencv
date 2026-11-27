@@ -1,8 +1,8 @@
 /*
- * Accurate integer FDCT (Arm Neon)
+ * Accurate Integer Forward DCT (Arm Neon)
  *
- * Copyright (C) 2020, Arm Limited.  All Rights Reserved.
- * Copyright (C) 2020, 2024, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2020, Arm Limited.
+ * Copyright (C) 2020, 2024-2025, D. R. Commander.
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -21,17 +21,9 @@
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
-#define JPEG_INTERNALS
-#include "../../src/jinclude.h"
-#include "../../src/jpeglib.h"
-#include "../../src/jsimd.h"
-#include "../../src/jdct.h"
-#include "../../src/jsimddct.h"
-#include "../jsimd.h"
+#include "../jsimdint.h"
 #include "align.h"
 #include "neon-compat.h"
-
-#include <arm_neon.h>
 
 
 /* jsimd_fdct_islow_neon() performs a slower but more accurate forward DCT
@@ -84,7 +76,8 @@ ALIGN(16) static const int16_t jsimd_fdct_islow_neon_consts[] = {
  -F_1_961,  F_2_053, -F_2_562,  F_3_072
 };
 
-void jsimd_fdct_islow_neon(DCTELEM *data)
+HIDDEN void
+jsimd_fdct_islow_neon(DCTELEM *data)
 {
   /* Load DCT constants. */
 #ifdef HAVE_VLD1_S16_X3
@@ -169,29 +162,29 @@ void jsimd_fdct_islow_neon(DCTELEM *data)
   z5_l = vmlal_lane_s16(z5_l, vget_low_s16(z4), consts.val[1], 1);
   z5_h = vmlal_lane_s16(z5_h, vget_high_s16(z4), consts.val[1], 1);
 
-  /* sqrt(2) * (-c1+c3+c5-c7) */
+  /* sqrt(2) * (-c1 + c3 + c5 - c7) */
   int32x4_t tmp4_l = vmull_lane_s16(vget_low_s16(tmp4), consts.val[0], 0);
   int32x4_t tmp4_h = vmull_lane_s16(vget_high_s16(tmp4), consts.val[0], 0);
-  /* sqrt(2) * ( c1+c3-c5+c7) */
+  /* sqrt(2) * ( c1 + c3 - c5 + c7) */
   int32x4_t tmp5_l = vmull_lane_s16(vget_low_s16(tmp5), consts.val[2], 1);
   int32x4_t tmp5_h = vmull_lane_s16(vget_high_s16(tmp5), consts.val[2], 1);
-  /* sqrt(2) * ( c1+c3+c5-c7) */
+  /* sqrt(2) * ( c1 + c3 + c5 - c7) */
   int32x4_t tmp6_l = vmull_lane_s16(vget_low_s16(tmp6), consts.val[2], 3);
   int32x4_t tmp6_h = vmull_lane_s16(vget_high_s16(tmp6), consts.val[2], 3);
-  /* sqrt(2) * ( c1+c3-c5-c7) */
+  /* sqrt(2) * ( c1 + c3 - c5 - c7) */
   int32x4_t tmp7_l = vmull_lane_s16(vget_low_s16(tmp7), consts.val[1], 2);
   int32x4_t tmp7_h = vmull_lane_s16(vget_high_s16(tmp7), consts.val[1], 2);
 
-  /* sqrt(2) * (c7-c3) */
+  /* sqrt(2) * (c7 - c3) */
   z1_l = vmull_lane_s16(vget_low_s16(z1), consts.val[1], 0);
   z1_h = vmull_lane_s16(vget_high_s16(z1), consts.val[1], 0);
-  /* sqrt(2) * (-c1-c3) */
+  /* sqrt(2) * (-c1 - c3) */
   int32x4_t z2_l = vmull_lane_s16(vget_low_s16(z2), consts.val[2], 2);
   int32x4_t z2_h = vmull_lane_s16(vget_high_s16(z2), consts.val[2], 2);
-  /* sqrt(2) * (-c3-c5) */
+  /* sqrt(2) * (-c3 - c5) */
   int32x4_t z3_l = vmull_lane_s16(vget_low_s16(z3), consts.val[2], 0);
   int32x4_t z3_h = vmull_lane_s16(vget_high_s16(z3), consts.val[2], 0);
-  /* sqrt(2) * (c5-c3) */
+  /* sqrt(2) * (c5 - c3) */
   int32x4_t z4_l = vmull_lane_s16(vget_low_s16(z4), consts.val[0], 1);
   int32x4_t z4_h = vmull_lane_s16(vget_high_s16(z4), consts.val[0], 1);
 
@@ -306,29 +299,29 @@ void jsimd_fdct_islow_neon(DCTELEM *data)
   z5_l = vmlal_lane_s16(z5_l, vget_low_s16(z4), consts.val[1], 1);
   z5_h = vmlal_lane_s16(z5_h, vget_high_s16(z4), consts.val[1], 1);
 
-  /* sqrt(2) * (-c1+c3+c5-c7) */
+  /* sqrt(2) * (-c1 + c3 + c5 - c7) */
   tmp4_l = vmull_lane_s16(vget_low_s16(tmp4), consts.val[0], 0);
   tmp4_h = vmull_lane_s16(vget_high_s16(tmp4), consts.val[0], 0);
-  /* sqrt(2) * ( c1+c3-c5+c7) */
+  /* sqrt(2) * ( c1 + c3 - c5 + c7) */
   tmp5_l = vmull_lane_s16(vget_low_s16(tmp5), consts.val[2], 1);
   tmp5_h = vmull_lane_s16(vget_high_s16(tmp5), consts.val[2], 1);
-  /* sqrt(2) * ( c1+c3+c5-c7) */
+  /* sqrt(2) * ( c1 + c3 + c5 - c7) */
   tmp6_l = vmull_lane_s16(vget_low_s16(tmp6), consts.val[2], 3);
   tmp6_h = vmull_lane_s16(vget_high_s16(tmp6), consts.val[2], 3);
-  /* sqrt(2) * ( c1+c3-c5-c7) */
+  /* sqrt(2) * ( c1 + c3 -c5 - c7) */
   tmp7_l = vmull_lane_s16(vget_low_s16(tmp7), consts.val[1], 2);
   tmp7_h = vmull_lane_s16(vget_high_s16(tmp7), consts.val[1], 2);
 
-  /* sqrt(2) * (c7-c3) */
+  /* sqrt(2) * (c7 - c3) */
   z1_l = vmull_lane_s16(vget_low_s16(z1), consts.val[1], 0);
   z1_h = vmull_lane_s16(vget_high_s16(z1), consts.val[1], 0);
-  /* sqrt(2) * (-c1-c3) */
+  /* sqrt(2) * (-c1 - c3) */
   z2_l = vmull_lane_s16(vget_low_s16(z2), consts.val[2], 2);
   z2_h = vmull_lane_s16(vget_high_s16(z2), consts.val[2], 2);
-  /* sqrt(2) * (-c3-c5) */
+  /* sqrt(2) * (-c3 - c5) */
   z3_l = vmull_lane_s16(vget_low_s16(z3), consts.val[2], 0);
   z3_h = vmull_lane_s16(vget_high_s16(z3), consts.val[2], 0);
-  /* sqrt(2) * (c5-c3) */
+  /* sqrt(2) * (c5 - c3) */
   z4_l = vmull_lane_s16(vget_low_s16(z4), consts.val[0], 1);
   z4_h = vmull_lane_s16(vget_high_s16(z4), consts.val[0], 1);
 

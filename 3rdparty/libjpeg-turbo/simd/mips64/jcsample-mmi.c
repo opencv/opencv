@@ -1,9 +1,8 @@
 /*
- * Loongson MMI optimizations for libjpeg-turbo
+ * Downsampling (64-bit MMI)
  *
- * Copyright (C) 2015, 2018-2019, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2015, 2018-2019, 2025-2026, D. R. Commander.
  * Copyright (C) 2016-2017, Loongson Technology Corporation Limited, BeiJing.
- *                          All Rights Reserved.
  * Authors:  ZhuChen     <zhuchen@loongson.cn>
  *           CaiWanwei   <caiwanwei@loongson.cn>
  *           SunZhangzhi <sunzhangzhi-cq@loongson.cn>
@@ -28,16 +27,14 @@
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
-/* CHROMA DOWNSAMPLING */
-
 #include "jsimd_mmi.h"
-#include "jcsample.h"
+#include "../common/jcsample.h"
 
 
-void jsimd_h2v2_downsample_mmi(JDIMENSION image_width, int max_v_samp_factor,
-                               JDIMENSION v_samp_factor,
-                               JDIMENSION width_in_blocks,
-                               JSAMPARRAY input_data, JSAMPARRAY output_data)
+HIDDEN void
+jsimd_h2v2_downsample_mmi(JDIMENSION image_width, int max_v_samp_factor,
+                          JDIMENSION v_samp_factor, JDIMENSION width_in_blocks,
+                          JSAMPARRAY input_data, JSAMPARRAY output_data)
 {
   int inrow, outrow, outcol;
   JDIMENSION output_cols = width_in_blocks * DCTSIZE;
@@ -50,9 +47,9 @@ void jsimd_h2v2_downsample_mmi(JDIMENSION image_width, int max_v_samp_factor,
                     output_cols * 2);
 
   bias = _mm_set1_pi32((1 << 17) + 1);   /* 0x00020001 (32-bit bias pattern) */
-                                         /* bias={1, 2, 1, 2} (16-bit) */
+                                         /* bias = { 1, 2, 1, 2 } (16-bit) */
   mask = _mm_cmpeq_pi16(mask, mask);
-  mask = _mm_srli_pi16(mask, BYTE_BIT);  /* {0xFF 0x00 0xFF 0x00 ..} */
+  mask = _mm_srli_pi16(mask, BYTE_BIT);  /* { 0xFF 0x00 0xFF 0x00 .. } */
 
   for (inrow = 0, outrow = 0; outrow < v_samp_factor;
        inrow += 2, outrow++) {

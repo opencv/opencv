@@ -1,8 +1,8 @@
 /*
- * AltiVec optimizations for libjpeg-turbo
+ * RGB-to-YCbCr Color Conversion (AltiVec)
  *
- * Copyright (C) 2014-2015, 2024, D. R. Commander.  All Rights Reserved.
- * Copyright (C) 2014, Jay Foad.  All Rights Reserved.
+ * Copyright (C) 2014-2015, 2024-2025, D. R. Commander.
+ * Copyright (C) 2014, Jay Foad.
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -24,9 +24,10 @@
 /* This file is included by jccolor-altivec.c */
 
 
-void jsimd_rgb_ycc_convert_altivec(JDIMENSION img_width, JSAMPARRAY input_buf,
-                                   JSAMPIMAGE output_buf,
-                                   JDIMENSION output_row, int num_rows)
+HIDDEN void
+jsimd_rgb_ycc_convert_altivec(JDIMENSION img_width, JSAMPARRAY input_buf,
+                              JSAMPIMAGE output_buf, JDIMENSION output_row,
+                              int num_rows)
 {
   JSAMPROW inptr, outptr0, outptr1, outptr2;
   int pitch = img_width * RGB_PIXELSIZE, num_cols;

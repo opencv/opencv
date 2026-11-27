@@ -1,7 +1,7 @@
 /*
- * AltiVec optimizations for libjpeg-turbo
+ * Integer Sample Conversion and Quantization (AltiVec)
  *
- * Copyright (C) 2014-2015, 2024, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2014-2015, 2024-2025, D. R. Commander.
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -19,8 +19,6 @@
  *    misrepresented as being the original software.
  * 3. This notice may not be removed or altered from any source distribution.
  */
-
-/* INTEGER QUANTIZATION AND SAMPLE CONVERSION */
 
 #include "jsimd_altivec.h"
 
@@ -48,8 +46,9 @@
 #endif
 
 
-void jsimd_convsamp_altivec(JSAMPARRAY sample_data, JDIMENSION start_col,
-                            DCTELEM *workspace)
+HIDDEN void
+jsimd_convsamp_altivec(JSAMPARRAY sample_data, JDIMENSION start_col,
+                       DCTELEM *workspace)
 {
   JSAMPROW elemptr;
 

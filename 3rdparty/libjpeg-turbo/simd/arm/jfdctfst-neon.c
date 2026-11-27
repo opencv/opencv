@@ -1,8 +1,8 @@
 /*
- * Fast integer FDCT (Arm Neon)
+ * Fast Integer Forward DCT (Arm Neon)
  *
- * Copyright (C) 2020, Arm Limited.  All Rights Reserved.
- * Copyright (C) 2024, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2020, Arm Limited.
+ * Copyright (C) 2024-2025, D. R. Commander.
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -21,17 +21,9 @@
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
-#define JPEG_INTERNALS
-#include "../../src/jinclude.h"
-#include "../../src/jpeglib.h"
-#include "../../src/jsimd.h"
-#include "../../src/jdct.h"
-#include "../../src/jsimddct.h"
-#include "../jsimd.h"
+#include "../jsimdint.h"
 #include "align.h"
 #include "neon-compat.h"
-
-#include <arm_neon.h>
 
 
 /* jsimd_fdct_ifast_neon() performs a fast, not so accurate forward DCT
@@ -60,7 +52,8 @@ ALIGN(16) static const int16_t jsimd_fdct_ifast_neon_consts[] = {
   F_0_382, F_0_541, F_0_707, F_0_306
 };
 
-void jsimd_fdct_ifast_neon(DCTELEM *data)
+HIDDEN void
+jsimd_fdct_ifast_neon(DCTELEM *data)
 {
   /* Load an 8x8 block of samples into Neon registers.  De-interleaving loads
    * are used, followed by vuzp to transpose the block such that we have a

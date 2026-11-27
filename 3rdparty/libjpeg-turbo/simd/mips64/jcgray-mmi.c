@@ -1,9 +1,8 @@
 /*
- * Loongson MMI optimizations for libjpeg-turbo
+ * RGB-to-Grayscale Color Conversion (64-bit MMI)
  *
- * Copyright (C) 2011, 2014, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2011, 2014, D. R. Commander.
  * Copyright (C) 2016-2018, Loongson Technology Corporation Limited, BeiJing.
- *                          All Rights Reserved.
  * Authors:  ZhangLixia <zhanglixia-hf@loongson.cn>
  *
  * This software is provided 'as-is', without any express or implied
@@ -23,16 +22,14 @@
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
-/* RGB --> GRAYSCALE CONVERSION */
-
 #include "jsimd_mmi.h"
 
 
-#define F_0_114  ((short)7471)                /* FIX(0.11400) */
-#define F_0_250  ((short)16384)               /* FIX(0.25000) */
-#define F_0_299  ((short)19595)               /* FIX(0.29900) */
-#define F_0_587  ((short)38470)               /* FIX(0.58700) */
-#define F_0_337  ((short)(F_0_587 - F_0_250)) /* FIX(0.58700) - FIX(0.25000) */
+#define F_0_114  ((short)7471)                 /* FIX(0.11400) */
+#define F_0_250  ((short)16384)                /* FIX(0.25000) */
+#define F_0_299  ((short)19595)                /* FIX(0.29900) */
+#define F_0_587  ((short)38470)                /* FIX(0.58700) */
+#define F_0_337  ((short)(F_0_587 - F_0_250))  /* FIX(0.58700) - FIX(0.25000) */
 
 enum const_index {
   index_PD_ONEHALF,

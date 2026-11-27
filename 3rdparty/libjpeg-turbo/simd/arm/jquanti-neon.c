@@ -1,8 +1,8 @@
 /*
- * Sample data conversion and quantization (Arm Neon)
+ * Integer Sample Conversion and Quantization (Arm Neon)
  *
- * Copyright (C) 2020-2021, Arm Limited.  All Rights Reserved.
- * Copyright (C) 2024-2025, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2020-2021, Arm Limited.
+ * Copyright (C) 2024-2025, D. R. Commander.
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -21,16 +21,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
-#define JPEG_INTERNALS
-#include "../../src/jinclude.h"
-#include "../../src/jpeglib.h"
-#include "../../src/jsimd.h"
-#include "../../src/jdct.h"
-#include "../../src/jsimddct.h"
-#include "../jsimd.h"
+#include "../jsimdint.h"
 #include "neon-compat.h"
-
-#include <arm_neon.h>
 
 
 /* After downsampling, the resulting sample values are in the range [0, 255],
@@ -44,8 +36,9 @@
  * The equivalent scalar C function convsamp() can be found in jcdctmgr.c.
  */
 
-void jsimd_convsamp_neon(JSAMPARRAY sample_data, JDIMENSION start_col,
-                         DCTELEM *workspace)
+HIDDEN void
+jsimd_convsamp_neon(JSAMPARRAY sample_data, JDIMENSION start_col,
+                    DCTELEM *workspace)
 {
   uint8x8_t samp_row0 = vld1_u8(sample_data[0] + start_col);
   uint8x8_t samp_row1 = vld1_u8(sample_data[1] + start_col);
@@ -93,8 +86,8 @@ void jsimd_convsamp_neon(JSAMPARRAY sample_data, JDIMENSION start_col,
  * The equivalent scalar C function quantize() can be found in jcdctmgr.c.
  */
 
-void jsimd_quantize_neon(JCOEFPTR coef_block, DCTELEM *divisors,
-                         DCTELEM *workspace)
+HIDDEN void
+jsimd_quantize_neon(JCOEFPTR coef_block, DCTELEM *divisors, DCTELEM *workspace)
 {
   JCOEFPTR out_ptr = coef_block;
   UDCTELEM *recip_ptr = (UDCTELEM *)divisors;
@@ -102,8 +95,7 @@ void jsimd_quantize_neon(JCOEFPTR coef_block, DCTELEM *divisors,
   DCTELEM *shift_ptr = divisors + 3 * DCTSIZE2;
   int i;
 
-#if defined(__clang__) && (defined(__aarch64__) || defined(_M_ARM64) || \
-                           defined(_M_ARM64EC))
+#if defined(__clang__) && SIMD_ARCHITECTURE == ARM64
 #pragma unroll
 #endif
   for (i = 0; i < DCTSIZE; i += DCTSIZE / 2) {

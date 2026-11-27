@@ -1,10 +1,9 @@
 /*
- * Loongson MMI optimizations for libjpeg-turbo
+ * YCbCr-to-RGB Color Conversion (64-bit MMI)
  *
  * Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
- * Copyright (C) 2015, 2019, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2015, 2019, 2025, D. R. Commander.
  * Copyright (C) 2016-2018, Loongson Technology Corporation Limited, BeiJing.
- *                          All Rights Reserved.
  * Authors:  ZhuChen     <zhuchen@loongson.cn>
  *           SunZhangzhi <sunzhangzhi-cq@loongson.cn>
  *           CaiWanwei   <caiwanwei@loongson.cn>
@@ -89,9 +88,10 @@
 #endif
 
 
-void jsimd_ycc_rgb_convert_mmi(JDIMENSION out_width, JSAMPIMAGE input_buf,
-                               JDIMENSION input_row, JSAMPARRAY output_buf,
-                               int num_rows)
+HIDDEN void
+jsimd_ycc_rgb_convert_mmi(JDIMENSION out_width, JSAMPIMAGE input_buf,
+                          JDIMENSION input_row, JSAMPARRAY output_buf,
+                          int num_rows)
 {
   JSAMPROW outptr, inptr0, inptr1, inptr2;
   int num_cols, col;
@@ -116,8 +116,8 @@ void jsimd_ycc_rgb_convert_mmi(JDIMENSION out_width, JSAMPIMAGE input_buf,
       mask = decenter = 0.0;
       mask = _mm_cmpeq_pi16(mask, mask);
       decenter = _mm_cmpeq_pi16(decenter, decenter);
-      mask = _mm_srli_pi16(mask, BYTE_BIT);   /* {0xFF 0x00 0xFF 0x00 ..} */
-      decenter = _mm_slli_pi16(decenter, 7);  /* {0xFF80 0xFF80 0xFF80 0xFF80} */
+      mask = _mm_srli_pi16(mask, BYTE_BIT);   /* { 0xFF 0x00 0xFF 0x00 .. } */
+      decenter = _mm_slli_pi16(decenter, 7);  /* { 0xFF80 0xFF80 0xFF80 0xFF80 } */
 
       cbe = _mm_and_si64(mask, cb);           /* Cb(0246) */
       cbo = _mm_srli_pi16(cb, BYTE_BIT);      /* Cb(1357) */
@@ -139,15 +139,15 @@ void jsimd_ycc_rgb_convert_mmi(JDIMENSION out_width, JSAMPIMAGE input_buf,
        * B = Y - 0.22800 * Cb + Cb + Cb
        */
 
-      cbe2 = _mm_add_pi16(cbe, cbe);          /* 2*CbE */
-      cbo2 = _mm_add_pi16(cbo, cbo);          /* 2*CbO */
-      cre2 = _mm_add_pi16(cre, cre);          /* 2*CrE */
-      cro2 = _mm_add_pi16(cro, cro);          /* 2*CrO */
+      cbe2 = _mm_add_pi16(cbe, cbe);          /* 2 * CbE */
+      cbo2 = _mm_add_pi16(cbo, cbo);          /* 2 * CbO */
+      cre2 = _mm_add_pi16(cre, cre);          /* 2 * CrE */
+      cro2 = _mm_add_pi16(cro, cro);          /* 2 * CrO */
 
-      be = _mm_mulhi_pi16(cbe2, PW_MF0228);   /* (2*CbE * -FIX(0.22800) */
-      bo = _mm_mulhi_pi16(cbo2, PW_MF0228);   /* (2*CbO * -FIX(0.22800) */
-      re = _mm_mulhi_pi16(cre2, PW_F0402);    /* (2*CrE * FIX(0.40200)) */
-      ro = _mm_mulhi_pi16(cro2, PW_F0402);    /* (2*CrO * FIX(0.40200)) */
+      be = _mm_mulhi_pi16(cbe2, PW_MF0228);   /* (2 * CbE * -FIX(0.22800) */
+      bo = _mm_mulhi_pi16(cbo2, PW_MF0228);   /* (2 * CbO * -FIX(0.22800) */
+      re = _mm_mulhi_pi16(cre2, PW_F0402);    /* (2 * CrE * FIX(0.40200)) */
+      ro = _mm_mulhi_pi16(cro2, PW_F0402);    /* (2 * CrO * FIX(0.40200)) */
 
       be = _mm_add_pi16(be, PW_ONE);
       bo = _mm_add_pi16(bo, PW_ONE);
@@ -160,10 +160,10 @@ void jsimd_ycc_rgb_convert_mmi(JDIMENSION out_width, JSAMPIMAGE input_buf,
 
       be = _mm_add_pi16(be, cbe);
       bo = _mm_add_pi16(bo, cbo);
-      be = _mm_add_pi16(be, cbe);             /* (CbE * FIX(1.77200))=(B-Y)E */
-      bo = _mm_add_pi16(bo, cbo);             /* (CbO * FIX(1.77200))=(B-Y)O */
-      re = _mm_add_pi16(re, cre);             /* (CrE * FIX(1.40200))=(R-Y)E */
-      ro = _mm_add_pi16(ro, cro);             /* (CrO * FIX(1.40200))=(R-Y)O */
+      be = _mm_add_pi16(be, cbe);         /* (CbE * FIX(1.77200)) = (B - Y)E */
+      bo = _mm_add_pi16(bo, cbo);         /* (CbO * FIX(1.77200)) = (B - Y)O */
+      re = _mm_add_pi16(re, cre);         /* (CrE * FIX(1.40200)) = (R - Y)E */
+      ro = _mm_add_pi16(ro, cro);         /* (CrO * FIX(1.40200)) = (R - Y)O */
 
       gle = _mm_unpacklo_pi16(cbe, cre);
       ghe = _mm_unpackhi_pi16(cbe, cre);
@@ -183,54 +183,64 @@ void jsimd_ycc_rgb_convert_mmi(JDIMENSION out_width, JSAMPIMAGE input_buf,
       glo = _mm_srai_pi32(glo, SCALEBITS);
       gho = _mm_srai_pi32(gho, SCALEBITS);
 
-      ge = _mm_packs_pi32(gle, ghe);       /* CbE*-FIX(0.344)+CrE*FIX(0.285) */
-      go = _mm_packs_pi32(glo, gho);       /* CbO*-FIX(0.344)+CrO*FIX(0.285) */
-      ge = _mm_sub_pi16(ge, cre);  /* CbE*-FIX(0.344)+CrE*-FIX(0.714)=(G-Y)E */
-      go = _mm_sub_pi16(go, cro);  /* CbO*-FIX(0.344)+CrO*-FIX(0.714)=(G-Y)O */
+      ge = _mm_packs_pi32(gle, ghe);  /* CbE * -FIX(0.344) + CrE * FIX(0.285) */
+      go = _mm_packs_pi32(glo, gho);  /* CbO * -FIX(0.344) + CrO * FIX(0.285) */
+      ge = _mm_sub_pi16(ge, cre);  /* CbE * -FIX(0.344) + CrE * -FIX(0.714) = (G - Y)E */
+      go = _mm_sub_pi16(go, cro);  /* CbO * -FIX(0.344) + CrO * -FIX(0.714) = (G - Y)O */
 
       ye = _mm_and_si64(mask, y);             /* Y(0246) */
       yo = _mm_srli_pi16(y, BYTE_BIT);        /* Y(1357) */
 
-      re = _mm_add_pi16(re, ye);              /* ((R-Y)E+YE)=(R0 R2 R4 R6) */
-      ro = _mm_add_pi16(ro, yo);              /* ((R-Y)O+YO)=(R1 R3 R5 R7) */
+      re = _mm_add_pi16(re, ye);          /* ((R - Y)E + YE) = (R0 R2 R4 R6) */
+      ro = _mm_add_pi16(ro, yo);          /* ((R - Y)O + YO) = (R1 R3 R5 R7) */
       re = _mm_packs_pu16(re, re);            /* (R0 R2 R4 R6 ** ** ** **) */
       ro = _mm_packs_pu16(ro, ro);            /* (R1 R3 R5 R7 ** ** ** **) */
 
-      ge = _mm_add_pi16(ge, ye);              /* ((G-Y)E+YE)=(G0 G2 G4 G6) */
-      go = _mm_add_pi16(go, yo);              /* ((G-Y)O+YO)=(G1 G3 G5 G7) */
+      ge = _mm_add_pi16(ge, ye);          /* ((G - Y)E + YE) = (G0 G2 G4 G6) */
+      go = _mm_add_pi16(go, yo);          /* ((G - Y)O + YO) = (G1 G3 G5 G7) */
       ge = _mm_packs_pu16(ge, ge);            /* (G0 G2 G4 G6 ** ** ** **) */
       go = _mm_packs_pu16(go, go);            /* (G1 G3 G5 G7 ** ** ** **) */
 
-      be = _mm_add_pi16(be, ye);              /* (YE+(B-Y)E)=(B0 B2 B4 B6) */
-      bo = _mm_add_pi16(bo, yo);              /* (YO+(B-Y)O)=(B1 B3 B5 B7) */
+      be = _mm_add_pi16(be, ye);          /* (YE + (B - Y)E) = (B0 B2 B4 B6) */
+      bo = _mm_add_pi16(bo, yo);          /* (YO + (B - Y)O) = (B1 B3 B5 B7) */
       be = _mm_packs_pu16(be, be);            /* (B0 B2 B4 B6 ** ** ** **) */
       bo = _mm_packs_pu16(bo, bo);            /* (B1 B3 B5 B7 ** ** ** **) */
 
 #if RGB_PIXELSIZE == 3
 
-      /* mmA=(00 02 04 06 ** ** ** **), mmB=(01 03 05 07 ** ** ** **) */
-      /* mmC=(10 12 14 16 ** ** ** **), mmD=(11 13 15 17 ** ** ** **) */
-      mmA = _mm_unpacklo_pi8(mmA, mmC);       /* (00 10 02 12 04 14 06 16) */
-      mmE = _mm_unpacklo_pi8(mmE, mmB);       /* (20 01 22 03 24 05 26 07) */
-      mmD = _mm_unpacklo_pi8(mmD, mmF);       /* (11 21 13 23 15 25 17 27) */
+      /* NOTE: The values of RGB_RED, RGB_GREEN, and RGB_BLUE determine the
+       * mapping of components A, B, and C to red, green, and blue.
+       *
+       * mmA = (A0 A2 A4 A6 ** ** ** **) = AE
+       * mmB = (A1 A3 A5 A7 ** ** ** **) = AO
+       * mmC = (B0 B2 B4 B6 ** ** ** **) = BE
+       * mmD = (B1 B3 B5 B7 ** ** ** **) = BO
+       * mmE = (C0 C2 C4 C6 ** ** ** **) = CE
+       * mmF = (C1 C3 C5 C7 ** ** ** **) = CO
+       * mmG = (** ** ** ** ** ** ** **)
+       * mmH = (** ** ** ** ** ** ** **)
+       */
+      mmA = _mm_unpacklo_pi8(mmA, mmC);       /* (A0 B0 A2 B2 A4 B4 A6 B6) */
+      mmE = _mm_unpacklo_pi8(mmE, mmB);       /* (C0 A1 C2 A3 C4 A5 C6 A7) */
+      mmD = _mm_unpacklo_pi8(mmD, mmF);       /* (B1 C1 B3 C3 B5 C5 B7 C7) */
 
       mmH = _mm_srli_si64(mmA, 2 * BYTE_BIT);
 
-      mmG = _mm_unpackhi_pi16(mmA, mmE);      /* (04 14 24 05 06 16 26 07) */
-      mmA = _mm_unpacklo_pi16(mmA, mmE);      /* (00 10 20 01 02 12 22 03) */
+      mmG = _mm_unpackhi_pi16(mmA, mmE);      /* (A4 B4 C4 A5 A6 B6 C6 A7) */
+      mmA = _mm_unpacklo_pi16(mmA, mmE);      /* (A0 B0 C0 A1 A2 B2 C2 A3) */
 
       mmE = _mm_srli_si64(mmE, 2 * BYTE_BIT);
-      mmB = _mm_srli_si64(mmD, 2 * BYTE_BIT);  /* (13 23 15 25 17 27 -- --) */
+      mmB = _mm_srli_si64(mmD, 2 * BYTE_BIT);  /* (B3 C3 B5 C5 B7 C7 -- --) */
 
-      mmC = _mm_unpackhi_pi16(mmD, mmH);      /* (15 25 06 16 17 27 -- --) */
-      mmD = _mm_unpacklo_pi16(mmD, mmH);      /* (11 21 02 12 13 23 04 14) */
+      mmC = _mm_unpackhi_pi16(mmD, mmH);      /* (B5 C5 A6 B6 B7 C7 -- --) */
+      mmD = _mm_unpacklo_pi16(mmD, mmH);      /* (B1 C1 A2 B2 B3 C3 A4 B4) */
 
-      mmF = _mm_unpackhi_pi16(mmE, mmB);      /* (26 07 17 27 -- -- -- --) */
-      mmE = _mm_unpacklo_pi16(mmE, mmB);      /* (22 03 13 23 24 05 15 25) */
+      mmF = _mm_unpackhi_pi16(mmE, mmB);      /* (C6 A7 B7 C7 -- -- -- --) */
+      mmE = _mm_unpacklo_pi16(mmE, mmB);      /* (C2 A3 B3 C3 C4 A5 B5 C5) */
 
-      mmA = _mm_unpacklo_pi32(mmA, mmD);      /* (00 10 20 01 11 21 02 12) */
-      mmE = _mm_unpacklo_pi32(mmE, mmG);      /* (22 03 13 23 04 14 24 05) */
-      mmC = _mm_unpacklo_pi32(mmC, mmF);      /* (15 25 06 16 26 07 17 27) */
+      mmA = _mm_unpacklo_pi32(mmA, mmD);      /* (A0 B0 C0 A1 B1 C1 A2 B2) */
+      mmE = _mm_unpacklo_pi32(mmE, mmG);      /* (C2 A3 B3 C3 A4 B4 C4 A5) */
+      mmC = _mm_unpacklo_pi32(mmC, mmF);      /* (B5 C5 A6 B6 C6 A7 B7 C7) */
 
       if (num_cols >= 8) {
         if (!(((long)outptr) & 7)) {
@@ -320,25 +330,33 @@ void jsimd_ycc_rgb_convert_mmi(JDIMENSION out_width, JSAMPIMAGE input_buf,
       xe = _mm_xor_si64(xe, xe);
       xo = _mm_xor_si64(xo, xo);
 #endif
-      /* mmA=(00 02 04 06 ** ** ** **), mmB=(01 03 05 07 ** ** ** **) */
-      /* mmC=(10 12 14 16 ** ** ** **), mmD=(11 13 15 17 ** ** ** **) */
-      /* mmE=(20 22 24 26 ** ** ** **), mmF=(21 23 25 27 ** ** ** **) */
-      /* mmG=(30 32 34 36 ** ** ** **), mmH=(31 33 35 37 ** ** ** **) */
 
-      mmA = _mm_unpacklo_pi8(mmA, mmC);       /* (00 10 02 12 04 14 06 16) */
-      mmE = _mm_unpacklo_pi8(mmE, mmG);       /* (20 30 22 32 24 34 26 36) */
-      mmB = _mm_unpacklo_pi8(mmB, mmD);       /* (01 11 03 13 05 15 07 17) */
-      mmF = _mm_unpacklo_pi8(mmF, mmH);       /* (21 31 23 33 25 35 27 37) */
+      /* NOTE: The values of RGB_RED, RGB_GREEN, and RGB_BLUE determine the
+       * mapping of components A, B, C, and D to red, green, and blue.
+       *
+       * mmA = (A0 A2 A4 A6 ** ** ** **) = AE
+       * mmB = (A1 A3 A5 A7 ** ** ** **) = AO
+       * mmC = (B0 B2 B4 B6 ** ** ** **) = BE
+       * mmD = (B1 B3 B5 B7 ** ** ** **) = BO
+       * mmE = (C0 C2 C4 C6 ** ** ** **) = CE
+       * mmF = (C1 C3 C5 C7 ** ** ** **) = CO
+       * mmG = (D0 D2 D4 D6 ** ** ** **) = DE
+       * mmH = (D1 D3 D5 D7 ** ** ** **) = DO
+       */
+      mmA = _mm_unpacklo_pi8(mmA, mmC);       /* (A0 B0 A2 B2 A4 B4 A6 B6) */
+      mmE = _mm_unpacklo_pi8(mmE, mmG);       /* (C0 D0 C2 D2 C4 D4 C6 D6) */
+      mmB = _mm_unpacklo_pi8(mmB, mmD);       /* (A1 B1 A3 B3 A5 B5 A7 B7) */
+      mmF = _mm_unpacklo_pi8(mmF, mmH);       /* (C1 D1 C3 D3 C5 D5 C7 D7) */
 
-      mmC = _mm_unpackhi_pi16(mmA, mmE);      /* (04 14 24 34 06 16 26 36) */
-      mmA = _mm_unpacklo_pi16(mmA, mmE);      /* (00 10 20 30 02 12 22 32) */
-      mmG = _mm_unpackhi_pi16(mmB, mmF);      /* (05 15 25 35 07 17 27 37) */
-      mmB = _mm_unpacklo_pi16(mmB, mmF);      /* (01 11 21 31 03 13 23 33) */
+      mmC = _mm_unpackhi_pi16(mmA, mmE);      /* (A4 B4 C4 D4 A6 B6 C6 D6) */
+      mmA = _mm_unpacklo_pi16(mmA, mmE);      /* (A0 B0 C0 D0 A2 B2 C2 D2) */
+      mmG = _mm_unpackhi_pi16(mmB, mmF);      /* (A5 B5 C5 D5 A7 B7 C7 D7) */
+      mmB = _mm_unpacklo_pi16(mmB, mmF);      /* (A1 B1 C1 D1 A3 B3 C3 D3) */
 
-      mmD = _mm_unpackhi_pi32(mmA, mmB);      /* (02 12 22 32 03 13 23 33) */
-      mmA = _mm_unpacklo_pi32(mmA, mmB);      /* (00 10 20 30 01 11 21 31) */
-      mmH = _mm_unpackhi_pi32(mmC, mmG);      /* (06 16 26 36 07 17 27 37) */
-      mmC = _mm_unpacklo_pi32(mmC, mmG);      /* (04 14 24 34 05 15 25 35) */
+      mmD = _mm_unpackhi_pi32(mmA, mmB);      /* (A2 B2 C2 D2 A3 B3 C3 D3) */
+      mmA = _mm_unpacklo_pi32(mmA, mmB);      /* (A0 B0 C0 D0 A1 B1 C1 D1) */
+      mmH = _mm_unpackhi_pi32(mmC, mmG);      /* (A6 B6 C6 D6 A7 B7 C7 D7) */
+      mmC = _mm_unpacklo_pi32(mmC, mmG);      /* (A4 B4 C4 D4 A5 B5 C5 D5) */
 
       if (num_cols >= 8) {
         if (!(((long)outptr) & 7)) {

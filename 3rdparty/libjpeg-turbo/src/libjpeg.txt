@@ -5,7 +5,7 @@ Copyright (C) 1994-2013, Thomas G. Lane, Guido Vollbeding.
 Lossless JPEG Modifications:
 Copyright (C) 1999, Ken Murchison.
 libjpeg-turbo Modifications:
-Copyright (C) 2010, 2014-2018, 2020, 2022-2024, D. R. Commander.
+Copyright (C) 2010, 2014-2018, 2020, 2022-2024, 2026, D. R. Commander.
 Copyright (C) 2015, Google, Inc.
 For conditions of distribution and use, see the accompanying README.ijg file.
 
@@ -122,10 +122,10 @@ with 2 to 16 bits of data precision per sample.  To create a JPEG image with a
 particular data precision, set cinfo->data_precision accordingly.  Note that
 9-bit and higher data precisions cause the sample size to be larger than a
 char, which affects the surrounding application's image data.  The sample
-application djpeg can support 12-bit data precision only for PPM, PGM, and GIF
-file formats.  The sample applications cjpeg and djpeg can support 2-bit
-through 7-bit and 9-bit through 16-bit data precision only for PPM and PGM file
-formats.
+application djpeg can support 12-bit data precision only for PNG, PPM, PGM, and
+GIF file formats.  The sample applications cjpeg and djpeg can support 2-bit
+through 7-bit and 9-bit through 16-bit data precision only for PNG, PPM, and
+PGM file formats.
 
 Note that, when 12-bit data precision is enabled in lossy mode, the library
 compresses in Huffman optimization mode by default, in order to generate valid
@@ -867,7 +867,7 @@ to jpeg*_read_scanlines() (since it will actually call jpeg*_read_scanlines().)
 This function provides application programmers with the ability to decompress
 only a portion of each row in the JPEG image.  It must be called after
 jpeg_start_decompress() and before any calls to jpeg*_read_scanlines() or
-jpeg*_skip_scanlines().
+jpeg*_skip_scanlines().  (It cannot be used with raw data output.)
 
 If xoffset and width do not form a valid subset of the image row, then this
 function will generate an error.  Note that if the output image is scaled, then
@@ -1326,6 +1326,26 @@ int data_precision                      Data precision (bits per sample)
         jpeg_skip_scanlines(), jpeg_crop_scanline(), and/or
         jpeg_read_raw_data().  If data_precision is 13 to 16, then use
         jpeg16_read_scanlines() instead of jpeg_read_scanlines().
+
+        The application can also set this field to 12, prior to calling
+        jpeg_start_decompress(), in order to decompress an 8-bit-per-sample
+        lossy JPEG image to a 12-bit-per-sample output image.
+
+        The JPEG format uses 16-bit DCT coefficients and computes those
+        coefficients relative to an 8x8 DCT block.  Thus, an 8-bit-per-sample
+        JPEG image can preserve most of the signal from an underexposed
+        higher-data-precision source image, provided that the data precision of
+        the source image is retained in the compressor until the forward DCT
+        stage.  (Modern digital cameras typically do that, but note that
+        libjpeg-turbo does not.  Our solution for retaining higher data
+        precision in the compressor is simply to generate a 12-bit-per-sample
+        JPEG image.)
+
+        It may be desirable to preserve as much of that signal as possible in
+        the decompressor, to facilitate shadow recovery in the output image.
+        Thus, setting this field to 12 forces the decompressor to use the
+        12-bit-per-sample decompression pipeline even if the JPEG image has 8
+        bits of data precision.
 
 JDIMENSION image_width                  Width and height of image
 JDIMENSION image_height

@@ -7,7 +7,7 @@
  * Lossless JPEG Modifications:
  * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2009-2011, 2016, 2019, 2022-2024, D. R. Commander.
+ * Copyright (C) 2009-2011, 2016, 2019, 2022-2024, 2026, D. R. Commander.
  * Copyright (C) 2013, Linaro Limited.
  * Copyright (C) 2015, Google, Inc.
  * For conditions of distribution and use, see the accompanying README.ijg
@@ -24,6 +24,9 @@
 #include "jpeglib.h"
 #include "jpegapicomp.h"
 #include "jdmaster.h"
+#ifdef WITH_PROFILE
+#include "tjutil.h"
+#endif
 
 
 /*
@@ -515,6 +518,17 @@ master_selection(j_decompress_ptr cinfo)
   long samplesperrow;
   JDIMENSION jd_samplesperrow;
 
+  /* When decompressing an 8-bit-per-sample lossy JPEG image, we allow the
+   * caller to request 12-bit-per-sample output in order to facilitate shadow
+   * recovery in underexposed images.  However, in all other cases, setting the
+   * output data precision to a different value than the JPEG data precision
+   * will produce unexpected results, such as a bogus output image.
+   */
+  if (cinfo->master->jpeg_data_precision &&
+      cinfo->data_precision != cinfo->master->jpeg_data_precision &&
+      (cinfo->master->lossless || cinfo->data_precision != 12))
+    ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
+
   /* Disable IDCT scaling and raw (downsampled) data output in lossless mode.
    * IDCT scaling is not useful in lossless mode, and it must be disabled in
    * order to properly calculate the output dimensions.  Raw data output isn't
@@ -675,6 +689,8 @@ master_selection(j_decompress_ptr cinfo)
     ERREXIT(cinfo, JERR_NOT_COMPILED);
 #endif
   } else {
+#if defined(DCT_ISLOW_SUPPORTED) || defined(DCT_IFAST_SUPPORTED) || \
+    defined(DCT_FLOAT_SUPPORTED)
     /* Inverse DCT */
     if (cinfo->data_precision == 8)
       jinit_inverse_dct(cinfo);
@@ -707,6 +723,9 @@ master_selection(j_decompress_ptr cinfo)
       j12init_d_coef_controller(cinfo, use_c_buffer);
     else
       jinit_d_coef_controller(cinfo, use_c_buffer);
+#else
+    ERREXIT(cinfo, JERR_NOT_COMPILED);
+#endif
   }
 
   if (!cinfo->raw_data_out) {
@@ -882,6 +901,10 @@ GLOBAL(void)
 jinit_master_decompress(j_decompress_ptr cinfo)
 {
   my_master_ptr master = (my_master_ptr)cinfo->master;
+
+#ifdef WITH_PROFILE
+  master->pub.total_start = getTime();
+#endif
 
   master->pub.prepare_for_output_pass = prepare_for_output_pass;
   master->pub.finish_output_pass = finish_output_pass;

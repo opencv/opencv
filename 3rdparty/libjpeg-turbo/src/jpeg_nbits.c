@@ -7,6 +7,9 @@
 
 #include "jpeg_nbits.h"
 #include "jconfigint.h"
+#ifdef WITH_SIMD
+#include "../simd/jsimdconst.h"
+#endif
 
 
 #ifndef USE_CLZ_INTRINSIC
@@ -16,8 +19,8 @@
 /* When building for x86[-64] with the SIMD extensions enabled, the C Huffman
  * encoders can reuse jpeg_nbits_table from the SSE2 baseline Huffman encoder.
  */
-#if (defined(__x86_64__) || defined(__i386__) || defined(_M_IX86) || \
-     (defined(_M_X64) && !defined(_M_ARM64EC))) && defined(WITH_SIMD)
+#if defined(WITH_SIMD) && \
+    (SIMD_ARCHITECTURE == X86_64 || SIMD_ARCHITECTURE == I386)
 #undef INCLUDE_JPEG_NBITS_TABLE
 #endif
 

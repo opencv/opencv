@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1994-1996, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2015, 2022, D. R. Commander.
+ * Copyright (C) 2015, 2022, 2025, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -15,6 +15,12 @@
  * machine-dependent tuning (e.g., assembly coding).
  */
 
+#ifndef JDCT_H
+#define JDCT_H
+
+#define JPEG_INTERNALS
+#include "jinclude.h"
+#include "jpeglib.h"
 #include "jsamplecomp.h"
 
 
@@ -89,6 +95,25 @@ typedef FAST_FLOAT FLOAT_MULT_TYPE;  /* preferred floating type */
   ((_JSAMPLE *)((cinfo)->sample_range_limit) + _CENTERJSAMPLE)
 
 #define RANGE_MASK  (_MAXJSAMPLE * 4 + 3) /* 2 bits wider than legal samples */
+
+
+/* Method signatures */
+
+typedef void (*forward_DCT_method_ptr) (DCTELEM *data);
+typedef void (*float_DCT_method_ptr) (FAST_FLOAT *data);
+
+typedef void (*convsamp_method_ptr) (_JSAMPARRAY sample_data,
+                                     JDIMENSION start_col,
+                                     DCTELEM *workspace);
+typedef void (*float_convsamp_method_ptr) (_JSAMPARRAY sample_data,
+                                           JDIMENSION start_col,
+                                           FAST_FLOAT *workspace);
+
+typedef void (*quantize_method_ptr) (JCOEFPTR coef_block, DCTELEM *divisors,
+                                     DCTELEM *workspace);
+typedef void (*float_quantize_method_ptr) (JCOEFPTR coef_block,
+                                           FAST_FLOAT *divisors,
+                                           FAST_FLOAT *workspace);
 
 
 /* Extern declarations for the forward and inverse DCT routines. */
@@ -219,3 +244,5 @@ EXTERN(void) _jpeg_idct_16x16(j_decompress_ptr cinfo,
 #ifndef MULTIPLY16V16           /* default definition */
 #define MULTIPLY16V16(var1, var2)  ((var1) * (var2))
 #endif
+
+#endif /* JDCT_H */

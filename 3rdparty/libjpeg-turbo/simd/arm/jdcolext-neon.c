@@ -1,8 +1,8 @@
 /*
- * Colorspace conversion (Arm Neon)
+ * YCbCr-to-RGB/RGB565 Color Conversion (Arm Neon)
  *
- * Copyright (C) 2020, Arm Limited.  All Rights Reserved.
- * Copyright (C) 2020, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2020, Arm Limited.
+ * Copyright (C) 2020, 2025, D. R. Commander.
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -50,9 +50,10 @@
  * buffer allocated by the calling program.
  */
 
-void jsimd_ycc_rgb_convert_neon(JDIMENSION output_width, JSAMPIMAGE input_buf,
-                                JDIMENSION input_row, JSAMPARRAY output_buf,
-                                int num_rows)
+HIDDEN void
+jsimd_ycc_rgb_convert_neon(JDIMENSION output_width, JSAMPIMAGE input_buf,
+                           JDIMENSION input_row, JSAMPARRAY output_buf,
+                           int num_rows)
 {
   JSAMPROW outptr;
   /* Pointers to Y, Cb, and Cr data */

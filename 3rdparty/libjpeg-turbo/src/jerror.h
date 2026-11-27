@@ -7,7 +7,7 @@
  * Lossless JPEG Modifications:
  * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2014, 2017, 2021-2023, D. R. Commander.
+ * Copyright (C) 2014, 2017, 2021-2023, 2026, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -137,7 +137,7 @@ JMESSAGE(JERR_VIRTUAL_BUG, "Virtual array controller messed up")
 JMESSAGE(JERR_WIDTH_OVERFLOW, "Image too wide for this implementation")
 JMESSAGE(JERR_XMS_READ, "Read from XMS failed")
 JMESSAGE(JERR_XMS_WRITE, "Write to XMS failed")
-JMESSAGE(JMSG_COPYRIGHT, JCOPYRIGHT_SHORT)
+JMESSAGE(JMSG_COPYRIGHT, JCOPYRIGHT)
 JMESSAGE(JMSG_VERSION, JVERSION)
 JMESSAGE(JTRC_16BIT_TABLES,
          "Caution: quantization tables are too coarse for baseline JPEG")
@@ -272,7 +272,7 @@ JMESSAGE(JERR_BAD_RESTART,
    (*(cinfo)->err->error_exit) ((j_common_ptr)(cinfo)))
 #define ERREXITS(cinfo, code, str) \
   ((cinfo)->err->msg_code = (code), \
-   strncpy((cinfo)->err->msg_parm.s, (str), JMSG_STR_PARM_MAX), \
+   strncpy((cinfo)->err->msg_parm.s, (str), JMSG_STR_PARM_MAX - 1), \
    (cinfo)->err->msg_parm.s[JMSG_STR_PARM_MAX - 1] = '\0', \
    (*(cinfo)->err->error_exit) ((j_common_ptr)(cinfo)))
 

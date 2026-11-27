@@ -6,7 +6,7 @@
  * Lossless JPEG Modifications:
  * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2022, 2024, D. R. Commander.
+ * Copyright (C) 2022, 2024-2026, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -23,6 +23,9 @@
 #include "jinclude.h"
 #include "jpeglib.h"
 #include "jsamplecomp.h"
+#ifdef WITH_PROFILE
+#include "tjutil.h"
+#endif
 
 
 #if BITS_IN_JSAMPLE != 16 || defined(C_LOSSLESS_SUPPORTED)
@@ -38,21 +41,21 @@
 
 
 /*
- * For the simple (no-context-row) case, we just need to buffer one
- * row group's worth of pixels for the downsampling step.  At the bottom of
- * the image, we pad to a full row group by replicating the last pixel row.
- * The downsampler's last output row is then replicated if needed to pad
- * out to a full iMCU row.
+ * For the simple (no-context-row) case, we just need to buffer one row group's
+ * worth of components for the downsampling step.  At the bottom of the image,
+ * we pad to a full row group by replicating the last component row(s).  The
+ * downsampler's last output row is then replicated if needed to pad out to a
+ * full iMCU row.
  *
  * When providing context rows, we must buffer three row groups' worth of
- * pixels.  Three row groups are physically allocated, but the row pointer
+ * components.  Three row groups are physically allocated, but the row pointer
  * arrays are made five row groups high, with the extra pointers above and
  * below "wrapping around" to point to the last and first real row groups.
- * This allows the downsampler to access the proper context rows.
- * At the top and bottom of the image, we create dummy context rows by
- * copying the first or last real pixel row.  This copying could be avoided
- * by pointer hacking as is done in jdmainct.c, but it doesn't seem worth the
- * trouble on the compression side.
+ * This allows the downsampler to access the proper context rows.  At the top
+ * and bottom of the image, we create dummy context rows by copying the first
+ * or last real component row(s).  This copying could be avoided by pointer
+ * hacking, as is done in jdmainct.c, but it doesn't seem worth the trouble on
+ * the compression side.
  */
 
 
@@ -150,10 +153,18 @@ pre_process_data(j_compress_ptr cinfo, _JSAMPARRAY input_buf,
     inrows = in_rows_avail - *in_row_ctr;
     numrows = cinfo->max_v_samp_factor - prep->next_buf_row;
     numrows = (int)MIN((JDIMENSION)numrows, inrows);
+#ifdef WITH_PROFILE
+    cinfo->master->start = getTime();
+#endif
     (*cinfo->cconvert->_color_convert) (cinfo, input_buf + *in_row_ctr,
                                         prep->color_buf,
                                         (JDIMENSION)prep->next_buf_row,
                                         numrows);
+#ifdef WITH_PROFILE
+    cinfo->master->cconvert_elapsed += getTime() - cinfo->master->start;
+    cinfo->master->cconvert_mpixels +=
+      (double)cinfo->image_width * numrows / 1000000.;
+#endif
     *in_row_ctr += numrows;
     prep->next_buf_row += numrows;
     prep->rows_to_go -= numrows;
@@ -168,9 +179,17 @@ pre_process_data(j_compress_ptr cinfo, _JSAMPARRAY input_buf,
     }
     /* If we've filled the conversion buffer, empty it. */
     if (prep->next_buf_row == cinfo->max_v_samp_factor) {
+#ifdef WITH_PROFILE
+      cinfo->master->start = getTime();
+#endif
       (*cinfo->downsample->_downsample) (cinfo,
                                          prep->color_buf, (JDIMENSION)0,
                                          output_buf, *out_row_group_ctr);
+#ifdef WITH_PROFILE
+      cinfo->master->downsample_elapsed += getTime() - cinfo->master->start;
+      cinfo->master->downsample_msamples +=
+        (double)cinfo->image_width * cinfo->max_v_samp_factor / 1000000.;
+#endif
       prep->next_buf_row = 0;
       (*out_row_group_ctr)++;
     }
@@ -215,10 +234,18 @@ pre_process_context(j_compress_ptr cinfo, _JSAMPARRAY input_buf,
       inrows = in_rows_avail - *in_row_ctr;
       numrows = prep->next_buf_stop - prep->next_buf_row;
       numrows = (int)MIN((JDIMENSION)numrows, inrows);
+#ifdef WITH_PROFILE
+      cinfo->master->start = getTime();
+#endif
       (*cinfo->cconvert->_color_convert) (cinfo, input_buf + *in_row_ctr,
                                           prep->color_buf,
                                           (JDIMENSION)prep->next_buf_row,
                                           numrows);
+#ifdef WITH_PROFILE
+      cinfo->master->cconvert_elapsed += getTime() - cinfo->master->start;
+      cinfo->master->cconvert_mpixels +=
+        (double)cinfo->image_width * numrows / 1000000.;
+#endif
       /* Pad at top of image, if first time through */
       if (prep->rows_to_go == cinfo->image_height) {
         for (ci = 0; ci < cinfo->num_components; ci++) {
@@ -247,9 +274,17 @@ pre_process_context(j_compress_ptr cinfo, _JSAMPARRAY input_buf,
     }
     /* If we've gotten enough data, downsample a row group. */
     if (prep->next_buf_row == prep->next_buf_stop) {
+#ifdef WITH_PROFILE
+      cinfo->master->start = getTime();
+#endif
       (*cinfo->downsample->_downsample) (cinfo, prep->color_buf,
                                          (JDIMENSION)prep->this_row_group,
                                          output_buf, *out_row_group_ctr);
+#ifdef WITH_PROFILE
+      cinfo->master->downsample_elapsed += getTime() - cinfo->master->start;
+      cinfo->master->downsample_msamples +=
+        (double)cinfo->image_width * cinfo->max_v_samp_factor / 1000000.;
+#endif
       (*out_row_group_ctr)++;
       /* Advance pointers with wraparound as necessary. */
       prep->this_row_group += cinfo->max_v_samp_factor;

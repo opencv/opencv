@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1997, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2016, 2021-2022, 2024, D. R. Commander.
+ * Copyright (C) 2016, 2021-2022, 2024, 2026, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -459,7 +459,7 @@ alloc_sarray(j_common_ptr cinfo, int pool_id, JDIMENSION samplesperrow,
   if ((ALIGN_SIZE % sample_size) != 0)
     out_of_memory(cinfo, 5);    /* safety check */
 
-  if (samplesperrow > MAX_ALLOC_CHUNK) {
+  if (samplesperrow == 0 || samplesperrow > MAX_ALLOC_CHUNK) {
     /* This prevents overflow/wrap-around in round_up_pow2() if sizeofobject
        is close to SIZE_MAX. */
     out_of_memory(cinfo, 9);
@@ -560,7 +560,7 @@ alloc_barray(j_common_ptr cinfo, int pool_id, JDIMENSION blocksperrow,
   long ltemp;
 
   /* Make sure each row is properly aligned */
-  if ((sizeof(JBLOCK) % ALIGN_SIZE) != 0)
+  if (blocksperrow == 0 || (sizeof(JBLOCK) % ALIGN_SIZE) != 0)
     out_of_memory(cinfo, 6);    /* safety check */
 
   /* Calculate max # of rows allowed in one allocation chunk */
@@ -717,11 +717,11 @@ realize_virt_arrays(j_common_ptr cinfo)
   maximum_space = 0;
   for (sptr = mem->virt_sarray_list; sptr != NULL; sptr = sptr->next) {
     if (sptr->mem_buffer == NULL) { /* if not realized yet */
-      size_t new_space = (long)sptr->rows_in_array *
-                         (long)sptr->samplesperrow * sample_size;
+      size_t new_space = (size_t)sptr->rows_in_array *
+                         (size_t)sptr->samplesperrow * sample_size;
 
-      space_per_minheight += (long)sptr->maxaccess *
-                             (long)sptr->samplesperrow * sample_size;
+      space_per_minheight += (size_t)sptr->maxaccess *
+                             (size_t)sptr->samplesperrow * sample_size;
       if (SIZE_MAX - maximum_space < new_space)
         out_of_memory(cinfo, 10);
       maximum_space += new_space;
@@ -729,11 +729,11 @@ realize_virt_arrays(j_common_ptr cinfo)
   }
   for (bptr = mem->virt_barray_list; bptr != NULL; bptr = bptr->next) {
     if (bptr->mem_buffer == NULL) { /* if not realized yet */
-      size_t new_space = (long)bptr->rows_in_array *
-                         (long)bptr->blocksperrow * sizeof(JBLOCK);
+      size_t new_space = (size_t)bptr->rows_in_array *
+                         (size_t)bptr->blocksperrow * sizeof(JBLOCK);
 
-      space_per_minheight += (long)bptr->maxaccess *
-                             (long)bptr->blocksperrow * sizeof(JBLOCK);
+      space_per_minheight += (size_t)bptr->maxaccess *
+                             (size_t)bptr->blocksperrow * sizeof(JBLOCK);
       if (SIZE_MAX - maximum_space < new_space)
         out_of_memory(cinfo, 11);
       maximum_space += new_space;
@@ -774,9 +774,9 @@ realize_virt_arrays(j_common_ptr cinfo)
         /* It doesn't fit in memory, create backing store. */
         sptr->rows_in_mem = (JDIMENSION)(max_minheights * sptr->maxaccess);
         jpeg_open_backing_store(cinfo, &sptr->b_s_info,
-                                (long)sptr->rows_in_array *
-                                (long)sptr->samplesperrow *
-                                (long)sample_size);
+                                (long)((size_t)sptr->rows_in_array *
+                                       (size_t)sptr->samplesperrow *
+                                       sample_size));
         sptr->b_s_open = TRUE;
       }
       sptr->mem_buffer = alloc_sarray(cinfo, JPOOL_IMAGE,
@@ -798,9 +798,9 @@ realize_virt_arrays(j_common_ptr cinfo)
         /* It doesn't fit in memory, create backing store. */
         bptr->rows_in_mem = (JDIMENSION)(max_minheights * bptr->maxaccess);
         jpeg_open_backing_store(cinfo, &bptr->b_s_info,
-                                (long)bptr->rows_in_array *
-                                (long)bptr->blocksperrow *
-                                (long)sizeof(JBLOCK));
+                                (long)((size_t)bptr->rows_in_array *
+                                       (size_t)bptr->blocksperrow *
+                                       sizeof(JBLOCK)));
         bptr->b_s_open = TRUE;
       }
       bptr->mem_buffer = alloc_barray(cinfo, JPOOL_IMAGE,

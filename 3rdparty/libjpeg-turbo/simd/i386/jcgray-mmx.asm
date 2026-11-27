@@ -1,5 +1,5 @@
 ;
-; Grayscale colorspace conversion (MMX)
+; RGB-to-Grayscale Color Conversion (32-bit MMX)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
 ; Copyright (C) 2011, 2016, 2024, D. R. Commander.

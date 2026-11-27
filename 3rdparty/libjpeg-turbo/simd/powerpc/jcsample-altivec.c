@@ -1,7 +1,7 @@
 /*
- * AltiVec optimizations for libjpeg-turbo
+ * Downsampling (AltiVec)
  *
- * Copyright (C) 2015, 2024, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2015, 2024-2026, D. R. Commander.
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -20,18 +20,15 @@
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
-/* CHROMA DOWNSAMPLING */
-
 #include "jsimd_altivec.h"
-#include "jcsample.h"
+#include "../common/jcsample.h"
 
 
-void jsimd_h2v1_downsample_altivec(JDIMENSION image_width,
-                                   int max_v_samp_factor,
-                                   JDIMENSION v_samp_factor,
-                                   JDIMENSION width_in_blocks,
-                                   JSAMPARRAY input_data,
-                                   JSAMPARRAY output_data)
+HIDDEN void
+jsimd_h2v1_downsample_altivec(JDIMENSION image_width, int max_v_samp_factor,
+                              JDIMENSION v_samp_factor,
+                              JDIMENSION width_in_blocks,
+                              JSAMPARRAY input_data, JSAMPARRAY output_data)
 {
   int outrow, outcol;
   JDIMENSION output_cols = width_in_blocks * DCTSIZE;
@@ -83,7 +80,7 @@ void jsimd_h2v1_downsample_altivec(JDIMENSION image_width,
 }
 
 
-void
+HIDDEN void
 jsimd_h2v2_downsample_altivec(JDIMENSION image_width, int max_v_samp_factor,
                               JDIMENSION v_samp_factor,
                               JDIMENSION width_in_blocks,

@@ -6,7 +6,7 @@
  * Lossless JPEG Modifications:
  * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2011, 2015, 2018, 2021-2022, 2024, D. R. Commander.
+ * Copyright (C) 2011, 2015, 2018, 2021-2022, 2024-2025, D. R. Commander.
  * Copyright (C) 2016, 2018, 2022, Matthieu Darbois.
  * Copyright (C) 2020, Arm Limited.
  * Copyright (C) 2021, Alex Richardson.
@@ -24,10 +24,9 @@
 #include "jinclude.h"
 #include "jpeglib.h"
 #ifdef WITH_SIMD
-#include "jsimd.h"
-#else
-#include "jchuff.h"             /* Declarations shared with jc*huff.c */
+#include "../simd/jsimd.h"
 #endif
+#include "jchuff.h"             /* Declarations shared with jc*huff.c */
 #include <limits.h>
 
 #ifdef HAVE_INTRIN_H
@@ -197,9 +196,8 @@ start_pass_phuff(j_compress_ptr cinfo, boolean gather_statistics)
     else
       entropy->pub.encode_mcu = encode_mcu_AC_first;
 #ifdef WITH_SIMD
-    if (jsimd_can_encode_mcu_AC_first_prepare())
-      entropy->AC_first_prepare = jsimd_encode_mcu_AC_first_prepare;
-    else
+    if (!jsimd_set_encode_mcu_AC_first_prepare(cinfo,
+                                               &entropy->AC_first_prepare))
 #endif
       entropy->AC_first_prepare = encode_mcu_AC_first_prepare;
   } else {
@@ -208,16 +206,15 @@ start_pass_phuff(j_compress_ptr cinfo, boolean gather_statistics)
     else {
       entropy->pub.encode_mcu = encode_mcu_AC_refine;
 #ifdef WITH_SIMD
-      if (jsimd_can_encode_mcu_AC_refine_prepare())
-        entropy->AC_refine_prepare = jsimd_encode_mcu_AC_refine_prepare;
-      else
+      if (!jsimd_set_encode_mcu_AC_refine_prepare(cinfo,
+                                                  &entropy->AC_refine_prepare))
 #endif
         entropy->AC_refine_prepare = encode_mcu_AC_refine_prepare;
       /* AC refinement needs a correction bit buffer */
       if (entropy->bit_buffer == NULL)
         entropy->bit_buffer = (char *)
           (*cinfo->mem->alloc_small) ((j_common_ptr)cinfo, JPOOL_IMAGE,
-                                      MAX_CORR_BITS * sizeof(char));
+                                      MAX_CORR_BITS);
     }
   }
   if (gather_statistics)

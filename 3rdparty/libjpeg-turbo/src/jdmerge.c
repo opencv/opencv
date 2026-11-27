@@ -5,7 +5,7 @@
  * Copyright (C) 1994-1996, Thomas G. Lane.
  * libjpeg-turbo Modifications:
  * Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
- * Copyright (C) 2009, 2011, 2014-2015, 2020, 2022, D. R. Commander.
+ * Copyright (C) 2009, 2011, 2014-2015, 2020, 2022, 2025, D. R. Commander.
  * Copyright (C) 2013, Linaro Limited.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
@@ -41,7 +41,12 @@
 #include "jinclude.h"
 #include "jpeglib.h"
 #include "jdmerge.h"
-#include "jsimd.h"
+#ifdef WITH_SIMD
+#include "../simd/jsimd.h"
+#endif
+#ifdef WITH_PROFILE
+#include "tjutil.h"
+#endif
 
 #ifdef UPSAMPLE_MERGING_SUPPORTED
 
@@ -63,93 +68,93 @@
 #define RGB_GREEN  EXT_RGB_GREEN
 #define RGB_BLUE  EXT_RGB_BLUE
 #define RGB_PIXELSIZE  EXT_RGB_PIXELSIZE
-#define h2v1_merged_upsample_internal  extrgb_h2v1_merged_upsample_internal
-#define h2v2_merged_upsample_internal  extrgb_h2v2_merged_upsample_internal
+#define h2v1_merged_upsample  extrgb_h2v1_merged_upsample
+#define h2v2_merged_upsample  extrgb_h2v2_merged_upsample
 #include "jdmrgext.c"
 #undef RGB_RED
 #undef RGB_GREEN
 #undef RGB_BLUE
 #undef RGB_PIXELSIZE
-#undef h2v1_merged_upsample_internal
-#undef h2v2_merged_upsample_internal
+#undef h2v1_merged_upsample
+#undef h2v2_merged_upsample
 
 #define RGB_RED  EXT_RGBX_RED
 #define RGB_GREEN  EXT_RGBX_GREEN
 #define RGB_BLUE  EXT_RGBX_BLUE
 #define RGB_ALPHA  3
 #define RGB_PIXELSIZE  EXT_RGBX_PIXELSIZE
-#define h2v1_merged_upsample_internal  extrgbx_h2v1_merged_upsample_internal
-#define h2v2_merged_upsample_internal  extrgbx_h2v2_merged_upsample_internal
+#define h2v1_merged_upsample  extrgbx_h2v1_merged_upsample
+#define h2v2_merged_upsample  extrgbx_h2v2_merged_upsample
 #include "jdmrgext.c"
 #undef RGB_RED
 #undef RGB_GREEN
 #undef RGB_BLUE
 #undef RGB_ALPHA
 #undef RGB_PIXELSIZE
-#undef h2v1_merged_upsample_internal
-#undef h2v2_merged_upsample_internal
+#undef h2v1_merged_upsample
+#undef h2v2_merged_upsample
 
 #define RGB_RED  EXT_BGR_RED
 #define RGB_GREEN  EXT_BGR_GREEN
 #define RGB_BLUE  EXT_BGR_BLUE
 #define RGB_PIXELSIZE  EXT_BGR_PIXELSIZE
-#define h2v1_merged_upsample_internal  extbgr_h2v1_merged_upsample_internal
-#define h2v2_merged_upsample_internal  extbgr_h2v2_merged_upsample_internal
+#define h2v1_merged_upsample  extbgr_h2v1_merged_upsample
+#define h2v2_merged_upsample  extbgr_h2v2_merged_upsample
 #include "jdmrgext.c"
 #undef RGB_RED
 #undef RGB_GREEN
 #undef RGB_BLUE
 #undef RGB_PIXELSIZE
-#undef h2v1_merged_upsample_internal
-#undef h2v2_merged_upsample_internal
+#undef h2v1_merged_upsample
+#undef h2v2_merged_upsample
 
 #define RGB_RED  EXT_BGRX_RED
 #define RGB_GREEN  EXT_BGRX_GREEN
 #define RGB_BLUE  EXT_BGRX_BLUE
 #define RGB_ALPHA  3
 #define RGB_PIXELSIZE  EXT_BGRX_PIXELSIZE
-#define h2v1_merged_upsample_internal  extbgrx_h2v1_merged_upsample_internal
-#define h2v2_merged_upsample_internal  extbgrx_h2v2_merged_upsample_internal
+#define h2v1_merged_upsample  extbgrx_h2v1_merged_upsample
+#define h2v2_merged_upsample  extbgrx_h2v2_merged_upsample
 #include "jdmrgext.c"
 #undef RGB_RED
 #undef RGB_GREEN
 #undef RGB_BLUE
 #undef RGB_ALPHA
 #undef RGB_PIXELSIZE
-#undef h2v1_merged_upsample_internal
-#undef h2v2_merged_upsample_internal
+#undef h2v1_merged_upsample
+#undef h2v2_merged_upsample
 
 #define RGB_RED  EXT_XBGR_RED
 #define RGB_GREEN  EXT_XBGR_GREEN
 #define RGB_BLUE  EXT_XBGR_BLUE
 #define RGB_ALPHA  0
 #define RGB_PIXELSIZE  EXT_XBGR_PIXELSIZE
-#define h2v1_merged_upsample_internal  extxbgr_h2v1_merged_upsample_internal
-#define h2v2_merged_upsample_internal  extxbgr_h2v2_merged_upsample_internal
+#define h2v1_merged_upsample  extxbgr_h2v1_merged_upsample
+#define h2v2_merged_upsample  extxbgr_h2v2_merged_upsample
 #include "jdmrgext.c"
 #undef RGB_RED
 #undef RGB_GREEN
 #undef RGB_BLUE
 #undef RGB_ALPHA
 #undef RGB_PIXELSIZE
-#undef h2v1_merged_upsample_internal
-#undef h2v2_merged_upsample_internal
+#undef h2v1_merged_upsample
+#undef h2v2_merged_upsample
 
 #define RGB_RED  EXT_XRGB_RED
 #define RGB_GREEN  EXT_XRGB_GREEN
 #define RGB_BLUE  EXT_XRGB_BLUE
 #define RGB_ALPHA  0
 #define RGB_PIXELSIZE  EXT_XRGB_PIXELSIZE
-#define h2v1_merged_upsample_internal  extxrgb_h2v1_merged_upsample_internal
-#define h2v2_merged_upsample_internal  extxrgb_h2v2_merged_upsample_internal
+#define h2v1_merged_upsample  extxrgb_h2v1_merged_upsample
+#define h2v2_merged_upsample  extxrgb_h2v2_merged_upsample
 #include "jdmrgext.c"
 #undef RGB_RED
 #undef RGB_GREEN
 #undef RGB_BLUE
 #undef RGB_ALPHA
 #undef RGB_PIXELSIZE
-#undef h2v1_merged_upsample_internal
-#undef h2v2_merged_upsample_internal
+#undef h2v1_merged_upsample
+#undef h2v2_merged_upsample
 
 
 /*
@@ -257,7 +262,15 @@ merged_2v_upsample(j_decompress_ptr cinfo, _JSAMPIMAGE input_buf,
       upsample->spare_full = TRUE;
     }
     /* Now do the upsampling. */
+#ifdef WITH_PROFILE
+    cinfo->master->start = getTime();
+#endif
     (*upsample->upmethod) (cinfo, input_buf, *in_row_group_ctr, work_ptrs);
+#ifdef WITH_PROFILE
+    cinfo->master->merged_upsample_elapsed += getTime() - cinfo->master->start;
+    cinfo->master->merged_upsample_mpixels +=
+      (double)cinfo->output_width * 2 / 1000000.;
+#endif
   }
 
   /* Adjust counts */
@@ -279,8 +292,16 @@ merged_1v_upsample(j_decompress_ptr cinfo, _JSAMPIMAGE input_buf,
   my_merged_upsample_ptr upsample = (my_merged_upsample_ptr)cinfo->upsample;
 
   /* Just do the upsampling. */
+#ifdef WITH_PROFILE
+  cinfo->master->start = getTime();
+#endif
   (*upsample->upmethod) (cinfo, input_buf, *in_row_group_ctr,
                          output_buf + *out_row_ctr);
+#ifdef WITH_PROFILE
+  cinfo->master->merged_upsample_elapsed += getTime() - cinfo->master->start;
+  cinfo->master->merged_upsample_mpixels +=
+    (double)cinfo->output_width / 1000000.;
+#endif
   /* Adjust counts */
   (*out_row_ctr)++;
   (*in_row_group_ctr)++;
@@ -295,96 +316,6 @@ merged_1v_upsample(j_decompress_ptr cinfo, _JSAMPIMAGE input_buf,
  * we have to be honest about the output width; we can't assume the buffer
  * has been rounded up to an even width.
  */
-
-
-/*
- * Upsample and color convert for the case of 2:1 horizontal and 1:1 vertical.
- */
-
-METHODDEF(void)
-h2v1_merged_upsample(j_decompress_ptr cinfo, _JSAMPIMAGE input_buf,
-                     JDIMENSION in_row_group_ctr, _JSAMPARRAY output_buf)
-{
-  switch (cinfo->out_color_space) {
-  case JCS_EXT_RGB:
-    extrgb_h2v1_merged_upsample_internal(cinfo, input_buf, in_row_group_ctr,
-                                         output_buf);
-    break;
-  case JCS_EXT_RGBX:
-  case JCS_EXT_RGBA:
-    extrgbx_h2v1_merged_upsample_internal(cinfo, input_buf, in_row_group_ctr,
-                                          output_buf);
-    break;
-  case JCS_EXT_BGR:
-    extbgr_h2v1_merged_upsample_internal(cinfo, input_buf, in_row_group_ctr,
-                                         output_buf);
-    break;
-  case JCS_EXT_BGRX:
-  case JCS_EXT_BGRA:
-    extbgrx_h2v1_merged_upsample_internal(cinfo, input_buf, in_row_group_ctr,
-                                          output_buf);
-    break;
-  case JCS_EXT_XBGR:
-  case JCS_EXT_ABGR:
-    extxbgr_h2v1_merged_upsample_internal(cinfo, input_buf, in_row_group_ctr,
-                                          output_buf);
-    break;
-  case JCS_EXT_XRGB:
-  case JCS_EXT_ARGB:
-    extxrgb_h2v1_merged_upsample_internal(cinfo, input_buf, in_row_group_ctr,
-                                          output_buf);
-    break;
-  default:
-    h2v1_merged_upsample_internal(cinfo, input_buf, in_row_group_ctr,
-                                  output_buf);
-    break;
-  }
-}
-
-
-/*
- * Upsample and color convert for the case of 2:1 horizontal and 2:1 vertical.
- */
-
-METHODDEF(void)
-h2v2_merged_upsample(j_decompress_ptr cinfo, _JSAMPIMAGE input_buf,
-                     JDIMENSION in_row_group_ctr, _JSAMPARRAY output_buf)
-{
-  switch (cinfo->out_color_space) {
-  case JCS_EXT_RGB:
-    extrgb_h2v2_merged_upsample_internal(cinfo, input_buf, in_row_group_ctr,
-                                         output_buf);
-    break;
-  case JCS_EXT_RGBX:
-  case JCS_EXT_RGBA:
-    extrgbx_h2v2_merged_upsample_internal(cinfo, input_buf, in_row_group_ctr,
-                                          output_buf);
-    break;
-  case JCS_EXT_BGR:
-    extbgr_h2v2_merged_upsample_internal(cinfo, input_buf, in_row_group_ctr,
-                                         output_buf);
-    break;
-  case JCS_EXT_BGRX:
-  case JCS_EXT_BGRA:
-    extbgrx_h2v2_merged_upsample_internal(cinfo, input_buf, in_row_group_ctr,
-                                          output_buf);
-    break;
-  case JCS_EXT_XBGR:
-  case JCS_EXT_ABGR:
-    extxbgr_h2v2_merged_upsample_internal(cinfo, input_buf, in_row_group_ctr,
-                                          output_buf);
-    break;
-  case JCS_EXT_XRGB:
-  case JCS_EXT_ARGB:
-    extxrgb_h2v2_merged_upsample_internal(cinfo, input_buf, in_row_group_ctr,
-                                          output_buf);
-    break;
-  default:
-    h2v2_merged_upsample_internal(cinfo, input_buf, in_row_group_ctr,
-                                  output_buf);
-    break;
-  }
-}
 
 
 /*
@@ -553,11 +484,38 @@ _jinit_merged_upsampler(j_decompress_ptr cinfo)
   if (cinfo->max_v_samp_factor == 2) {
     upsample->pub._upsample = merged_2v_upsample;
 #ifdef WITH_SIMD
-    if (jsimd_can_h2v2_merged_upsample())
+    if (jsimd_set_h2v2_merged_upsample(cinfo))
       upsample->upmethod = jsimd_h2v2_merged_upsample;
     else
 #endif
-      upsample->upmethod = h2v2_merged_upsample;
+    {
+      switch (cinfo->out_color_space) {
+      case JCS_EXT_RGB:
+        upsample->upmethod = extrgb_h2v2_merged_upsample;
+        break;
+      case JCS_EXT_RGBX:
+      case JCS_EXT_RGBA:
+        upsample->upmethod = extrgbx_h2v2_merged_upsample;
+        break;
+      case JCS_EXT_BGR:
+        upsample->upmethod = extbgr_h2v2_merged_upsample;
+        break;
+      case JCS_EXT_BGRX:
+      case JCS_EXT_BGRA:
+        upsample->upmethod = extbgrx_h2v2_merged_upsample;
+        break;
+      case JCS_EXT_XBGR:
+      case JCS_EXT_ABGR:
+        upsample->upmethod = extxbgr_h2v2_merged_upsample;
+        break;
+      case JCS_EXT_XRGB:
+      case JCS_EXT_ARGB:
+        upsample->upmethod = extxrgb_h2v2_merged_upsample;
+        break;
+      default:
+        upsample->upmethod = h2v2_merged_upsample;
+      }
+    }
     if (cinfo->out_color_space == JCS_RGB565) {
       if (cinfo->dither_mode != JDITHER_NONE) {
         upsample->upmethod = h2v2_merged_upsample_565D;
@@ -572,11 +530,38 @@ _jinit_merged_upsampler(j_decompress_ptr cinfo)
   } else {
     upsample->pub._upsample = merged_1v_upsample;
 #ifdef WITH_SIMD
-    if (jsimd_can_h2v1_merged_upsample())
+    if (jsimd_set_h2v1_merged_upsample(cinfo))
       upsample->upmethod = jsimd_h2v1_merged_upsample;
     else
 #endif
-      upsample->upmethod = h2v1_merged_upsample;
+    {
+      switch (cinfo->out_color_space) {
+      case JCS_EXT_RGB:
+        upsample->upmethod = extrgb_h2v1_merged_upsample;
+        break;
+      case JCS_EXT_RGBX:
+      case JCS_EXT_RGBA:
+        upsample->upmethod = extrgbx_h2v1_merged_upsample;
+        break;
+      case JCS_EXT_BGR:
+        upsample->upmethod = extbgr_h2v1_merged_upsample;
+        break;
+      case JCS_EXT_BGRX:
+      case JCS_EXT_BGRA:
+        upsample->upmethod = extbgrx_h2v1_merged_upsample;
+        break;
+      case JCS_EXT_XBGR:
+      case JCS_EXT_ABGR:
+        upsample->upmethod = extxbgr_h2v1_merged_upsample;
+        break;
+      case JCS_EXT_XRGB:
+      case JCS_EXT_ARGB:
+        upsample->upmethod = extxrgb_h2v1_merged_upsample;
+        break;
+      default:
+        upsample->upmethod = h2v1_merged_upsample;
+      }
+    }
     if (cinfo->out_color_space == JCS_RGB565) {
       if (cinfo->dither_mode != JDITHER_NONE) {
         upsample->upmethod = h2v1_merged_upsample_565D;

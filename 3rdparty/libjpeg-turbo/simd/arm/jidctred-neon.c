@@ -1,8 +1,8 @@
 /*
- * Reduced-size IDCT (Arm Neon)
+ * Scaled Integer Inverse DCT (Arm Neon)
  *
- * Copyright (C) 2020, Arm Limited.  All Rights Reserved.
- * Copyright (C) 2020, 2024, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2020, Arm Limited.
+ * Copyright (C) 2020, 2024-2025, D. R. Commander.
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -21,17 +21,9 @@
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
-#define JPEG_INTERNALS
-#include "../../src/jinclude.h"
-#include "../../src/jpeglib.h"
-#include "../../src/jsimd.h"
-#include "../../src/jdct.h"
-#include "../../src/jsimddct.h"
-#include "../jsimd.h"
+#include "../jsimdint.h"
 #include "align.h"
 #include "neon-compat.h"
-
-#include <arm_neon.h>
 
 
 #define CONST_BITS  13
@@ -73,8 +65,9 @@ ALIGN(16) static const int16_t jsimd_idct_2x2_neon_consts[] = {
   -F_0_720, F_0_850, -F_1_272, F_3_624
 };
 
-void jsimd_idct_2x2_neon(void *dct_table, JCOEFPTR coef_block,
-                         JSAMPARRAY output_buf, JDIMENSION output_col)
+HIDDEN void
+jsimd_idct_2x2_neon(void *dct_table, JCOEFPTR coef_block,
+                    JSAMPARRAY output_buf, JDIMENSION output_col)
 {
   ISLOW_MULT_TYPE *quantptr = dct_table;
 
@@ -193,8 +186,9 @@ ALIGN(16) static const int16_t jsimd_idct_4x4_neon_consts[] = {
   F_0_899,  F_2_562,        0,        0
 };
 
-void jsimd_idct_4x4_neon(void *dct_table, JCOEFPTR coef_block,
-                         JSAMPARRAY output_buf, JDIMENSION output_col)
+HIDDEN void
+jsimd_idct_4x4_neon(void *dct_table, JCOEFPTR coef_block,
+                    JSAMPARRAY output_buf, JDIMENSION output_col)
 {
   ISLOW_MULT_TYPE *quantptr = dct_table;
 

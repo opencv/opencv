@@ -1,9 +1,8 @@
 /*
- * Loongson MMI optimizations for libjpeg-turbo
+ * Fancy (Smooth) Upsampling (64-bit MMI)
  *
- * Copyright (C) 2015, 2018-2019, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2015, 2018-2019, 2025, D. R. Commander.
  * Copyright (C) 2016-2018, Loongson Technology Corporation Limited, BeiJing.
- *                          All Rights Reserved.
  * Authors:  ZhuChen     <zhuchen@loongson.cn>
  *           CaiWanwei   <caiwanwei@loongson.cn>
  *           SunZhangzhi <sunzhangzhi-cq@loongson.cn>
@@ -29,8 +28,6 @@
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
-/* CHROMA UPSAMPLING */
-
 #include "jsimd_mmi.h"
 
 
@@ -39,7 +36,7 @@ enum const_index {
   index_PW_TWO,
   index_PW_THREE,
   index_PW_SEVEN,
-  index_PW_EIGHT,
+  index_PW_EIGHT
 };
 
 static uint64_t const_value[] = {
@@ -104,10 +101,11 @@ static uint64_t const_value[] = {
   _mm_store_si64((__m64 *)outptr##row + 1, outh); \
 }
 
-void jsimd_h2v2_fancy_upsample_mmi(int max_v_samp_factor,
-                                   JDIMENSION downsampled_width,
-                                   JSAMPARRAY input_data,
-                                   JSAMPARRAY *output_data_ptr)
+HIDDEN void
+jsimd_h2v2_fancy_upsample_mmi(int max_v_samp_factor,
+                              JDIMENSION downsampled_width,
+                              JSAMPARRAY input_data,
+                              JSAMPARRAY *output_data_ptr)
 {
   JSAMPARRAY output_data = *output_data_ptr;
   JSAMPROW inptr_1, inptr0, inptr1, outptr0, outptr1;
@@ -216,13 +214,13 @@ void jsimd_h2v2_fancy_upsample_mmi(int max_v_samp_factor,
         wk[2] = _mm_slli_si64(nextcolsum_1l, (SIZEOF_MMWORD - 2) * BYTE_BIT);  /* ( - - - 0) */
         wk[3] = _mm_slli_si64(nextcolsum1l, (SIZEOF_MMWORD - 2) * BYTE_BIT);   /* ( - - - 0) */
       } else {
-        __m64 tmp;
+        __m64 mmitmp;
 
         /* process the last column block */
-        tmp = _mm_load_si64((__m64 *)outptr0 + 1);
-        wk[2] = _mm_and_si64(masklast, tmp);        /* ( - - - 7) */
-        tmp = _mm_load_si64((__m64 *)outptr1 + 1);
-        wk[3] = _mm_and_si64(masklast, tmp);        /* ( - - - 7) */
+        mmitmp = _mm_load_si64((__m64 *)outptr0 + 1);
+        wk[2] = _mm_and_si64(masklast, mmitmp);        /* ( - - - 7) */
+        mmitmp = _mm_load_si64((__m64 *)outptr1 + 1);
+        wk[3] = _mm_and_si64(masklast, mmitmp);        /* ( - - - 7) */
       }
 
       /* process the upper row */
@@ -239,10 +237,11 @@ void jsimd_h2v2_fancy_upsample_mmi(int max_v_samp_factor,
 }
 
 
-void jsimd_h2v1_fancy_upsample_mmi(int max_v_samp_factor,
-                                   JDIMENSION downsampled_width,
-                                   JSAMPARRAY input_data,
-                                   JSAMPARRAY *output_data_ptr)
+HIDDEN void
+jsimd_h2v1_fancy_upsample_mmi(int max_v_samp_factor,
+                              JDIMENSION downsampled_width,
+                              JSAMPARRAY input_data,
+                              JSAMPARRAY *output_data_ptr)
 {
   JSAMPARRAY output_data = *output_data_ptr;
   JSAMPROW inptr0, outptr0;

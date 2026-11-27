@@ -1,10 +1,9 @@
 /*
- * Loongson MMI optimizations for libjpeg-turbo
+ * RGB-to-YCbCr Color Conversion (64-bit MMI)
  *
  * Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
- * Copyright (C) 2014-2015, 2019, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2014-2015, 2019, 2025, D. R. Commander.
  * Copyright (C) 2016-2018, Loongson Technology Corporation Limited, BeiJing.
- *                          All Rights Reserved.
  * Authors:  ZhuChen     <zhuchen@loongson.cn>
  *           SunZhangzhi <sunzhangzhi-cq@loongson.cn>
  *           CaiWanwei   <caiwanwei@loongson.cn>
@@ -90,9 +89,10 @@
 #endif
 
 
-void jsimd_rgb_ycc_convert_mmi(JDIMENSION image_width, JSAMPARRAY input_buf,
-                               JSAMPIMAGE output_buf, JDIMENSION output_row,
-                               int num_rows)
+HIDDEN void
+jsimd_rgb_ycc_convert_mmi(JDIMENSION image_width, JSAMPARRAY input_buf,
+                          JSAMPIMAGE output_buf, JDIMENSION output_row,
+                          int num_rows)
 {
   JSAMPROW inptr, outptr0, outptr1, outptr2;
   int num_cols, col;
@@ -319,8 +319,8 @@ void jsimd_rgb_ycc_convert_mmi(JDIMENSION image_width, JSAMPARRAY input_buf,
 
 #endif
 
-      /* re=(R0 R2 R4 R6), ge=(G0 G2 G4 G6), be=(B0 B2 B4 B6)
-       * ro=(R1 R3 R5 R7), go=(G1 G3 G5 G7), bo=(B1 B3 B5 B7)
+      /* re = (R0 R2 R4 R6), ge = (G0 G2 G4 G6), be = (B0 B2 B4 B6)
+       * ro = (R1 R3 R5 R7), go = (G1 G3 G5 G7), bo = (B1 B3 B5 B7)
        *
        * (Original)
        * Y  =  0.29900 * R + 0.58700 * G + 0.11400 * B

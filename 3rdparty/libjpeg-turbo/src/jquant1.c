@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1996, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2009, 2015, 2022-2023, D. R. Commander.
+ * Copyright (C) 2009, 2015, 2022-2023, 2026, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -826,8 +826,9 @@ _jinit_1pass_quantizer(j_decompress_ptr cinfo)
   if (cinfo->data_precision != BITS_IN_JSAMPLE)
     ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
 
-  /* Color quantization is not supported with lossless JPEG images */
-  if (cinfo->master->lossless)
+  /* Color quantization is not supported with RGB565 color conversion or
+     lossless JPEG images. */
+  if (cinfo->out_color_space == JCS_RGB565 || cinfo->master->lossless)
     ERREXIT(cinfo, JERR_NOTIMPL);
 
   cquantize = (my_cquantize_ptr)
