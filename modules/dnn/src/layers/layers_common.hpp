@@ -142,6 +142,11 @@ void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<size_t>&
                           const std::vector<size_t>& strides, const String &padMode,
                           std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end);
 
+// The same, for a kernel with the given dilations.
+void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<size_t>& kernel,
+                          const std::vector<size_t>& strides, const std::vector<size_t>& dilations,
+                          const String &padMode, std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end);
+
 // Used in quantized model. It will return the (Max_element - Min_element)/127.
 double getWeightScale(const Mat& weightsMat);
 }
