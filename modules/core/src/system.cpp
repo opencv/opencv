@@ -688,6 +688,7 @@ struct HWFeatures
     #endif
     #if defined _M_ARM64 || defined _M_ARM64EC
         have[CV_CPU_NEON] = true;
+        have[CV_CPU_FP16] = true;
     #endif
     #ifdef __riscv_vector
         have[CV_CPU_RISCVV] = true;

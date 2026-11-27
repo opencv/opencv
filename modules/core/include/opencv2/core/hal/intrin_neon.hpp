@@ -2651,6 +2651,23 @@ inline void v_lut_deinterleave(const double* tab, const v_int32x4& idxvec, v_flo
 
 ////// FP16 support ///////
 #if CV_FP16
+#if defined(_MSC_VER) && !defined(__clang__)
+// _ARM64_DISTINCT_NEON_TYPES, which this build requires for distinct NEON vector types, hides
+// float16x4_t and the vcvt_*_f16 wrappers; the same instructions stay reachable as raw neon_*.
+inline v_float32x4 v_load_expand(const hfloat* ptr)
+{
+    __n128 f32 = neon_fcvtl_32(neon_ld1m_16((const __int16*)ptr));
+    // memcpy is the only conversion MSVC accepts between __n128 and a distinct NEON type.
+    float32x4_t v; std::memcpy(&v, &f32, sizeof(v));
+    return v_float32x4(v);
+}
+
+inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
+{
+    __n128 f32; std::memcpy(&f32, &v.val, sizeof(f32));
+    neon_st1m_16((__int16*)ptr, neon_fcvtn_32(f32));
+}
+#else
 inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
     float16x4_t v =
@@ -2672,6 +2689,7 @@ inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
         vst1_f16((__fp16*)ptr, hv);
     #endif
 }
+#endif
 #else
 inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
