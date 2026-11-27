@@ -758,11 +758,12 @@ TEST(Layer_LSTM2_Test_Accuracy_, CellOutputOnly)
         inTypes.push_back(inputs[i].type());
     }
 
-    layer->getMemoryShapes(inShapes, 2, outShapes, internalShapes);
-    ASSERT_EQ(outShapes.size(), (size_t)2);
+    layer->getMemoryShapes(inShapes, 3, outShapes, internalShapes);
+    ASSERT_EQ(outShapes.size(), (size_t)3);
     EXPECT_EQ(outShapes[0], shape(D, N, H));
     EXPECT_EQ(outShapes[1], shape(D, N, H));
-    layer->getTypes(inTypes, 2, (int)internalShapes.size(), outTypes, internalTypes);
+    EXPECT_EQ(outShapes[2], shape(D, N, H));
+    layer->getTypes(inTypes, 3, (int)internalShapes.size(), outTypes, internalTypes);
 
     std::vector<Mat> outputs, internals;
     for (size_t i = 0; i < outShapes.size(); i++)
@@ -779,8 +780,9 @@ TEST(Layer_LSTM2_Test_Accuracy_, CellOutputOnly)
 
     Mat expectedY3d = expectedY.reshape(1, {D, N, H});
     normAssert(expectedY3d, outputs[0], "LSTM2 Y", 1e-4, 1e-4);
-    // When produce_output_yh is false, output[1] contains Y_c
-    normAssert(expectedYc, outputs[1], "LSTM2 Y_c as output 1", 1e-4, 1e-4);
+    // ONNX LSTM outputs are positional: output[1] is Y_h (unused, remains 0), output[2] is Y_c
+    EXPECT_EQ(countNonZero(outputs[1].reshape(1, 1)), 0);
+    normAssert(expectedYc, outputs[2], "LSTM2 Y_c as output 2", 1e-4, 1e-4);
 }
 
 TEST(Layer_GRU_Test_Accuracy_with_, Pytorch)

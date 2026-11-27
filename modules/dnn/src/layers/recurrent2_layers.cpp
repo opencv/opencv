@@ -248,16 +248,16 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 std::swap(shp[0], shp[1]);
             MatShape newShape(shp, shp + sizeof(shp)/sizeof(shp[0]));
 
-            // compute output shape of yh
-            if (produceOutputYh)
-            {
-                outputs.push_back(newShape);
-            }
-            // compute output shape of yc
+            // ONNX LSTM outputs are positional: 0: Y, 1: Y_h, 2: Y_c.
+            int minOuts = 1;
             if (produceCellOutput)
-            {
-                outputs.push_back(newShape);
-            }
+                minOuts = 3;
+            else if (produceOutputYh)
+                minOuts = 2;
+            int numOuts = std::max(minOuts, requiredOutputs);
+
+            outputs.assign(numOuts, newShape);
+            outputs[0] = outResShape;
 
             // forward() allocates its own per-direction scratch, so no engine internals are needed
             internals.clear();
@@ -677,21 +677,21 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             else
             {
                 // When useTimestampDim == false, output[0] is preallocated with 3D shape (dirs, batch, hid).
-                // Do not transpose directly into output[0], which would reallocate it as 4D
-                // and detach from the engine graph.
-                cv::transpose(y4d, {0, 2, 1, 3}, ySeqFirst);
-                int outShp[] = {numDirs, batchSize, numHidden};
-                Mat y3d = ySeqFirst.reshape(1, sizeof(outShp)/sizeof(outShp[0]), outShp);
-                y3d.copyTo(output[0]);
+                // Reshaping to a 4D view (1, dirs, batch, hid) transposes directly into output[0]'s
+                // preallocated buffer with no temporary Mat and no copy.
+                int outShp4d[] = {1, numDirs, batchSize, numHidden};
+                Mat yOut4d = output[0].reshape(1, sizeof(outShp4d)/sizeof(outShp4d[0]), outShp4d);
+                cv::transpose(y4d, {0, 2, 1, 3}, yOut4d);
+                ySeqFirst = yOut4d;
             }
 
-            int outIdx = 1;
-            if (produceOutputYh && (int)output.size() > outIdx){
-                getCellStateYh(ySeqFirst, output[outIdx++], numDirs);
+            // ONNX LSTM outputs are positional: 0: Y, 1: Y_h, 2: Y_c.
+            if (produceOutputYh && (int)output.size() > 1){
+                getCellStateYh(ySeqFirst, output[1], numDirs);
             }
 
-            if (produceCellOutput && (int)output.size() > outIdx){
-                getCellStateYc(cOut, output[outIdx++], numDirs);
+            if (produceCellOutput && (int)output.size() > 2){
+                getCellStateYc(cOut, output[2], numDirs);
             }
         }
 
