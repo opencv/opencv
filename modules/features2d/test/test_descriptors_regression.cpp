@@ -36,7 +36,7 @@ TEST( Features2d_DescriptorExtractor_BRISK, regression )
 TEST( Features2d_DescriptorExtractor_ORB, regression )
 {
     CV_DescriptorExtractorTest<Hamming> test( "descriptor-orb",
-#if CV_NEON && !defined(__aarch64__) && !defined(_M_ARM64)
+#if CV_NEON && !defined(__aarch64__) && !defined(_M_ARM64) && !defined(_M_ARM64EC)
                                               // 32-bit ARM NEON was not re-measured; keep its previous limit
                                               (CV_DescriptorExtractorTest<Hamming>::DistanceType)25.f,
 #else
