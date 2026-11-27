@@ -1820,6 +1820,64 @@ TEST(Imgproc_ColorLuv, accuracy) { CV_ColorLuvTest test; test.safe_run(); }
 TEST(Imgproc_ColorRGB, accuracy) { CV_ColorRGBTest test; test.safe_run(); }
 TEST(Imgproc_ColorBayer, accuracy) { CV_ColorBayerTest test; test.safe_run(); }
 
+// The vector gray kernels cover a row remainder by rewinding the last block, which must
+// not happen when the destination overlaps the source. CV_ColorGrayTest never aliases the
+// output (inplace = false), so convert into a destination header sharing the source storage
+// and compare with a normal conversion over a range of widths that exercises the vector tails.
+static void checkGrayDstAliasesSrc(int srcType, int dstType, int code, double tol)
+{
+    RNG rng(0x5eed);
+    const int rows = 3;
+    for (int width = 1; width <= 100; width++)
+    {
+        SCOPED_TRACE(cv::format("srcType=%d code=%d width=%d", srcType, code, width));
+
+        Mat src(rows, width, srcType);
+        const int depth = CV_MAT_DEPTH(srcType);
+        rng.fill(src, RNG::UNIFORM, 0, depth == CV_8U ? 256 : depth == CV_16U ? 65536 : 1);
+
+        Mat expected;
+        cvtColor(src.clone(), expected, code);
+
+        // Destination header aliases the source rows (dst <= src overlap).
+        Mat buf = src.clone();
+        Mat dst(rows, width, dstType, buf.data, buf.step);
+        cvtColor(buf, dst, code);
+
+        ASSERT_EQ(buf.data, dst.data);
+        EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), tol);
+    }
+}
+
+TEST(Imgproc_ColorGray, rgb2gray_dst_aliases_src)
+{
+    // 32F is routed to IPP on x86, which never reaches the kernel under test.
+    const bool useIPP = cv::ipp::useIPP();
+    cv::ipp::setUseIPP(false);
+
+    const int depths[] = { CV_8U, CV_16U, CV_32F };
+    for (int di = 0; di < 3; di++)
+    {
+        // 8U/16U are bit-exact; 32F may differ by FMA rounding between vector and scalar tails.
+        const double tol = depths[di] == CV_32F ? 1e-5 : 0.0;
+        checkGrayDstAliasesSrc(CV_MAKETYPE(depths[di], 3), CV_MAKETYPE(depths[di], 1), COLOR_BGR2GRAY, tol);
+        checkGrayDstAliasesSrc(CV_MAKETYPE(depths[di], 4), CV_MAKETYPE(depths[di], 1), COLOR_BGRA2GRAY, tol);
+    }
+
+    cv::ipp::setUseIPP(useIPP);
+}
+
+TEST(Imgproc_ColorGray, rgb5x52gray_dst_aliases_src)
+{
+    const bool useIPP = cv::ipp::useIPP();
+    cv::ipp::setUseIPP(false);
+
+    checkGrayDstAliasesSrc(CV_8UC2, CV_8UC1, COLOR_BGR5652GRAY, 0.0);
+    checkGrayDstAliasesSrc(CV_8UC2, CV_8UC1, COLOR_BGR5552GRAY, 0.0);
+
+    cv::ipp::setUseIPP(useIPP);
+}
+
 TEST(Imgproc_ColorLuv, Overflow_21112)
 {
     const Size sz(107, 16);  // unaligned size to run both SIMD and generic code
