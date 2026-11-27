@@ -1649,14 +1649,6 @@ or array and a scalar:
 @sa max, compare, inRange, minMaxLoc
 */
 CV_EXPORTS_W void min(InputArray src1, InputArray src2, OutputArray dst);
-/** @overload
-needed to avoid conflicts with const _Tp& std::min(const _Tp&, const _Tp&, _Compare)
-*/
-CV_EXPORTS void min(const Mat& src1, const Mat& src2, Mat& dst);
-/** @overload
-needed to avoid conflicts with const _Tp& std::min(const _Tp&, const _Tp&, _Compare)
-*/
-CV_EXPORTS void min(const UMat& src1, const UMat& src2, UMat& dst);
 
 /** @brief Calculates per-element maximum of two arrays or an array and a scalar.
 
@@ -1670,14 +1662,6 @@ or array and a scalar:
 @sa  min, compare, inRange, minMaxLoc, @ref MatrixExpressions
 */
 CV_EXPORTS_W void max(InputArray src1, InputArray src2, OutputArray dst);
-/** @overload
-needed to avoid conflicts with const _Tp& std::min(const _Tp&, const _Tp&, _Compare)
-*/
-CV_EXPORTS void max(const Mat& src1, const Mat& src2, Mat& dst);
-/** @overload
-needed to avoid conflicts with const _Tp& std::min(const _Tp&, const _Tp&, _Compare)
-*/
-CV_EXPORTS void max(const UMat& src1, const UMat& src2, UMat& dst);
 
 /** @brief Calculates a square root of array elements.
 

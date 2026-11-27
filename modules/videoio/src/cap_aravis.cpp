@@ -91,7 +91,7 @@ using namespace cv;
 #define MODE_Y16    CV_FOURCC_MACRO('Y','1','6',' ')
 #define MODE_GRBG   CV_FOURCC_MACRO('G','R','B','G')
 
-#define CLIP(a,b,c) (cv::max(cv::min((a),(c)),(b)))
+#define CLIP(a,b,c) (std::max(std::min((a),(c)),(b)))
 
 /********************* Capturing video from camera via Aravis *********************/
 

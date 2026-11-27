@@ -494,15 +494,15 @@ Dictionary extendDictionary(int nMarkers, int markerSize, const Dictionary &base
     // if baseDictionary is provided, calculate its intermarker distance
     if(baseDictionary.bytesList.rows > 0) {
         CV_Assert(baseDictionary.markerSize == markerSize);
-        out.bytesList = baseDictionary.bytesList.rowRange(0, min(nMarkers, baseDictionary.bytesList.rows)).clone();
+        out.bytesList = baseDictionary.bytesList.rowRange(0, std::min(nMarkers, baseDictionary.bytesList.rows)).clone();
 
         int minDistance = markerSize * markerSize + 1;
         for(int i = 0; i < out.bytesList.rows; i++) {
             Mat markerBytes = out.bytesList.rowRange(i, i + 1);
             Mat markerBits = Dictionary::getBitsFromByteList(markerBytes, markerSize);
-            minDistance = min(minDistance, _getSelfDistance(markerBits));
+            minDistance = std::min(minDistance, _getSelfDistance(markerBits));
             for(int j = i + 1; j < out.bytesList.rows; j++) {
-                minDistance = min(minDistance, out.getDistanceToId(markerBits, j));
+                minDistance = std::min(minDistance, out.getDistanceToId(markerBits, j));
             }
         }
         tau = minDistance;
@@ -527,7 +527,7 @@ Dictionary extendDictionary(int nMarkers, int markerSize, const Dictionary &base
         if(selfDistance >= bestTau) {
             for(int i = 0; i < out.bytesList.rows; i++) {
                 int currentDistance = out.getDistanceToId(currentMarker, i);
-                minDistance = min(currentDistance, minDistance);
+                minDistance = std::min(currentDistance, minDistance);
                 if(minDistance <= bestTau) {
                     break;
                 }

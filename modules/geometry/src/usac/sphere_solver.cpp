@@ -91,7 +91,7 @@ public:
             tmp1 = center_x - x1;
             tmp2 = center_y - y1;
             tmp3 = center_z - z1;
-            radius = sqrt(tmp1 * tmp1 + tmp2 * tmp2 + tmp3 * tmp3);
+            radius = std::sqrt(tmp1 * tmp1 + tmp2 * tmp2 + tmp3 * tmp3);
         }
 
         double sphere_coeff[4] = {center_x, center_y, center_z, radius};

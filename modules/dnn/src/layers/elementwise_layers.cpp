@@ -77,13 +77,11 @@ using std::abs;
 using std::exp;
 using std::expm1;
 using std::tanh;
-using std::pow;
 using std::ceil;
 using std::floor;
 using std::log;
 using std::log1p;
 using std::sqrt;
-using std::round;
 using std::acos;
 using std::acosh;
 using std::asin;
@@ -2603,7 +2601,7 @@ struct HardSwishFunctor : public BaseDefaultFunctor<HardSwishFunctor>
 
     inline float calculate(float x) const
     {
-        return x * std::max(0.f, std::min(1.f, x / 6.f + 0.5f));
+        return x * std::clamp(x / 6.f + 0.5f, 0.f, 1.f);
     }
 
     void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
@@ -3028,7 +3026,7 @@ struct HardSigmoidFunctor : public BaseDefaultFunctor<HardSigmoidFunctor>
 
     inline float calculate(float x) const
     {
-        return max(0.f, min(1.f, alpha * x + beta));
+        return std::clamp(alpha * x + beta, 0.f, 1.f);
     }
 
     inline void setKernelParams(ocl::Kernel& kernel) const

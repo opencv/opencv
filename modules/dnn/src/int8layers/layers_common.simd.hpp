@@ -376,7 +376,7 @@ void fastDepthwiseConv( const int8_t* wptr,
     const int8_t w00_ = wptr[0], w01_ = wptr[1], w02_ = wptr[2],
                  w10 = wptr[3], w11 = wptr[4], w12 = wptr[5],
                  w20_ = wptr[6], w21_ = wptr[7], w22_ = wptr[8];
-    int outW1 = min(outW, (width - dilation_w*(kernel_w - 1) + pad_l)/stride_w);
+    int outW1 = std::min(outW, (width - dilation_w*(kernel_w - 1) + pad_l)/stride_w);
     float mult = multptr[out_d];
     int bias = biasptr[out_d];
     int biasCopy;
@@ -973,7 +973,7 @@ void fastDepthwiseConv( const int8_t* wptr,
     const int8_t w00_ = wptr[0], w01_ = wptr[1], w02_ = wptr[2],
                  w10 = wptr[3], w11 = wptr[4], w12 = wptr[5],
                  w20_ = wptr[6], w21_ = wptr[7], w22_ = wptr[8];
-    int outW1 = min(outW, (width - dilation_w*(kernel_w - 1) + pad_l)/stride_w);
+    int outW1 = std::min(outW, (width - dilation_w*(kernel_w - 1) + pad_l)/stride_w);
     float mult = multptr[out_d];
     int bias = biasptr[out_d];
     int biasCopy;

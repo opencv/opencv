@@ -233,7 +233,7 @@ public:
 
         float key = (log_max - log_mean) / (log_max - log_min);
         float map_key = 0.3f + 0.7f * std::pow(key, 1.4f);
-        const float intensity_scale = exp(-intensity);
+        const float intensity_scale = std::exp(-intensity);
         Scalar chan_mean = mean(img);
         float gray_mean = static_cast<float>(mean(gray_img)[0]);
 
@@ -431,7 +431,7 @@ protected:
 
     void getContrast(Mat src, std::vector<Mat>& x_contrast, std::vector<Mat>& y_contrast)
     {
-        int levels = static_cast<int>(logf(static_cast<float>(min(src.rows, src.cols))) / logf(2.0f));
+        int levels = static_cast<int>(std::log2(static_cast<float>(std::min(src.rows, src.cols))));
         x_contrast.resize(levels);
         y_contrast.resize(levels);
 

@@ -1475,8 +1475,8 @@ static inline double sacDesignSPRTTest(double delta, double epsilon, double t_M,
      * Eq (2)
      */
 
-    C = (1-delta)  *  log((1-delta)/(1-epsilon)) +
-        delta      *  log(  delta  /  epsilon  );
+    C = (1-delta)  *  std::log((1-delta)/(1-epsilon)) +
+        delta      *  std::log(  delta  /  epsilon  );
 
     /**
      * Randomized RANSAC with Sequential Probability Ratio Test, ICCV 2005
@@ -1501,7 +1501,7 @@ static inline double sacDesignSPRTTest(double delta, double epsilon, double t_M,
 
     do{
         prevAn = An;
-        An = K + log(An);
+        An = K + std::log(An);
     }while((An-prevAn > 1.5e-8)  &&  (++i < 10));
 
     /**
@@ -1598,11 +1598,11 @@ static inline void   sacInitNonRand(double    beta,
                                     unsigned  N,
                                     unsigned* nonRandMinInl){
     unsigned n = SMPL_SIZE+1 > start ? SMPL_SIZE+1 : start;
-    double   beta_beta1_sq_chi = sqrt(beta*(1.0-beta)) * CHI_SQ;
+    double   beta_beta1_sq_chi = std::sqrt(beta*(1.0-beta)) * CHI_SQ;
 
     for(; n < N; n++){
         double   mu      = n * beta;
-        double   sigma   = sqrt((double)n)* beta_beta1_sq_chi;
+        double   sigma   = std::sqrt((double)n)* beta_beta1_sq_chi;
         unsigned i_min   = (unsigned)ceil(SMPL_SIZE + mu + sigma);
 
         nonRandMinInl[n] = i_min;
@@ -1770,7 +1770,7 @@ static inline unsigned sacCalcIterBound(double   confidence,
          * numIterations (the return value) into
          */
 
-        retVal = (unsigned)ceil(log(1.-confidence)/log(atLeastOneOutlierProbability));
+        retVal = (unsigned)ceil(std::log(1.-confidence)/std::log(atLeastOneOutlierProbability));
     }
 
     /**

@@ -102,7 +102,7 @@ bool UPCEANDecoder::findStartGuardPatterns(const std::vector<uchar> &row, std::p
         }
         int start = static_cast<int>(start_range.first);
         next_start = static_cast<int>(start_range.second);
-        int quiet_start = max(start - (next_start - start), 0);
+        int quiet_start = std::max(start - (next_start - start), 0);
         is_find = (quiet_start != start) &&
                   (std::find(std::begin(row) + quiet_start, std::begin(row) + start, BLACK) == std::begin(row) + start);
     }

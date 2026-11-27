@@ -125,8 +125,8 @@ public:
         CV_Assert(img0.channels() == 1 && img0.type() == img1.type());
         CV_Assert(img0.size() == img1.size());
 
-        int maxlevel = static_cast<int>(log((double)max(img0.rows, img0.cols)) / log(2.0)) - 1;
-        maxlevel = min(maxlevel, max_bits - 1);
+        int maxlevel = static_cast<int>(std::log2((double)std::max(img0.rows, img0.cols))) - 1;
+        maxlevel = std::min(maxlevel, max_bits - 1);
 
         std::vector<Mat> pyr0;
         std::vector<Mat> pyr1;
@@ -175,8 +175,8 @@ public:
         Mat res = Mat::zeros(src.size(), src.type());
         int width = src.cols - abs(shift.x);
         int height = src.rows - abs(shift.y);
-        Rect dst_rect(max(shift.x, 0), max(shift.y, 0), width, height);
-        Rect src_rect(max(-shift.x, 0), max(-shift.y, 0), width, height);
+        Rect dst_rect(std::max(shift.x, 0), std::max(shift.y, 0), width, height);
+        Rect src_rect(std::max(-shift.x, 0), std::max(-shift.y, 0), width, height);
         src(src_rect).copyTo(res(dst_rect));
         res.copyTo(dst);
     }

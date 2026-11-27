@@ -40,22 +40,22 @@ static Mat rot2quatMinimal(const Mat& R)
 
     double qx, qy, qz;
     if (trace > 0) {
-        double S = sqrt(trace + 1.0) * 2; // S=4*qw
+        double S = std::sqrt(trace + 1.0) * 2; // S=4*qw
         qx = (m21 - m12) / S;
         qy = (m02 - m20) / S;
         qz = (m10 - m01) / S;
     } else if (m00 > m11 && m00 > m22) {
-        double S = sqrt(1.0 + m00 - m11 - m22) * 2; // S=4*qx
+        double S = std::sqrt(1.0 + m00 - m11 - m22) * 2; // S=4*qx
         qx = 0.25 * S;
         qy = (m01 + m10) / S;
         qz = (m02 + m20) / S;
     } else if (m11 > m22) {
-        double S = sqrt(1.0 + m11 - m00 - m22) * 2; // S=4*qy
+        double S = std::sqrt(1.0 + m11 - m00 - m22) * 2; // S=4*qy
         qx = (m01 + m10) / S;
         qy = 0.25 * S;
         qz = (m12 + m21) / S;
     } else {
-        double S = sqrt(1.0 + m22 - m00 - m11) * 2; // S=4*qz
+        double S = std::sqrt(1.0 + m22 - m00 - m11) * 2; // S=4*qz
         qx = (m02 + m20) / S;
         qy = (m12 + m21) / S;
         qz = 0.25 * S;
@@ -88,7 +88,7 @@ static Mat quatMinimal2rot(const Mat& q)
     CV_Assert(q.type() == CV_64FC1 && q.rows == 3 && q.cols == 1);
 
     Mat p = q.t()*q;
-    double w = sqrt(1 - p.at<double>(0,0));
+    double w = std::sqrt(1 - p.at<double>(0,0));
 
     Mat diag_p = Mat::eye(3,3,CV_64FC1)*p.at<double>(0,0);
     return 2*q*q.t() + 2*w*skew(q) + Mat::eye(3,3,CV_64FC1) - 2*diag_p;
@@ -110,25 +110,25 @@ static Mat rot2quat(const Mat& R)
 
     double qw, qx, qy, qz;
     if (trace > 0) {
-        double S = sqrt(trace + 1.0) * 2; // S=4*qw
+        double S = std::sqrt(trace + 1.0) * 2; // S=4*qw
         qw = 0.25 * S;
         qx = (m21 - m12) / S;
         qy = (m02 - m20) / S;
         qz = (m10 - m01) / S;
     } else if (m00 > m11 && m00 > m22) {
-        double S = sqrt(1.0 + m00 - m11 - m22) * 2; // S=4*qx
+        double S = std::sqrt(1.0 + m00 - m11 - m22) * 2; // S=4*qx
         qw = (m21 - m12) / S;
         qx = 0.25 * S;
         qy = (m01 + m10) / S;
         qz = (m02 + m20) / S;
     } else if (m11 > m22) {
-        double S = sqrt(1.0 + m11 - m00 - m22) * 2; // S=4*qy
+        double S = std::sqrt(1.0 + m11 - m00 - m22) * 2; // S=4*qy
         qw = (m02 - m20) / S;
         qx = (m01 + m10) / S;
         qy = 0.25 * S;
         qz = (m12 + m21) / S;
     } else {
-        double S = sqrt(1.0 + m22 - m00 - m11) * 2; // S=4*qz
+        double S = std::sqrt(1.0 + m22 - m00 - m11) * 2; // S=4*qz
         qw = (m10 - m01) / S;
         qx = (m02 + m20) / S;
         qy = (m12 + m21) / S;
@@ -345,7 +345,7 @@ static void calibrateHandEyeTsai(const std::vector<Mat>& Hg, const std::vector<M
     Mat Pcg_norm = Pcg_.t() * Pcg_;
     //Obtained non-unit quaternion is scaled back to unit value that
     //designates camera-gripper rotation
-    Mat Pcg = 2 * Pcg_ / sqrt(1 + Pcg_norm.at<double>(0,0)); //eq 14
+    Mat Pcg = 2 * Pcg_ / std::sqrt(1 + Pcg_norm.at<double>(0,0)); //eq 14
 
     Mat Rcg = quatMinimal2rot(Pcg/2.0);
 
@@ -410,7 +410,7 @@ static void calibrateHandEyePark(const std::vector<Mat>& Hg, const std::vector<M
 
     Mat v = Mat::zeros(3, 3, CV_64FC1);
     for (int i = 0; i < 3; i++) {
-        v.at<double>(i,i) = 1.0 / sqrt(eigenvalues.at<double>(i,0));
+        v.at<double>(i,i) = 1.0 / std::sqrt(eigenvalues.at<double>(i,0));
     }
 
     Mat R = eigenvectors.t() * v * eigenvectors * M.t();
@@ -691,8 +691,8 @@ static void calibrateHandEyeDaniilidis(const std::vector<Mat>& Hg, const std::ve
     double b = mb.at<double>(0,0);
     double c = mc.at<double>(0,0);
 
-    double s1 = (-b + sqrt(b*b - 4*a*c)) / (2*a);
-    double s2 = (-b - sqrt(b*b - 4*a*c)) / (2*a);
+    double s1 = (-b + std::sqrt(b*b - 4*a*c)) / (2*a);
+    double s2 = (-b - std::sqrt(b*b - 4*a*c)) / (2*a);
 
     Mat sol1 = s1*s1*u1.t()*u1 + 2*s1*u1.t()*u2 + u2.t()*u2;
     Mat sol2 = s2*s2*u1.t()*u1 + 2*s2*u1.t()*u2 + u2.t()*u2;
@@ -708,7 +708,7 @@ static void calibrateHandEyeDaniilidis(const std::vector<Mat>& Hg, const std::ve
         val = sol2.at<double>(0,0);
     }
 
-    double lambda2 = sqrt(1.0 / val);
+    double lambda2 = std::sqrt(1.0 / val);
     double lambda1 = s * lambda2;
 
     Mat dualq = lambda1 * v(Rect(6, 0, 1, 8)) + lambda2*v(Rect(7, 0, 1, 8));

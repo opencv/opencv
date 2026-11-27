@@ -1084,8 +1084,8 @@ void DISOpticalFlowImpl::PatchInverseSearch_ParBody::operator()(const Range &ran
     float dUx, dUy, i_I1, j_I1, w00, w01, w10, w11, dx, dy;
 
 #define INIT_BILINEAR_WEIGHTS(Ux, Uy) \
-    i_I1 = min(max(i + Uy + bsz, i_lower_limit), i_upper_limit); \
-    j_I1 = min(max(j + Ux + bsz, j_lower_limit), j_upper_limit); \
+    i_I1 = std::min(std::max(i + Uy + bsz, i_lower_limit), i_upper_limit); \
+    j_I1 = std::min(std::max(j + Ux + bsz, j_lower_limit), j_upper_limit); \
     { \
         float di = i_I1 - floor(i_I1); \
         float dj = j_I1 - floor(j_I1); \
@@ -1110,8 +1110,8 @@ void DISOpticalFlowImpl::PatchInverseSearch_ParBody::operator()(const Range &ran
         if (iter % 2 == 0)
         {
             dir = 1;
-            start_is = min(range.start * stripe_sz, hs);
-            end_is = min(range.end * stripe_sz, hs);
+            start_is = std::min(range.start * stripe_sz, hs);
+            end_is = std::min(range.end * stripe_sz, hs);
             start_js = 0;
             end_js = dis->ws;
             start_i = start_is * dis->patch_stride;
@@ -1120,8 +1120,8 @@ void DISOpticalFlowImpl::PatchInverseSearch_ParBody::operator()(const Range &ran
         else
         {
             dir = -1;
-            start_is = min(range.end * stripe_sz, hs) - 1;
-            end_is = min(range.start * stripe_sz, hs) - 1;
+            start_is = std::min(range.end * stripe_sz, hs) - 1;
+            end_is = std::min(range.start * stripe_sz, hs) - 1;
             start_js = dis->ws - 1;
             end_js = -1;
             start_i = start_is * dis->patch_stride;
@@ -1264,8 +1264,8 @@ void DISOpticalFlowImpl::Densification_ParBody::operator()(const Range &range) c
 {
     CV_INSTRUMENT_REGION();
 
-    int start_i = min(range.start * stripe_sz, h);
-    int end_i = min(range.end * stripe_sz, h);
+    int start_i = std::min(range.start * stripe_sz, h);
+    int end_i = std::min(range.end * stripe_sz, h);
 
     /* Input sparse flow */
     float *Sx_ptr = Sx->ptr<float>();
@@ -1358,7 +1358,7 @@ void DISOpticalFlowImpl::Densification_ParBody::operator()(const Range &range) c
                 {
                     float sx = Sx_ptr[is * dis->ws + js];
                     float sy = Sy_ptr[is * dis->ws + js];
-                    i_m = min(max(i + sy, 0.0f), dis->h - 1.0f - EPS);
+                    i_m = std::min(std::max(i + sy, 0.0f), dis->h - 1.0f - EPS);
                     i_l = (int)i_m;
                     i_u = i_l + 1;
                     v_float32 v_wi_u = vx_setall_f32(i_m - i_l);
@@ -1428,8 +1428,8 @@ void DISOpticalFlowImpl::Densification_ParBody::operator()(const Range &range) c
             for (int is = start_is; is <= end_is; is++)
                 for (int js = start_js; js <= end_js; js++)
                 {
-                    j_m = min(max(j + Sx_ptr[is * dis->ws + js], 0.0f), dis->w - 1.0f - EPS);
-                    i_m = min(max(i + Sy_ptr[is * dis->ws + js], 0.0f), dis->h - 1.0f - EPS);
+                    j_m = std::min(std::max(j + Sx_ptr[is * dis->ws + js], 0.0f), dis->w - 1.0f - EPS);
+                    i_m = std::min(std::max(i + Sy_ptr[is * dis->ws + js], 0.0f), dis->h - 1.0f - EPS);
                     j_l = (int)j_m;
                     j_u = j_l + 1;
                     i_l = (int)i_m;
@@ -1438,7 +1438,7 @@ void DISOpticalFlowImpl::Densification_ParBody::operator()(const Range &range) c
                            (j_u - j_m) * (i_m - i_l) * I1_ptr[i_u * dis->w + j_l] +
                            (j_m - j_l) * (i_u - i_m) * I1_ptr[i_l * dis->w + j_u] +
                            (j_u - j_m) * (i_u - i_m) * I1_ptr[i_l * dis->w + j_l] - I0_ptr[i * dis->w + j];
-                    coef = 1 / max(1.0f, abs(diff));
+                    coef = 1 / std::max(1.0f, abs(diff));
                     sum_Ux += coef * Sx_ptr[is * dis->ws + js];
                     sum_Uy += coef * Sy_ptr[is * dis->ws + js];
                     sum_coef += coef;
@@ -1735,11 +1735,11 @@ bool DISOpticalFlowImpl::ocl_calc(InputArray I0, InputArray I1, InputOutputArray
     if (flow.sameSize(I0) && flow.depth() == CV_32F && flow.channels() == 2)
         use_input_flow = true;
 
-    int max_possible_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code search for maximal movement of width/4 */
-                                 (int)(log(min(I0Mat.cols, I0Mat.rows) / patch_size) / log(2.0)));              /* Deepest pyramid level greater or equal than patch*/
+    int max_possible_scale = std::min((int)(std::log2(std::max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) + 0.5), /* Original code search for maximal movement of width/4 */
+                                 (int)(std::log2(std::min(I0Mat.cols, I0Mat.rows) / patch_size)));              /* Deepest pyramid level greater or equal than patch*/
 
     if (user_coarsest_scale != -1)
-        coarsest_scale = min(user_coarsest_scale, max_possible_scale);
+        coarsest_scale = std::min(user_coarsest_scale, max_possible_scale);
     else
         coarsest_scale = max_possible_scale;
 
@@ -1823,11 +1823,11 @@ void DISOpticalFlowImpl::calc(InputArray I0, InputArray I1, InputOutputArray flo
         flow.create(I1Mat.size(), CV_32FC2);
     Mat flowMat = flow.getMat();
 
-    int max_possible_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code search for maximal movement of width/4 */
-                                 (int)(log(min(I0Mat.cols, I0Mat.rows) / patch_size) / log(2.0)));              /* Deepest pyramid level greater or equal than patch*/
+    int max_possible_scale = std::min((int)(std::log2(std::max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) + 0.5), /* Original code search for maximal movement of width/4 */
+                                 (int)(std::log2(std::min(I0Mat.cols, I0Mat.rows) / patch_size)));              /* Deepest pyramid level greater or equal than patch*/
 
     if (user_coarsest_scale != -1)
-        coarsest_scale = min(user_coarsest_scale, max_possible_scale);
+        coarsest_scale = std::min(user_coarsest_scale, max_possible_scale);
     else
         coarsest_scale = max_possible_scale;
     if (coarsest_scale<0)

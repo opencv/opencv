@@ -81,7 +81,7 @@ void initUndistortRectifyMap( InputArray K, InputArray D, InputArray R, InputArr
             {
                 double x = _x/_w, y = _y/_w;
 
-                double r = sqrt(x*x + y*y);
+                double r = std::sqrt(x*x + y*y);
                 double theta = std::atan(r);
 
                 double theta2 = theta*theta, theta4 = theta2*theta2, theta6 = theta4*theta2, theta8 = theta4*theta4;

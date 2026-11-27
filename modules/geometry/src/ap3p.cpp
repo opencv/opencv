@@ -203,7 +203,7 @@ int ap3p::computePoses(const double featureVectors[3][4],
         double ctheta1p = s[i];
         if (abs(ctheta1p) > 1)
             continue;
-        double stheta1p = sqrt(1 - ctheta1p * ctheta1p);
+        double stheta1p = std::sqrt(1 - ctheta1p * ctheta1p);
         stheta1p = (k3b3 > 0) ? stheta1p : -stheta1p;
         double ctheta3 = g1 * ctheta1p + g2;
         double stheta3 = g3 * ctheta1p + g4;
@@ -361,21 +361,21 @@ int ap3p::solve(double R[4][3][3], double t[4][3],
 
     mu0 = inv_fx * mu0 - cx_fx;
     mv0 = inv_fy * mv0 - cy_fy;
-    norm = sqrt(mu0 * mu0 + mv0 * mv0 + 1);
+    norm = std::sqrt(mu0 * mu0 + mv0 * mv0 + 1);
     mk0 = 1. / norm;
     mu0 *= mk0;
     mv0 *= mk0;
 
     mu1 = inv_fx * mu1 - cx_fx;
     mv1 = inv_fy * mv1 - cy_fy;
-    norm = sqrt(mu1 * mu1 + mv1 * mv1 + 1);
+    norm = std::sqrt(mu1 * mu1 + mv1 * mv1 + 1);
     mk1 = 1. / norm;
     mu1 *= mk1;
     mv1 *= mk1;
 
     mu2 = inv_fx * mu2 - cx_fx;
     mv2 = inv_fy * mv2 - cy_fy;
-    norm = sqrt(mu2 * mu2 + mv2 * mv2 + 1);
+    norm = std::sqrt(mu2 * mu2 + mv2 * mv2 + 1);
     mk2 = 1. / norm;
     mu2 *= mk2;
     mv2 *= mk2;

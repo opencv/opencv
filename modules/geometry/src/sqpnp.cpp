@@ -521,7 +521,7 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
     H = cv::Matx<double, 9, 6>::zeros();
 
     // 1. q1
-    double norm_r1 = sqrt(r(0) * r(0) + r(1) * r(1) + r(2) * r(2));
+    double norm_r1 = std::sqrt(r(0) * r(0) + r(1) * r(1) + r(2) * r(2));
     double inv_norm_r1 = norm_r1 > 1e-5 ? 1.0 / norm_r1 : 0.0;
     H(0, 0) = r(0) * inv_norm_r1;
     H(1, 0) = r(1) * inv_norm_r1;
@@ -529,7 +529,7 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
     K(0, 0) = 2 * norm_r1;
 
     // 2. q2
-    double norm_r2 = sqrt(r(3) * r(3) + r(4) * r(4) + r(5) * r(5));
+    double norm_r2 = std::sqrt(r(3) * r(3) + r(4) * r(4) + r(5) * r(5));
     double inv_norm_r2 = 1.0 / norm_r2;
     H(3, 1) = r(3) * inv_norm_r2;
     H(4, 1) = r(4) * inv_norm_r2;
@@ -538,7 +538,7 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
     K(1, 1) = 2 * norm_r2;
 
     // 3. q3 = (r3'*q2)*q2 - (r3'*q1)*q1 ; q3 = q3/norm(q3)
-    double norm_r3 = sqrt(r(6) * r(6) + r(7) * r(7) + r(8) * r(8));
+    double norm_r3 = std::sqrt(r(6) * r(6) + r(7) * r(7) + r(8) * r(8));
     double inv_norm_r3 = 1.0 / norm_r3;
     H(6, 2) = r(6) * inv_norm_r3;
     H(7, 2) = r(7) * inv_norm_r3;
@@ -556,7 +556,7 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
     H(3, 3) = r(0) - dot_j4q2 * H(3, 1);
     H(4, 3) = r(1) - dot_j4q2 * H(4, 1);
     H(5, 3) = r(2) - dot_j4q2 * H(5, 1);
-    double inv_norm_j4 = 1.0 / sqrt(H(0, 3) * H(0, 3) + H(1, 3) * H(1, 3) + H(2, 3) * H(2, 3) +
+    double inv_norm_j4 = 1.0 / std::sqrt(H(0, 3) * H(0, 3) + H(1, 3) * H(1, 3) + H(2, 3) * H(2, 3) +
         H(3, 3) * H(3, 3) + H(4, 3) * H(4, 3) + H(5, 3) * H(5, 3));
 
     H(0, 3) *= inv_norm_j4;

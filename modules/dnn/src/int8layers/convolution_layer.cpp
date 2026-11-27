@@ -914,7 +914,7 @@ public:
             // for now only 3x3 depth-wise convolutions are supported
             depthWiseConvolution = depthWiseConvolution && kernel_w == 3 && kernel_h == 3 &&
                 // computing at most 1 pixel from each side can involve padding
-                max(stride_w, dilation_w) >= pad_l && max(stride_h, dilation_h) >= pad_t &&
+                std::max(stride_w, dilation_w) >= pad_l && std::max(stride_h, dilation_h) >= pad_t &&
                 pad_l <= 1 && pad_t <= 1;
 
             if( !depthWiseConvolution && nstripes >= batchSize*2 )
@@ -942,13 +942,13 @@ public:
             int* data_out0_ = output_->ptr<int>();
             int8_t* rowbuf0 = 0;
             bool use_rowbuf = !depthWiseConvolution;
-            int blk_size = depthWiseConvolution ? outPlaneSize : min((int)BLK_SIZE, stripeSize);
+            int blk_size = depthWiseConvolution ? outPlaneSize : std::min((int)BLK_SIZE, stripeSize);
 
             // im2row buffer is not used for depth-wise convolution
             // Use thread_local to avoid repeated allocation across layers
             if(use_rowbuf)
             {
-                size_t rowbufsz = alignSize(karea*blk_size_cn, valign)*min((int)BLK_SIZE, blk_size);
+                size_t rowbufsz = alignSize(karea*blk_size_cn, valign)*std::min((int)BLK_SIZE, blk_size);
                 thread_local AutoBuffer<int8_t> rowbuf0_tls;
                 rowbuf0_tls.allocate(rowbufsz + valign);
                 rowbuf0 = alignPtr(rowbuf0_tls.data(), (int)(valign*sizeof(int8_t)));
@@ -1024,7 +1024,7 @@ public:
                                 const int8_t w00_ = wptr[0], w01_ = wptr[1], w02_ = wptr[2],
                                              w10 = wptr[3], w11 = wptr[4], w12 = wptr[5],
                                              w20_ = wptr[6], w21_ = wptr[7], w22_ = wptr[8];
-                                int outW1 = min(outW, (width - dilation_w*(kernel_w - 1) + pad_l)/stride_w);
+                                int outW1 = std::min(outW, (width - dilation_w*(kernel_w - 1) + pad_l)/stride_w);
                                 int bias = biasptr[out_d], biasCopy;
                                 float mult = multptr[out_d];
 
@@ -1062,7 +1062,7 @@ public:
                                               (int)imgptr2[0]*w21 + (int)imgptr2[dilation_w]*w22 +
                                               biasCopy + inpZp*(w00 + w10 + w20);
                                         out1 = outZp + (int)std::round(out*mult);
-                                        outptr[0] = std::min(std::max(out1, -128), 127);
+                                        outptr[0] = std::clamp(out1, -128, 127);
                                         out_j = 1;
                                     }
                                 #if CV_SIMD128
@@ -1129,7 +1129,7 @@ public:
                                               (int)imgptr1[in_j]*w10 + (int)imgptr1[in_j + dilation_w]*w11 + (int)imgptr1[in_j + dilation_w*2]*w12 +
                                               (int)imgptr2[in_j]*w20 + (int)imgptr2[in_j + dilation_w]*w21 + (int)imgptr2[in_j + dilation_w*2]*w22 + biasCopy;
                                         out1 = outZp + (int)std::round(out*mult);
-                                        outptr[out_j] = std::min(std::max(out1, -128), 127);
+                                        outptr[out_j] = std::clamp(out1, -128, 127);
                                     }
 
                                     for (; out_j < outW; out_j++ )
@@ -1158,7 +1158,7 @@ public:
                                               (int)imgptr1[in_j0]*w10*s0 + (int)imgptr1[in_j1]*w11*s1 + (int)imgptr1[in_j2]*w12*s2 +
                                               (int)imgptr2[in_j0]*w20*s0 + (int)imgptr2[in_j1]*w21*s1 + (int)imgptr2[in_j2]*w22*s2 + biasCopy;
                                         out1 = outZp + (int)std::round(out*mult);
-                                        outptr[out_j] = std::min(std::max(out1, -128), 127);
+                                        outptr[out_j] = std::clamp(out1, -128, 127);
                                     }
                                 }
                             }
@@ -1513,8 +1513,8 @@ public:
                                     int out0 = outZp + (int)std::round(s00*mult0);
                                     int out1 = outZp + (int)std::round(s10*mult1);
 
-                                    s00 = std::min(std::max(out0, -128), 127);
-                                    s10 = std::min(std::max(out1, -128), 127);
+                                    s00 = std::clamp(out0, -128, 127);
+                                    s10 = std::clamp(out1, -128, 127);
                                 }
 
                                 outptr0[j] = s00;
@@ -1552,7 +1552,7 @@ public:
                         }
                     #endif
                         for( ; j < len; j++ )
-                            dst[j] = (uint8_t)std::min(std::max(src[j] + 128, 0), 255);
+                            dst[j] = (uint8_t)std::clamp(src[j] + 128, 0, 255);
                     }
                 }
             }

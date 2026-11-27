@@ -214,14 +214,14 @@ void correctMatches( InputArray _F, InputArray _points1, InputArray _points2,
 
         // Compute the right epipole e1 from F * e1 = 0
         SVDecomp(TFT, S, U, Vt);
-        double scale = sqrt(Vt(2, 0)*Vt(2, 0) + Vt(2, 1)*Vt(2, 1));
+        double scale = std::sqrt(Vt(2, 0)*Vt(2, 0) + Vt(2, 1)*Vt(2, 1));
 
         Vec3d e1(Vt(2, 0)/scale, Vt(2, 1)/scale, Vt(2, 2)/scale);
         if (e1(2) < 0)
             e1 = -e1;
 
         // Compute the left epipole e2 from e2' * F = 0  =>  F' * e2 = 0
-        scale = sqrt(U(0, 2)*U(0, 2) + U(1, 2)*U(1, 2));
+        scale = std::sqrt(U(0, 2)*U(0, 2) + U(1, 2)*U(1, 2));
 
         Vec3d e2(U(0, 2)/scale, U(1, 2)/scale, U(2, 2)/scale);
         if (e2(2) < 0)

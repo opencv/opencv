@@ -1269,7 +1269,7 @@ inline int BlockSumBorder(const T* ref, const T* S, T* R, ST* SUM, T* D, ST** bu
             {
                 R[j] = Si[k];
             }
-            int rem = min(diff, dx2);
+            int rem = std::min(diff, dx2);
             for( k=0; k < rem*cn; k++, j++ )
             {
                 if( borderType != BORDER_CONSTANT )
@@ -1490,7 +1490,7 @@ void BlockSum(const Mat& _src, Mat& _dst, Size ksize, Point anchor, const Size &
     int dx1 = std::max(anchor.x - roi.x, 0);
     int dx2 = std::max(kwidth - anchor.x - 1 + roi.x + roi.width - wholeSize.width, 0);
     int dy2 = std::max(kheight - anchor.y - 1 + roi.y + roi.height - wholeSize.height, 0);
-    int borderLeft = min(dx1, width)*cn;
+    int borderLeft = std::min(dx1, width)*cn;
     int bufWidth = (width1+borderLeft+VEC_ALIGN);
     int bufStep = bufWidth*besz;
 
@@ -1554,7 +1554,7 @@ void BlockSum(const Mat& _src, Mat& _dst, Size ksize, Point anchor, const Size &
     }
     else
     {
-        area2.allocate(border, (kwidth-1+max(dx1, dx2)+VEC_ALIGN)*sesz);
+        area2.allocate(border, (kwidth-1+std::max(dx1, dx2)+VEC_ALIGN)*sesz);
         area2.commit();
     }
     bufPtr.resize(kheight);

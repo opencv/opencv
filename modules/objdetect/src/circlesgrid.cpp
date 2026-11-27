@@ -356,7 +356,7 @@ void CirclesGridClusterFinder::getSortedCorners(const std::vector<cv::Point2f> &
     double dist01 = norm(sortedCorners[0] - sortedCorners[1]);
     double dist12 = norm(sortedCorners[1] - sortedCorners[2]);
     // Use half the average distance between circles on the shorter side as threshold for determining whether a point lies on an edge.
-    double thresh = min(dist01, dist12) / min(patternSize.width, patternSize.height) / 2;
+    double thresh = std::min(dist01, dist12) / std::min(patternSize.width, patternSize.height) / 2;
 
     size_t circleCount01 = 0;
     size_t circleCount12 = 0;

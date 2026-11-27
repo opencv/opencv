@@ -840,7 +840,7 @@ TEST(Calib3d_RotatedCirclesPatternDetector, issue_24964)
     EXPECT_LE(error, precise_success_error_level);
 
     // "rotate" the circle grid by 90 degrees
-    swap(parrernSize.height, parrernSize.width);
+    std::swap(parrernSize.height, parrernSize.width);
 
     found = findCirclesGrid(image, parrernSize, centers, CALIB_CB_SYMMETRIC_GRID);
     error = calcError(centers, goldCenters.t());

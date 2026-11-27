@@ -7,13 +7,12 @@
 
 #include "opencv2/core/cvdef.h"
 
+#include <cstddef>  // std::nullptr_t
 #include <string>
 #include <memory>  // std::shared_ptr
 #include <type_traits>  // std::enable_if
 
 namespace cv {
-
-using std::nullptr_t;
 
 //! @addtogroup core_basic
 //! @{
@@ -71,9 +70,9 @@ struct Ptr : public std::shared_ptr<T>
     using std::shared_ptr<T>::shared_ptr;  // GCC 5.x can't handle this
 #else
     inline Ptr() CV_NOEXCEPT : std::shared_ptr<T>() {}
-    inline Ptr(nullptr_t) CV_NOEXCEPT : std::shared_ptr<T>(nullptr) {}
+    inline Ptr(std::nullptr_t) CV_NOEXCEPT : std::shared_ptr<T>(nullptr) {}
     template<typename Y, typename D> inline Ptr(Y* p, D d) : std::shared_ptr<T>(p, d) {}
-    template<typename D> inline Ptr(nullptr_t, D d) : std::shared_ptr<T>(nullptr, d) {}
+    template<typename D> inline Ptr(std::nullptr_t, D d) : std::shared_ptr<T>(nullptr, d) {}
 
     template<typename Y> inline Ptr(const Ptr<Y>& r, T* ptr) CV_NOEXCEPT : std::shared_ptr<T>(r, ptr) {}
 

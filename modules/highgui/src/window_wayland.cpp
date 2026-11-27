@@ -1660,7 +1660,7 @@ void cv_wl_viewer::on_mouse(int event, cv::Point const &p, int flag) {
             int y = static_cast<int>((p.y - last_img_area_.y) *
                                      ((double) image_.size().height / last_img_area_.height));
 
-            x = cv::min(x, real_img_width);
+            x = std::min(x, real_img_width);
             callback_(event, x, y, flag, param_);
         }
     }

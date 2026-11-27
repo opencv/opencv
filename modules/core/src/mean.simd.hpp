@@ -77,7 +77,7 @@ struct SumSqr_SIMD<uchar, int, int>
         const int len0 = len & -VTraits<v_uint8>::vlanes();
         while(x < len0)
         {
-            const int len_tmp = min(x + 256*VTraits<v_uint16>::vlanes(), len0);
+            const int len_tmp = std::min(x + 256*VTraits<v_uint16>::vlanes(), len0);
             v_uint16 v_sum16 = vx_setzero_u16();
             for ( ; x < len_tmp; x += VTraits<v_uint8>::vlanes())
             {
@@ -169,7 +169,7 @@ struct SumSqr_SIMD<schar, int, int>
         const int len0 = len & -VTraits<v_int8>::vlanes();
         while (x < len0)
         {
-            const int len_tmp = min(x + 256 * VTraits<v_int16>::vlanes(), len0);
+            const int len_tmp = std::min(x + 256 * VTraits<v_int16>::vlanes(), len0);
             v_int16 v_sum16 = vx_setzero_s16();
             for (; x < len_tmp; x += VTraits<v_int8>::vlanes())
             {

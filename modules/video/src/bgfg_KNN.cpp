@@ -665,9 +665,9 @@ bool BackgroundSubtractorKNNImpl::ocl_apply(InputArray _image, OutputArray _fgma
     // calculate update parameters (using alpha)
     int Kshort,Kmid,Klong;
     //approximate exponential learning curve
-    Kshort=(int)(log(0.7)/log(1-learningRate))+1;//Kshort
-    Kmid=(int)(log(0.4)/log(1-learningRate))-Kshort+1;//Kmid
-    Klong=(int)(log(0.1)/log(1-learningRate))-Kshort-Kmid+1;//Klong
+    Kshort=(int)(std::log(0.7)/std::log(1-learningRate))+1;//Kshort
+    Kmid=(int)(std::log(0.4)/std::log(1-learningRate))-Kshort+1;//Kmid
+    Klong=(int)(std::log(0.1)/std::log(1-learningRate))-Kshort-Kmid+1;//Klong
 
     //refresh rates
     int nShortUpdate = (Kshort/nN)+1;
@@ -794,9 +794,9 @@ void BackgroundSubtractorKNNImpl::apply(InputArray _image, InputArray _knownFore
     // calculate update parameters (using alpha)
     int Kshort,Kmid,Klong;
     //approximate exponential learning curve
-    Kshort=(int)(log(0.7)/log(1-learningRate))+1;//Kshort
-    Kmid=(int)(log(0.4)/log(1-learningRate))-Kshort+1;//Kmid
-    Klong=(int)(log(0.1)/log(1-learningRate))-Kshort-Kmid+1;//Klong
+    Kshort=(int)(std::log(0.7)/std::log(1-learningRate))+1;//Kshort
+    Kmid=(int)(std::log(0.4)/std::log(1-learningRate))-Kshort+1;//Kmid
+    Klong=(int)(std::log(0.1)/std::log(1-learningRate))-Kshort-Kmid+1;//Klong
 
     //refresh rates
     int nShortUpdate = (Kshort/nN)+1;

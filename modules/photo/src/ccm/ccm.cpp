@@ -246,7 +246,7 @@ void ColorCorrectionModel::Impl::initialLeastSquare(bool fit)
         Mat residual = A.reshape(1, A.rows) * ccm.reshape(0, shape / 3) - B.reshape(1, B.rows);
         Scalar s = residual.dot(residual);
         double sum = s[0];
-        loss = sqrt(sum / maskedLen);
+        loss = std::sqrt(sum / maskedLen);
     }
 }
 
@@ -283,7 +283,7 @@ void ColorCorrectionModel::Impl::fitting(void)
     solver->setTermCriteria(termcrit);
     double res = solver->minimize(reshapeCcm);
     ccm = reshapeCcm.reshape(0, shape / 3);
-    loss = sqrt(res / maskedLen);
+    loss = std::sqrt(res / maskedLen);
 }
 
 ColorCorrectionModel::ColorCorrectionModel()

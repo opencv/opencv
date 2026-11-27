@@ -179,7 +179,7 @@ void softNMSBoxes(const std::vector<Rect>& bboxes,
                     }
                     break;
                 case SoftNMSMethod::SOFTNMS_GAUSSIAN:
-                    bscore_i *= exp(-(overlap * overlap) / sigma);
+                    bscore_i *= std::exp(-(overlap * overlap) / sigma);
                     break;
                 default:
                     CV_Error(Error::StsBadArg, "Not supported SoftNMS method.");

@@ -306,7 +306,7 @@ void Detect::calCoherence(int window_size)
             continue;
         }
         top_row = y * window_size;
-        bottom_row = min(height, (y + 1) * window_size);
+        bottom_row = std::min(height, (y + 1) * window_size);
 
         for (int pos = 0; pos < new_size.width; pos++)
         {
@@ -318,7 +318,7 @@ void Detect::calCoherence(int window_size)
                 continue;
             }
             left_col = pos * window_size;
-            right_col = min(width, (pos + 1) * window_size);
+            right_col = std::min(width, (pos + 1) * window_size);
 
             //we had an integral image to count non-zero elements
             CALCULATE_SUM(edges_ptr, rect_area)
@@ -334,7 +334,7 @@ void Detect::calCoherence(int window_size)
             CALCULATE_SUM(xy_ptr, xy)
 
             // get the values of the rectangle corners from the integral image - 0 if outside bounds
-            d = sqrt((x_sq - y_sq) * (x_sq - y_sq) + 4 * xy * xy) / (x_sq + y_sq);
+            d = std::sqrt((x_sq - y_sq) * (x_sq - y_sq) + 4 * xy * xy) / (x_sq + y_sq);
             if (d > THRESHOLD_COHERENCE)
             {
                 coherence_row[pos] = 255;

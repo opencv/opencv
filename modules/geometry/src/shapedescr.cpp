@@ -526,12 +526,12 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
             // Select the eigen vector {a,b,c,d,e} which has the lowest eigenvalue
             int minpos = 0;
             double normi, normEVali, normMinpos, normEValMinpos;
-            normMinpos = sqrt(eVec.at<double>(minpos,0)*eVec.at<double>(minpos,0) + eVec.at<double>(minpos,1)*eVec.at<double>(minpos,1) + \
+            normMinpos = std::sqrt(eVec.at<double>(minpos,0)*eVec.at<double>(minpos,0) + eVec.at<double>(minpos,1)*eVec.at<double>(minpos,1) + \
                               eVec.at<double>(minpos,2)*eVec.at<double>(minpos,2) + eVec.at<double>(minpos,3)*eVec.at<double>(minpos,3) + \
                               eVec.at<double>(minpos,4)*eVec.at<double>(minpos,4) );
             normEValMinpos = eVal.at<double>(minpos,0) * normMinpos;
             for (i=1; i<5; i++) {
-                normi = sqrt(eVec.at<double>(i,0)*eVec.at<double>(i,0) + eVec.at<double>(i,1)*eVec.at<double>(i,1) + \
+                normi = std::sqrt(eVec.at<double>(i,0)*eVec.at<double>(i,0) + eVec.at<double>(i,1)*eVec.at<double>(i,1) + \
                              eVec.at<double>(i,2)*eVec.at<double>(i,2) + eVec.at<double>(i,3)*eVec.at<double>(i,3) + \
                              eVec.at<double>(i,4)*eVec.at<double>(i,4) );
                 normEVali = eVal.at<double>(i,0) * normi;
@@ -567,7 +567,7 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
         if (is_ellipse) {
             double u1 = pVec(2) *pVec(3) *pVec(3)  - pVec(1) *pVec(3) *pVec(4)  + pVec(0) *pVec(4) *pVec(4)  + pVec(1) *pVec(1) *coeffs(5) ;
             double u2 = pVec(0) *pVec(2) *coeffs(5) ;
-            double l1 = sqrt(pVec(1) *pVec(1)  + (pVec(0)  - pVec(2) )*(pVec(0)  - pVec(2) ));
+            double l1 = std::sqrt(pVec(1) *pVec(1)  + (pVec(0)  - pVec(2) )*(pVec(0)  - pVec(2) ));
             double l2 = pVec(0)  + pVec(2) ;
             double l3 = pVec(1) *pVec(1)  - 4.0*pVec(0) *pVec(2) ;
             double p1 = 2.0*pVec(2) *pVec(3)  - pVec(1) *pVec(4) ;
@@ -575,8 +575,8 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
 
             x0 = p1/l3/scale + c.x;
             y0 = p2/l3/scale + c.y;
-            a = std::sqrt(2.)*sqrt((u1 - 4.0*u2)/((l1 - l2)*l3))/scale;
-            b = std::sqrt(2.)*sqrt(-1.0*((u1 - 4.0*u2)/((l1 + l2)*l3)))/scale;
+            a = std::sqrt(2.)*std::sqrt((u1 - 4.0*u2)/((l1 - l2)*l3))/scale;
+            b = std::sqrt(2.)*std::sqrt(-1.0*((u1 - 4.0*u2)/((l1 + l2)*l3)))/scale;
             if (pVec(1)  == 0) {
                 if (pVec(0)  < pVec(2) ) {
                     theta = 0;
@@ -751,7 +751,7 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
 
         double u1 = pVec(2)*Q(0,0)*Q(0,0) - pVec(1)*Q(0,0)*Q(0,1) + pVec(0)*Q(0,1)*Q(0,1) + pVec(1)*pVec(1)*Q(0,2);
         double u2 = pVec(0)*pVec(2)*Q(0,2);
-        double l1 = sqrt(pVec(1)*pVec(1) + (pVec(0) - pVec(2))*(pVec(0) - pVec(2)));
+        double l1 = std::sqrt(pVec(1)*pVec(1) + (pVec(0) - pVec(2))*(pVec(0) - pVec(2)));
         double l2 = pVec(0) + pVec(2) ;
         double l3 = pVec(1)*pVec(1) - 4*pVec(0)*pVec(2) ;
         double p1 = 2*pVec(2)*Q(0,0) - pVec(1)*Q(0,1);
@@ -759,8 +759,8 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
 
         x0 = (p1/l3/scale) + c.x;
         y0 = (p2/l3/scale) + c.y;
-        a = sqrt(2.)*sqrt((u1 - 4.0*u2)/((l1 - l2)*l3))/scale;
-        b = sqrt(2.)*sqrt(-1.0*((u1 - 4.0*u2)/((l1 + l2)*l3)))/scale;
+        a = std::sqrt(2.)*std::sqrt((u1 - 4.0*u2)/((l1 - l2)*l3))/scale;
+        b = std::sqrt(2.)*std::sqrt(-1.0*((u1 - 4.0*u2)/((l1 + l2)*l3)))/scale;
         if (pVec(1)  == 0) {
             if (pVec(0)  < pVec(2) ) {
                 theta = 0;
@@ -835,8 +835,8 @@ static void solveFast(float semi_major, float semi_minor, const cv::Point2f& pt,
         float r = std::hypotf(rx, ry);
         float q = std::hypotf(qx, qy);
 
-        tx = std::min(1.0f, std::max(0.0f, ((qx / q) * r + ex) / a));
-        ty = std::min(1.0f, std::max(0.0f, ((qy / q) * r + ey) / b));
+        tx = std::clamp(((qx / q) * r + ex) / a, 0.0f, 1.0f);
+        ty = std::clamp(((qy / q) * r + ey) / b, 0.0f, 1.0f);
         float t = std::hypotf(tx, ty);
         tx /= t;
         ty /= t;

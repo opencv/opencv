@@ -155,7 +155,7 @@ void sRGBBase_::calLinear()
 {
     alpha = a + 1;
     K0 = a / (gamma - 1);
-    phi = (pow(alpha, gamma) * pow(gamma - 1, gamma - 1)) / (pow(a, gamma - 1) * pow(gamma, gamma));
+    phi = (std::pow(alpha, gamma) * std::pow(gamma - 1, gamma - 1)) / (std::pow(a, gamma - 1) * std::pow(gamma, gamma));
     beta = K0 / phi;
 }
 
@@ -165,7 +165,7 @@ double sRGBBase_::toLFuncEW(double x) const
 {
     if (x > K0)
     {
-        return pow(((x + alpha - 1) / alpha), gamma);
+        return std::pow(((x + alpha - 1) / alpha), gamma);
     }
     else if (x >= -K0)
     {
@@ -173,7 +173,7 @@ double sRGBBase_::toLFuncEW(double x) const
     }
     else
     {
-        return -(pow(((-x + alpha - 1) / alpha), gamma));
+        return -(std::pow(((-x + alpha - 1) / alpha), gamma));
     }
 }
 
@@ -193,7 +193,7 @@ double sRGBBase_::fromLFuncEW(double x) const
 {
     if (x > beta)
     {
-        return alpha * pow(x, 1 / gamma) - (alpha - 1);
+        return alpha * std::pow(x, 1 / gamma) - (alpha - 1);
     }
     else if (x >= -beta)
     {
@@ -201,7 +201,7 @@ double sRGBBase_::fromLFuncEW(double x) const
     }
     else
     {
-        return -(alpha * pow(-x, 1 / gamma) - (alpha - 1));
+        return -(alpha * std::pow(-x, 1 / gamma) - (alpha - 1));
     }
 }
 
@@ -421,7 +421,7 @@ Mat Lab::fromsrc(Mat& src)
 Vec3d Lab::tolab(const Vec3d& lab)
 {
     auto f_inv = [](double t) -> double {
-        return t > DELTA ? pow(t, 3.0) : (t - C) / M;
+        return t > DELTA ? std::pow(t, 3.0) : (t - C) / M;
     };
     double L = (lab[0] + 16.) / 116., a = lab[1] / 500., b = lab[2] / 200.;
     auto& il = getIlluminants(illumobserver);

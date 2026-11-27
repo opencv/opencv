@@ -49,7 +49,7 @@ struct CharucoDetector::CharucoDetectorImpl {
                     continue;
                 Point2f centerMarker((mCorners[j].ptr<Point2f>(0)[0] + mCorners[j].ptr<Point2f>(0)[1] +
                                       mCorners[j].ptr<Point2f>(0)[2] + mCorners[j].ptr<Point2f>(0)[3]) / 4.f);
-                float dist = sqrt(normL2Sqr<float>(centerMarker - charucoCorner));
+                float dist = std::sqrt(normL2Sqr<float>(centerMarker - charucoCorner));
                 // nearestMarkerIdx contains for each charuco corner, nearest marker index in ids array
                 const int nearestMarkerId1 = boardIds[nearestMarkerIdx[chId][0]];
                 const int nearestMarkerId2 = boardIds[nearestMarkerIdx[chId][1]];
@@ -57,20 +57,20 @@ struct CharucoDetector::CharucoDetectorImpl {
                     int nearestCornerId = nearestMarkerId1 == idMaker ? nearestMarkerCorners[chId][0] : nearestMarkerCorners[chId][1];
                     Point2f nearestCorner = mCorners[j].ptr<Point2f>(0)[nearestCornerId];
                     // distToNearest: distance from the charuco corner to charuco corner-forming markers
-                    float distToNearest = sqrt(normL2Sqr<float>(nearestCorner - charucoCorner));
-                    distance[chId].x = max(distance[chId].x, distToNearest);
+                    float distToNearest = std::sqrt(normL2Sqr<float>(nearestCorner - charucoCorner));
+                    distance[chId].x = std::max(distance[chId].x, distToNearest);
                     // check that nearestCorner is nearest point
                     {
                         Point2f mid1 = (mCorners[j].ptr<Point2f>(0)[(nearestCornerId + 1) % 4]+nearestCorner)*0.5f;
                         Point2f mid2 = (mCorners[j].ptr<Point2f>(0)[(nearestCornerId + 3) % 4]+nearestCorner)*0.5f;
-                        float tmpDist = min(sqrt(normL2Sqr<float>(mid1 - charucoCorner)), sqrt(normL2Sqr<float>(mid2 - charucoCorner)));
+                        float tmpDist = std::min(std::sqrt(normL2Sqr<float>(mid1 - charucoCorner)), std::sqrt(normL2Sqr<float>(mid2 - charucoCorner)));
                         if (tmpDist < distToNearest)
                             return false;
                     }
                 }
                 // check distance from the charuco corner to other markers
                 else
-                    distance[chId].y = min(distance[chId].y, dist);
+                    distance[chId].y = std::min(distance[chId].y, dist);
             }
             // if distance from the charuco corner to charuco corner-forming markers more then distance from the charuco corner to other markers,
             // then a false board is found.
@@ -114,7 +114,7 @@ struct CharucoDetector::CharucoDetectorImpl {
                     Point2f charucoCorner = charucoCorners.getMat().at<Point2f>((int)i);
                     double dist = norm(markerCorner - charucoCorner);
                     if(minDist == -1) minDist = dist; // if first distance, just assign it
-                    minDist = min(dist, minDist);
+                    minDist = std::min(dist, minDist);
                     counter++;
                 }
                 // if this is the first closest marker, don't do anything
@@ -445,7 +445,7 @@ void CharucoDetector::detectDiamonds(InputArray image, OutputArrayOfArrays _diam
           perimeterSq += edge.x*edge.x + edge.y*edge.y;
         }
         // maximum reprojection error relative to perimeter
-        float minRepDistance = sqrt(perimeterSq) * minRepDistanceRate;
+        float minRepDistance = std::sqrt(perimeterSq) * minRepDistanceRate;
 
         int currentId = _markerIds.getMat().at<int>(i);
 
@@ -588,8 +588,8 @@ void drawDetectedDiamonds(InputOutputArray _image, InputArrayOfArrays _corners, 
     // calculate colors
     Scalar textColor, cornerColor;
     textColor = cornerColor = borderColor;
-    swap(textColor.val[0], textColor.val[1]);     // text color just sawp G and R
-    swap(cornerColor.val[1], cornerColor.val[2]); // corner color just sawp G and B
+    std::swap(textColor.val[0], textColor.val[1]);     // text color just sawp G and R
+    std::swap(cornerColor.val[1], cornerColor.val[2]); // corner color just sawp G and B
 
     int nMarkers = (int)_corners.total();
     for(int i = 0; i < nMarkers; i++) {

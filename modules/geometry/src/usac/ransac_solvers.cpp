@@ -96,7 +96,7 @@ double getLambda (std::vector<int> &supports, double cdf_thr, int points_size,
         int sample_size, bool is_independent, int &min_non_random_inliers) {
     std::sort(supports.begin(), supports.end());
     double lambda = supports.size() % 2 ? (supports[supports.size()/2] + supports[supports.size()/2+1])*0.5 : supports[supports.size()/2];
-    const double cdf = lambda + cdf_thr*sqrt(lambda * (1 - lambda / (is_independent ? points_size - sample_size : points_size)));
+    const double cdf = lambda + cdf_thr*std::sqrt(lambda * (1 - lambda / (is_independent ? points_size - sample_size : points_size)));
     int lower_than_cdf = 0; lambda = 0;
     for (const auto &inl : supports)
         if (inl < cdf) {
@@ -106,7 +106,7 @@ double getLambda (std::vector<int> &supports, double cdf_thr, int points_size,
     if (lambda < 1 || lower_than_cdf == 0) lambda = 1;
     // use 0.9999 quantile https://keisan.casio.com/exec/system/14060745333941
     if (! is_independent) // do not calculate it for all inliers
-        min_non_random_inliers = (int)(lambda + 2.32*sqrt(lambda * (1 - lambda / points_size))) + 1;
+        min_non_random_inliers = (int)(lambda + 2.32*std::sqrt(lambda * (1 - lambda / points_size))) + 1;
     return lambda;
 }
 
@@ -628,7 +628,7 @@ int UniversalRANSAC::getIndependentInliers (const Mat &model_, const std::vector
                     num_pts_validatin_or_constr++;
                     continue;
                 }
-                const auto mag2 = 1 / sqrt(a2 * a2 + b2 * b2), mag1 = 1/sqrt(a1 * a1 + b1 * b1);
+                const auto mag2 = 1 / std::sqrt(a2 * a2 + b2 * b2), mag1 = 1/std::sqrt(a1 * a1 + b1 * b1);
                 a2 *= mag2; b2 *= mag2; c2 *= mag2;
                 a1 *= mag1; b1 *= mag1; c1 *= mag1;
             }
