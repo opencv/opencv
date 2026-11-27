@@ -557,7 +557,13 @@ class JavaWrapperGenerator(object):
             enumType = None
         else:
             ctype = normalize_class_name(enumType)
-            type_dict[ctype] = { "cast_from" : "int", "cast_to" : get_cname(enumType), "j_type" : "int", "jn_type" : "int", "jni_type" : "jint", "suffix" : "I" }
+            enum_entry = { "cast_from" : "int", "cast_to" : get_cname(enumType), "j_type" : "int", "jn_type" : "int", "jni_type" : "jint", "suffix" : "I" }
+            type_dict[ctype] = enum_entry
+            for ns in self.namespaces:
+                prefix = ns + "."
+                if enumType.startswith(prefix):
+                    short_ctype = normalize_class_name(enumType[len(prefix):])
+                    type_dict.setdefault(short_ctype, enum_entry)
         const_decls = decl[3]
 
         for decl in const_decls:
@@ -847,7 +853,7 @@ class JavaWrapperGenerator(object):
             logging.info("java: " + j_signature)
 
             if j_signature in j_signatures:
-                if args:
+                if args and args[-1].defval:
                     args.pop()
                     continue
                 else:
