@@ -5,7 +5,7 @@
  * Copyright (C) 1994-1996, Thomas G. Lane.
  * Modified 2009-2012 by Guido Vollbeding.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2013, 2016, 2022, D. R. Commander.
+ * Copyright (C) 2013, 2016, 2022, 2026, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -22,6 +22,9 @@
 #include "jinclude.h"
 #include "jpeglib.h"
 #include "jerror.h"
+#if !defined(_MSC_VER) || _MSC_VER > 1600
+#include <stdint.h>
+#endif
 
 
 /* Expanded data destination object for stdio output */
@@ -124,12 +127,23 @@ empty_mem_output_buffer(j_compress_ptr cinfo)
   JOCTET *nextbuffer;
   my_mem_dest_ptr dest = (my_mem_dest_ptr)cinfo->dest;
 
-  /* Try to allocate new buffer with double size */
+  /* Try to allocate new buffer with double size
+   *
+   * NOTE: The following check isn't actually necessary.  On 64-bit systems,
+   * the maximum theoretical JPEG size is
+   * 65500 * 65500 * cinfo->num_components * sizeof(DCTELEM) bytes, which is of
+   * course much less than 8 exabytes (SIZE_MAX / 2).  On 32-bit systems,
+   * malloc() will never return a buffer >= 2 GB, so the malloc() call will
+   * fail before 32-bit integer overflow/wraparound can occur.  The sole
+   * purpose of this code is to shut up automated code analysis tools.
+   */
+  if (dest->bufsize > SIZE_MAX / 2)
+    ERREXIT1(cinfo, JERR_OUT_OF_MEMORY, 13);
   nextsize = dest->bufsize * 2;
   nextbuffer = (JOCTET *)malloc(nextsize);
 
   if (nextbuffer == NULL)
-    ERREXIT1(cinfo, JERR_OUT_OF_MEMORY, 10);
+    ERREXIT1(cinfo, JERR_OUT_OF_MEMORY, 12);
 
   memcpy(nextbuffer, dest->buffer, dest->bufsize);
 

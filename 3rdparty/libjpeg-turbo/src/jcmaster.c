@@ -7,7 +7,7 @@
  * Lossless JPEG Modifications:
  * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2010, 2016, 2018, 2022-2024, D. R. Commander.
+ * Copyright (C) 2010, 2016, 2018, 2022-2024, 2026, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -22,6 +22,9 @@
 #include "jpeglib.h"
 #include "jpegapicomp.h"
 #include "jcmaster.h"
+#ifdef WITH_PROFILE
+#include "tjutil.h"
+#endif
 
 
 /*
@@ -276,11 +279,11 @@ validate_script(j_compress_ptr cinfo)
  */
 {
   const jpeg_scan_info *scanptr;
-  int scanno, ncomps, ci, coefi, thisi;
+  int scanno, ncomps, ci, thisi;
   int Ss, Se, Ah, Al;
   boolean component_sent[MAX_COMPONENTS];
 #ifdef C_PROGRESSIVE_SUPPORTED
-  int *last_bitpos_ptr;
+  int coefi, *last_bitpos_ptr;
   int last_bitpos[MAX_COMPONENTS][DCTSIZE2];
   /* -1 until that coefficient has been seen; then last Al for it */
 #endif
@@ -619,8 +622,8 @@ prepare_for_pass(j_compress_ptr cinfo)
      */
     master->pass_type = output_pass;
     master->pass_number++;
-#endif
     FALLTHROUGH                 /*FALLTHROUGH*/
+#endif
   case output_pass:
     /* Do a data-output pass. */
     /* We need not repeat per-scan setup if prior optimization pass did it. */
@@ -720,6 +723,10 @@ jinit_c_master_control(j_compress_ptr cinfo, boolean transcode_only)
   my_master_ptr master = (my_master_ptr)cinfo->master;
   boolean empty_huff_tables = TRUE;
   int i;
+
+#ifdef WITH_PROFILE
+  master->pub.total_start = getTime();
+#endif
 
   master->pub.prepare_for_pass = prepare_for_pass;
   master->pub.pass_startup = pass_startup;

@@ -6,7 +6,7 @@
  * Lossless JPEG Modifications:
  * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2016, 2022, 2024, D. R. Commander.
+ * Copyright (C) 2016, 2022, 2024-2026, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -25,6 +25,9 @@
 #include "jinclude.h"
 #include "jpeglib.h"
 #include "jdmaster.h"
+#ifdef WITH_SIMD
+#include "../simd/jsimdconst.h"
+#endif
 
 
 /*
@@ -96,6 +99,12 @@ jpeg_CreateDecompress(j_decompress_ptr cinfo, int version, size_t structsize)
     (*cinfo->mem->alloc_small) ((j_common_ptr)cinfo, JPOOL_PERMANENT,
                                 sizeof(my_decomp_master));
   memset(cinfo->master, 0, sizeof(my_decomp_master));
+#ifdef WITH_SIMD
+  cinfo->master->simd_support = JSIMD_UNDEFINED;
+#ifndef WITH_SIMDE
+  cinfo->master->simd_huffman = 1;
+#endif
+#endif
 }
 
 

@@ -1,8 +1,8 @@
 /*
- * Merged upsampling/color conversion (Arm Neon)
+ * Merged Upsampling/Color Conversion (Arm Neon)
  *
- * Copyright (C) 2020, Arm Limited.  All Rights Reserved.
- * Copyright (C) 2020, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2020, Arm Limited.
+ * Copyright (C) 2020, 2025, D. R. Commander.
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -58,10 +58,10 @@
 /* Upsample and color convert for the case of 2:1 horizontal and 1:1 vertical.
  */
 
-void jsimd_h2v1_merged_upsample_neon(JDIMENSION output_width,
-                                     JSAMPIMAGE input_buf,
-                                     JDIMENSION in_row_group_ctr,
-                                     JSAMPARRAY output_buf)
+HIDDEN void
+jsimd_h2v1_merged_upsample_neon(JDIMENSION output_width, JSAMPIMAGE input_buf,
+                                JDIMENSION in_row_group_ctr,
+                                JSAMPARRAY output_buf)
 {
   JSAMPROW outptr;
   /* Pointers to Y, Cb, and Cr data */
@@ -342,10 +342,10 @@ void jsimd_h2v1_merged_upsample_neon(JDIMENSION output_width,
  * access.
  */
 
-void jsimd_h2v2_merged_upsample_neon(JDIMENSION output_width,
-                                     JSAMPIMAGE input_buf,
-                                     JDIMENSION in_row_group_ctr,
-                                     JSAMPARRAY output_buf)
+HIDDEN void
+jsimd_h2v2_merged_upsample_neon(JDIMENSION output_width, JSAMPIMAGE input_buf,
+                                JDIMENSION in_row_group_ctr,
+                                JSAMPARRAY output_buf)
 {
   JSAMPROW outptr0, outptr1;
   /* Pointers to Y (both rows), Cb, and Cr data */

@@ -17,12 +17,11 @@
 ; --------------------------------------------------------------------------
     SECTION     SEG_TEXT
     BITS        64
-;
+
 ; Check if the CPU supports SIMD instructions
 ;
 ; GLOBAL(unsigned int)
 ; jpeg_simd_cpu_support(void)
-;
 
     align       32
     GLOBAL_FUNCTION(jpeg_simd_cpu_support)
@@ -52,16 +51,16 @@ EXTN(jpeg_simd_cpu_support):
     cpuid
     mov         rax, rbx                ; rax = Extended feature flags
 
-    test        rax, 1<<5               ; bit5:AVX2
+    test        rax, 1 << 5             ; bit5:AVX2
     jz          short .return
 
     ; Check for AVX2 O/S support
     mov         rax, 1
     xor         rcx, rcx
     cpuid
-    test        rcx, 1<<27
+    test        rcx, 1 << 27
     jz          short .return           ; O/S does not support XSAVE
-    test        rcx, 1<<28
+    test        rcx, 1 << 28
     jz          short .return           ; CPU does not support AVX2
 
     xor         rcx, rcx

@@ -1,9 +1,9 @@
 /*
- * Prepare data for progressive Huffman encoding (Arm Neon)
+ * Data Preparation for Progressive Huffman Encoding (Arm Neon)
  *
- * Copyright (C) 2020-2021, Arm Limited.  All Rights Reserved.
- * Copyright (C) 2022, Matthieu Darbois.  All Rights Reserved.
- * Copyright (C) 2022, 2024-2025, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2020-2021, Arm Limited.
+ * Copyright (C) 2022, Matthieu Darbois.
+ * Copyright (C) 2022, 2024-2025, D. R. Commander.
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -22,16 +22,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
-#define JPEG_INTERNALS
-#include "../../src/jinclude.h"
-#include "../../src/jpeglib.h"
-#include "../../src/jsimd.h"
-#include "../../src/jdct.h"
-#include "../../src/jsimddct.h"
-#include "../jsimd.h"
+#include "../jsimdint.h"
 #include "neon-compat.h"
-
-#include <arm_neon.h>
 
 
 /* Data preparation for encode_mcu_AC_first().
@@ -40,9 +32,11 @@
  * found in jcphuff.c.
  */
 
-void jsimd_encode_mcu_AC_first_prepare_neon
-  (const JCOEF *block, const int *jpeg_natural_order_start, int Sl, int Al,
-   UJCOEF *values, size_t *zerobits)
+HIDDEN void
+jsimd_encode_mcu_AC_first_prepare_neon(const JCOEF *block,
+                                       const int *jpeg_natural_order_start,
+                                       int Sl, int Al, UJCOEF *values,
+                                       size_t *zerobits)
 {
   UJCOEF *values_ptr = values;
   UJCOEF *diff_values_ptr = values + DCTSIZE2;
@@ -251,7 +245,7 @@ void jsimd_encode_mcu_AC_first_prepare_neon
   uint8x8_t bitmap_rows_4567 = vpadd_u8(bitmap_rows_45, bitmap_rows_67);
   uint8x8_t bitmap_all = vpadd_u8(bitmap_rows_0123, bitmap_rows_4567);
 
-#if defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
+#if SIMD_ARCHITECTURE == ARM64
   /* Move bitmap to a 64-bit scalar register. */
   uint64_t bitmap = vget_lane_u64(vreinterpret_u64_u8(bitmap_all), 0);
   /* Store zerobits bitmap. */
@@ -273,9 +267,11 @@ void jsimd_encode_mcu_AC_first_prepare_neon
  * found in jcphuff.c.
  */
 
-int jsimd_encode_mcu_AC_refine_prepare_neon
-  (const JCOEF *block, const int *jpeg_natural_order_start, int Sl, int Al,
-   UJCOEF *absvalues, size_t *bits)
+HIDDEN int
+jsimd_encode_mcu_AC_refine_prepare_neon(const JCOEF *block,
+                                        const int *jpeg_natural_order_start,
+                                        int Sl, int Al, UJCOEF *absvalues,
+                                        size_t *bits)
 {
   /* Temporary storage buffers for data used to compute the signbits bitmap and
    * the end-of-block (EOB) position
@@ -511,7 +507,7 @@ int jsimd_encode_mcu_AC_refine_prepare_neon
   uint8x8_t bitmap_rows_4567 = vpadd_u8(bitmap_rows_45, bitmap_rows_67);
   uint8x8_t bitmap_all = vpadd_u8(bitmap_rows_0123, bitmap_rows_4567);
 
-#if defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
+#if SIMD_ARCHITECTURE == ARM64
   /* Move bitmap to a 64-bit scalar register. */
   uint64_t bitmap = vget_lane_u64(vreinterpret_u64_u8(bitmap_all), 0);
   /* Store zerobits bitmap. */
@@ -552,7 +548,7 @@ int jsimd_encode_mcu_AC_refine_prepare_neon
   bitmap_rows_4567 = vpadd_u8(bitmap_rows_45, bitmap_rows_67);
   bitmap_all = vpadd_u8(bitmap_rows_0123, bitmap_rows_4567);
 
-#if defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
+#if SIMD_ARCHITECTURE == ARM64
   /* Move bitmap to a 64-bit scalar register. */
   bitmap = vget_lane_u64(vreinterpret_u64_u8(bitmap_all), 0);
   /* Store signbits bitmap. */
@@ -595,7 +591,7 @@ int jsimd_encode_mcu_AC_refine_prepare_neon
   bitmap_rows_4567 = vpadd_u8(bitmap_rows_45, bitmap_rows_67);
   bitmap_all = vpadd_u8(bitmap_rows_0123, bitmap_rows_4567);
 
-#if defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
+#if SIMD_ARCHITECTURE == ARM64
   /* Move bitmap to a 64-bit scalar register. */
   bitmap = vget_lane_u64(vreinterpret_u64_u8(bitmap_all), 0);
 

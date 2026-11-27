@@ -1,7 +1,8 @@
 /*
- * Grayscale colorspace conversion (Arm Neon)
+ * RGB-to-Grayscale Color Conversion (Arm Neon)
  *
- * Copyright (C) 2020, Arm Limited.  All Rights Reserved.
+ * Copyright (C) 2020, Arm Limited.
+ * Copyright (C) 2025, D. R. Commander.
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -35,9 +36,10 @@
  * This is the same computation as the RGB -> Y portion of RGB -> YCbCr.
  */
 
-void jsimd_rgb_gray_convert_neon(JDIMENSION image_width, JSAMPARRAY input_buf,
-                                 JSAMPIMAGE output_buf, JDIMENSION output_row,
-                                 int num_rows)
+HIDDEN void
+jsimd_rgb_gray_convert_neon(JDIMENSION image_width, JSAMPARRAY input_buf,
+                            JSAMPIMAGE output_buf, JDIMENSION output_row,
+                            int num_rows)
 {
   JSAMPROW inptr;
   JSAMPROW outptr;

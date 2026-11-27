@@ -1,9 +1,8 @@
 /*
- * Loongson MMI optimizations for libjpeg-turbo
+ * YCbCr-to-RGB Color Conversion (64-bit MMI)
  *
- * Copyright (C) 2011, 2015, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2011, 2015, D. R. Commander.
  * Copyright (C) 2016-2017, Loongson Technology Corporation Limited, BeiJing.
- *                          All Rights Reserved.
  * Authors:  ZhuChen     <zhuchen@loongson.cn>
  *           CaiWanwei   <caiwanwei@loongson.cn>
  *           SunZhangzhi <sunzhangzhi-cq@loongson.cn>
@@ -24,8 +23,6 @@
  *    misrepresented as being the original software.
  * 3. This notice may not be removed or altered from any source distribution.
  */
-
-/* YCC --> RGB CONVERSION */
 
 #include "jsimd_mmi.h"
 

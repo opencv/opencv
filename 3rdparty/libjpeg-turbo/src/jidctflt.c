@@ -5,7 +5,7 @@
  * Copyright (C) 1994-1998, Thomas G. Lane.
  * Modified 2010 by Guido Vollbeding.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2014, 2022, D. R. Commander.
+ * Copyright (C) 2014, 2022, 2026, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -57,11 +57,33 @@
 #endif
 
 
+/* When decompressing an 8-bit-per-sample lossy JPEG image, we allow the caller
+ * to request 12-bit-per-sample output in order to facilitate shadow recovery
+ * in underexposed images.  This is accomplished by using the 12-bit-per-sample
+ * decompression pipeline and multiplying the DCT coefficients from the
+ * 8-bit-per-sample JPEG image by 16 (the equivalent of left shifting by 4
+ * bits.)
+ */
+
+#if BITS_IN_JSAMPLE == 12
+#define SCALING_FACTOR \
+  FAST_FLOAT scaling_factor = (cinfo->master->jpeg_data_precision == 8 && \
+                               cinfo->data_precision == 12 ? 16.0f : 1.0f);
+#else
+#define SCALING_FACTOR
+#endif
+
+
 /* Dequantize a coefficient by multiplying it by the multiplier-table
  * entry; produce a float result.
  */
 
+#if BITS_IN_JSAMPLE == 8
 #define DEQUANTIZE(coef, quantval)  (((FAST_FLOAT)(coef)) * (quantval))
+#else
+#define DEQUANTIZE(coef, quantval) \
+  (((FAST_FLOAT)(coef)) * (quantval) * scaling_factor)
+#endif
 
 
 /*
@@ -84,6 +106,7 @@ _jpeg_idct_float(j_decompress_ptr cinfo, jpeg_component_info *compptr,
   int ctr;
   FAST_FLOAT workspace[DCTSIZE2]; /* buffers data between passes */
 #define _0_125  ((FLOAT_MULT_TYPE)0.125)
+  SCALING_FACTOR
 
   /* Pass 1: process columns from input, store into work array. */
 

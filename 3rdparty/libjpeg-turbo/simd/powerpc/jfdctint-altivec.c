@@ -1,7 +1,7 @@
 /*
- * AltiVec optimizations for libjpeg-turbo
+ * Accurate Integer Forward DCT (AltiVec)
  *
- * Copyright (C) 2014, 2020, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2014, 2020, 2025, D. R. Commander.
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -19,8 +19,6 @@
  *    misrepresented as being the original software.
  * 3. This notice may not be removed or altered from any source distribution.
  */
-
-/* ACCURATE INTEGER FORWARD DCT */
 
 #include "jsimd_altivec.h"
 
@@ -179,7 +177,8 @@
 }
 
 
-void jsimd_fdct_islow_altivec(DCTELEM *data)
+HIDDEN void
+jsimd_fdct_islow_altivec(DCTELEM *data)
 {
   __vector short row0, row1, row2, row3, row4, row5, row6, row7,
     col0, col1, col2, col3, col4, col5, col6, col7,

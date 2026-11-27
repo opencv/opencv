@@ -6,7 +6,7 @@
  * Lossless JPEG Modifications:
  * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2022, D. R. Commander.
+ * Copyright (C) 2022, 2026, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -190,7 +190,9 @@ start_pass_lhuff(j_compress_ptr cinfo, boolean gather_statistics)
         entropy->input_ptr_index[sampn] = ptrn;
         /* Precalculate which tables to use for each sample */
         entropy->cur_tbls[sampn] = entropy->derived_tbls[compptr->dc_tbl_no];
+#ifdef ENTROPY_OPT_SUPPORTED
         entropy->cur_counts[sampn] = entropy->count_ptrs[compptr->dc_tbl_no];
+#endif
       }
     }
   }

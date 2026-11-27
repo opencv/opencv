@@ -6,7 +6,7 @@
  * Lossless JPEG Modifications:
  * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2022, 2024, D. R. Commander.
+ * Copyright (C) 2022, 2024, 2026, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -313,7 +313,7 @@ compress_output(j_compress_ptr cinfo, _JSAMPIMAGE input_buf)
 {
   my_diff_ptr diff = (my_diff_ptr)cinfo->coef;
   int ci, compi;
-  _JSAMPARRAY buffer[MAX_COMPS_IN_SCAN];
+  _JSAMPARRAY buffer[MAX_COMPONENTS];
   jpeg_component_info *compptr;
 
   /* Align the virtual buffers for the components used in this scan.

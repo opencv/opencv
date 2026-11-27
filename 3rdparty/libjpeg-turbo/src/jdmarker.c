@@ -6,7 +6,7 @@
  * Lossless JPEG Modifications:
  * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2012, 2015, 2022, 2024, D. R. Commander.
+ * Copyright (C) 2012, 2015, 2022, 2024, 2026, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -258,6 +258,7 @@ get_sof(j_decompress_ptr cinfo, boolean is_prog, boolean is_lossless,
   INPUT_2BYTES(cinfo, length, return FALSE);
 
   INPUT_BYTE(cinfo, cinfo->data_precision, return FALSE);
+  cinfo->master->jpeg_data_precision = cinfo->data_precision;
   INPUT_2BYTES(cinfo, cinfo->image_height, return FALSE);
   INPUT_2BYTES(cinfo, cinfo->image_width, return FALSE);
   INPUT_BYTE(cinfo, cinfo->num_components, return FALSE);

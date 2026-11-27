@@ -3,16 +3,25 @@ macro(simd_fail message)
     message(FATAL_ERROR "${message}.")
   else()
     message(STATUS "${message}.  Performance will suffer.")
+    set(WITH_SIMD 0)
     set(WITH_SIMD 0 PARENT_SCOPE)
+    set(SIMD_ARCHITECTURE NONE PARENT_SCOPE)
   endif()
 endmacro()
+
+
+option(WITH_SIMDE "Use SIMD Everywhere or Emscripten to translate Arm/Neon intrinsics into SIMD intrinsics for other platforms (Experimental)"
+  FALSE)
 
 
 ###############################################################################
 # x86[-64] (NASM)
 ###############################################################################
 
-if(CPU_TYPE STREQUAL "x86_64" OR CPU_TYPE STREQUAL "i386")
+if((CPU_TYPE STREQUAL "x86_64" OR CPU_TYPE STREQUAL "i386") AND NOT WITH_SIMDE)
+
+string(TOUPPER ${CPU_TYPE} SIMD_ARCHITECTURE)
+set(SIMD_ARCHITECTURE ${SIMD_ARCHITECTURE} PARENT_SCOPE)
 
 set(CMAKE_ASM_NASM_FLAGS_DEBUG_INIT "-g")
 set(CMAKE_ASM_NASM_FLAGS_RELWITHDEBINFO_INIT "-g")
@@ -119,8 +128,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "SunOS")
   set(GREP ggrep)
 endif()
 add_custom_target(jsimdcfg COMMAND
-  ${CMAKE_C_COMPILER} -E -I${CMAKE_BINARY_DIR} -I${CMAKE_CURRENT_BINARY_DIR}
-    -I${CMAKE_CURRENT_SOURCE_DIR}
+  ${CMAKE_C_COMPILER} -Wall -Werror -E -I${CMAKE_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/nasm/jsimdcfg.inc.h |
   ${GREP} -E '^[\;%]|^\ %' | sed 's%_cpp_protection_%%' |
   sed 's@% define@%define@g' >${CMAKE_CURRENT_SOURCE_DIR}/nasm/jsimdcfg.inc)
@@ -138,12 +146,12 @@ if(CPU_TYPE STREQUAL "x86_64")
     x86_64/jfdctint-avx2.asm x86_64/jidctint-avx2.asm x86_64/jquanti-avx2.asm)
 else()
   set(SIMD_SOURCES i386/jsimdcpu.asm i386/jfdctflt-3dn.asm
-    i386/jidctflt-3dn.asm i386/jquant-3dn.asm
+    i386/jidctflt-3dn.asm i386/jquantf-3dn.asm
     i386/jccolor-mmx.asm i386/jcgray-mmx.asm i386/jcsample-mmx.asm
     i386/jdcolor-mmx.asm i386/jdmerge-mmx.asm i386/jdsample-mmx.asm
     i386/jfdctfst-mmx.asm i386/jfdctint-mmx.asm i386/jidctfst-mmx.asm
-    i386/jidctint-mmx.asm i386/jidctred-mmx.asm i386/jquant-mmx.asm
-    i386/jfdctflt-sse.asm i386/jidctflt-sse.asm i386/jquant-sse.asm
+    i386/jidctint-mmx.asm i386/jidctred-mmx.asm i386/jquanti-mmx.asm
+    i386/jfdctflt-sse.asm i386/jidctflt-sse.asm i386/jquantf-sse.asm
     i386/jccolor-sse2.asm i386/jcgray-sse2.asm i386/jchuff-sse2.asm
     i386/jcphuff-sse2.asm i386/jcsample-sse2.asm i386/jdcolor-sse2.asm
     i386/jdmerge-sse2.asm i386/jdsample-sse2.asm i386/jfdctfst-sse2.asm
@@ -156,7 +164,7 @@ else()
 endif()
 
 if(MSVC_IDE)
-  set(OBJDIR "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}")
+  set(OBJDIR "${CMAKE_CURRENT_BINARY_DIR}/$(Configuration)")
   string(REGEX REPLACE " " ";" CMAKE_ASM_NASM_FLAGS "${CMAKE_ASM_NASM_FLAGS}")
 elseif(XCODE)
   set(OBJDIR "${CMAKE_CURRENT_BINARY_DIR}")
@@ -208,14 +216,14 @@ endforeach()
 
 if(MSVC_IDE OR XCODE)
   set(SIMD_OBJS ${SIMD_OBJS} PARENT_SCOPE)
-  add_library(simd OBJECT ${CPU_TYPE}/jsimd.c)
+  add_library(simd OBJECT jsimd.c)
   add_custom_target(simd-objs DEPENDS ${SIMD_OBJS})
   add_dependencies(simd simd-objs)
   set_target_properties(simd PROPERTIES FOLDER "3rdparty/jpeg")
   set_target_properties(simd-objs PROPERTIES FOLDER "3rdparty/jpeg")
   set_target_properties(jsimdcfg PROPERTIES FOLDER "3rdparty/jpeg")
 else()
-  add_library(simd OBJECT ${SIMD_SOURCES} ${CPU_TYPE}/jsimd.c)
+  add_library(simd OBJECT ${SIMD_SOURCES} jsimd.c)
 endif()
 if(NOT WIN32 AND (CMAKE_POSITION_INDEPENDENT_CODE OR ENABLE_SHARED))
   set_target_properties(simd PROPERTIES POSITION_INDEPENDENT_CODE 1)
@@ -223,10 +231,33 @@ endif()
 
 
 ###############################################################################
-# Arm (Intrinsics or GAS)
+# Arm (Intrinsics)
 ###############################################################################
 
-elseif(CPU_TYPE STREQUAL "arm64" OR CPU_TYPE STREQUAL "arm")
+elseif(CPU_TYPE STREQUAL "arm64" OR CPU_TYPE STREQUAL "arm" OR WITH_SIMDE)
+
+string(TOUPPER ${CPU_TYPE} SIMD_ARCHITECTURE)
+set(SIMD_ARCHITECTURE ${SIMD_ARCHITECTURE} PARENT_SCOPE)
+
+if(WITH_SIMDE)
+
+if(NOT DEFINED HAVE_VLD1_S16_X3)
+  set(HAVE_VLD1_S16_X3 1)
+endif()
+if(NOT DEFINED HAVE_VLD1_U16_X2)
+  set(HAVE_VLD1_U16_X2 1)
+endif()
+if(NOT DEFINED HAVE_VLD1Q_U8_X4)
+  set(HAVE_VLD1Q_U8_X4 0)
+endif()
+
+if(BITS EQUAL 64)
+  set(SIMD_ARCHITECTURE ARM64 PARENT_SCOPE)
+else()
+  set(SIMD_ARCHITECTURE ARM PARENT_SCOPE)
+endif()
+
+else() # WITH_SIMDE
 
 # If Neon instructions are not explicitly enabled at compile time (e.g. using
 # -mfpu=neon) with an AArch32 Linux or Android build, then the AArch32 SIMD
@@ -306,94 +337,45 @@ check_c_source_compiles("
 if(BITS EQUAL 32)
   unset(CMAKE_REQUIRED_FLAGS)
 endif()
+
+# GCC 11 and earlier and some older versions of Clang do not have a full or
+# optimal set of Neon intrinsics.  The presence or absence of the three
+# intrinsics we tested above is a reasonable proxy for this, except with GCC 10
+# and 11.
+if(NOT HAVE_VLD1_S16_X3 OR NOT HAVE_VLD1_U16_X2 OR NOT HAVE_VLD1Q_U8_X4 OR
+  (CMAKE_COMPILER_IS_GNUCC AND CMAKE_C_COMPILER_VERSION VERSION_LESS 12.0.0))
+  message(WARNING "The compiler's Arm Neon intrinsics implementation is incomplete or suboptimal.  Performance will suffer.  Use GCC 12 or later or Clang for full performance.")
+endif()
+
+endif() # WITH_SIMDE
+
 configure_file(arm/neon-compat.h.in arm/neon-compat.h @ONLY)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/arm)
 
-# GCC 11 and earlier and some older versions of Clang do not have a full or
-# optimal set of Neon intrinsics, so for performance reasons, when using those
-# compilers, we default to using the older GAS implementation of the Neon SIMD
-# extensions for certain algorithms.  The presence or absence of the three
-# intrinsics we tested above is a reasonable proxy for this, except with GCC 10
-# and 11.
-if((HAVE_VLD1_S16_X3 AND HAVE_VLD1_U16_X2 AND HAVE_VLD1Q_U8_X4 AND
-  (NOT CMAKE_COMPILER_IS_GNUCC OR
-  CMAKE_C_COMPILER_VERSION VERSION_EQUAL 12.0.0 OR
-  CMAKE_C_COMPILER_VERSION VERSION_GREATER 12.0.0)))
-  set(DEFAULT_NEON_INTRINSICS 1)
-else()
-  set(DEFAULT_NEON_INTRINSICS 0)
-endif()
-option(NEON_INTRINSICS
-  "Because GCC (as of this writing) and some older versions of Clang do not have a full or optimal set of Neon intrinsics, for performance reasons, the default when building libjpeg-turbo with those compilers is to continue using the older GAS implementation of the Neon SIMD extensions for certain algorithms.  Setting this option forces the full Neon intrinsics implementation to be used with all compilers.  Unsetting this option forces the hybrid GAS/intrinsics implementation to be used with all compilers."
-  ${DEFAULT_NEON_INTRINSICS})
-if(NOT NEON_INTRINSICS)
-  enable_language(ASM)
-
-  set(CMAKE_ASM_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_ASM_FLAGS}")
-
-  # Test whether gas-preprocessor.pl would be needed to build the GAS
-  # implementation of the Neon SIMD extensions.  If so, then automatically
-  # enable the full Neon intrinsics implementation.
-  if(CPU_TYPE STREQUAL "arm")
-    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/gastest.S "
-      .text
-      .fpu neon
-      .arch armv7a
-      .object_arch armv4
-      .arm
-      pld [r0]
-      vmovn.u16 d0, q0")
-  else()
-    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/gastest.S "
-      .text
-      MYVAR .req x0
-      movi v0.16b, #100
-      mov MYVAR, #100
-      .unreq MYVAR")
-  endif()
-  separate_arguments(CMAKE_ASM_FLAGS_SEP UNIX_COMMAND "${CMAKE_ASM_FLAGS}")
-  execute_process(COMMAND ${CMAKE_ASM_COMPILER} ${CMAKE_ASM_FLAGS_SEP}
-      -x assembler-with-cpp -c ${CMAKE_CURRENT_BINARY_DIR}/gastest.S
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} RESULT_VARIABLE RESULT
-    OUTPUT_VARIABLE OUTPUT ERROR_VARIABLE ERROR)
-  if(NOT RESULT EQUAL 0)
-    message(WARNING "GAS appears to be broken.  Using the full Neon SIMD intrinsics implementation.")
-    set(NEON_INTRINSICS 1 CACHE INTERNAL "" FORCE)
-  endif()
-endif()
-boolean_number(NEON_INTRINSICS PARENT_SCOPE)
-if(NEON_INTRINSICS)
-  add_definitions(-DNEON_INTRINSICS)
-  message(STATUS "Use full Neon SIMD intrinsics implementation (NEON_INTRINSICS = ${NEON_INTRINSICS})")
-else()
-  message(STATUS "Use partial Neon SIMD intrinsics implementation (NEON_INTRINSICS = ${NEON_INTRINSICS})")
-endif()
-
-set(SIMD_SOURCES arm/jcgray-neon.c arm/jcphuff-neon.c arm/jcsample-neon.c
-  arm/jdmerge-neon.c arm/jdsample-neon.c arm/jfdctfst-neon.c
+set(SIMD_SOURCES arm/jccolor-neon.c arm/jcgray-neon.c
+  arm/aarch${BITS}/jchuff-neon.c arm/jcphuff-neon.c arm/jcsample-neon.c
+  arm/jdcolor-neon.c arm/jdmerge-neon.c arm/jdsample-neon.c arm/jfdctfst-neon.c
+  arm/jfdctint-neon.c arm/jidctfst-neon.c arm/jidctint-neon.c
   arm/jidctred-neon.c arm/jquanti-neon.c)
-if(NEON_INTRINSICS)
-  set(SIMD_SOURCES ${SIMD_SOURCES} arm/jccolor-neon.c arm/jidctint-neon.c)
-endif()
-if(NEON_INTRINSICS OR BITS EQUAL 64)
-  set(SIMD_SOURCES ${SIMD_SOURCES} arm/jidctfst-neon.c)
-endif()
-if(NEON_INTRINSICS OR BITS EQUAL 32)
-  set(SIMD_SOURCES ${SIMD_SOURCES} arm/aarch${BITS}/jchuff-neon.c
-    arm/jdcolor-neon.c arm/jfdctint-neon.c)
-endif()
 if(BITS EQUAL 32)
   set_source_files_properties(${SIMD_SOURCES} COMPILE_FLAGS "-mfpu=neon ${SOFTFP_FLAG}")
 endif()
-if(NOT NEON_INTRINSICS)
-  string(TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE_UC)
-  set(EFFECTIVE_ASM_FLAGS "${CMAKE_ASM_FLAGS} ${CMAKE_ASM_FLAGS_${CMAKE_BUILD_TYPE_UC}}")
-  message(STATUS "CMAKE_ASM_FLAGS = ${EFFECTIVE_ASM_FLAGS}")
 
-  set(SIMD_SOURCES ${SIMD_SOURCES} arm/aarch${BITS}/jsimd_neon.S)
+if(UNIX AND BITS EQUAL 32)
+  include(CheckSymbolExists)
+  check_symbol_exists(getauxval sys/auxv.h HAVE_GETAUXVAL)
+  if(HAVE_GETAUXVAL)
+    set_source_files_properties(arm/aarch${BITS}/jsimdcpu.c PROPERTIES
+      COMPILE_DEFINITIONS HAVE_GETAUXVAL)
+  endif()
+  check_symbol_exists(elf_aux_info sys/auxv.h HAVE_ELF_AUX_INFO)
+  if(HAVE_ELF_AUX_INFO)
+    set_source_files_properties(arm/aarch${BITS}/jsimdcpu.c PROPERTIES
+      COMPILE_DEFINITIONS HAVE_ELF_AUX_INFO)
+  endif()
 endif()
 
-add_library(simd OBJECT ${SIMD_SOURCES} arm/aarch${BITS}/jsimd.c)
+add_library(simd OBJECT ${SIMD_SOURCES} arm/aarch${BITS}/jsimdcpu.c jsimd.c)
 
 if(CMAKE_POSITION_INDEPENDENT_CODE OR ENABLE_SHARED)
   set_target_properties(simd PROPERTIES POSITION_INDEPENDENT_CODE 1)
@@ -401,45 +383,126 @@ endif()
 
 
 ###############################################################################
-# MIPS (GAS)
+# PowerPC (Intrinsics)
 ###############################################################################
 
-elseif(CPU_TYPE STREQUAL "mips" OR CPU_TYPE STREQUAL "mipsel")
+elseif(CPU_TYPE STREQUAL "powerpc")
 
-enable_language(ASM)
+string(TOUPPER ${CPU_TYPE} SIMD_ARCHITECTURE)
+set(SIMD_ARCHITECTURE ${SIMD_ARCHITECTURE} PARENT_SCOPE)
 
-string(TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE_UC)
-set(EFFECTIVE_ASM_FLAGS "${CMAKE_ASM_FLAGS} ${CMAKE_ASM_FLAGS_${CMAKE_BUILD_TYPE_UC}}")
-message(STATUS "CMAKE_ASM_FLAGS = ${EFFECTIVE_ASM_FLAGS}")
-
-set(CMAKE_REQUIRED_FLAGS -mdspr2)
+set(CMAKE_REQUIRED_FLAGS -maltivec)
 
 check_c_source_compiles("
-  #if !(defined(__mips__) && __mips_isa_rev >= 2)
-  #error MIPS DSPr2 is currently only available on MIPS32r2 platforms.
-  #endif
+  #include <altivec.h>
   int main(void) {
-    int c = 0, a = 0, b = 0;
-    __asm__ __volatile__ (
-      \"precr.qb.ph %[c], %[a], %[b]\"
-      : [c] \"=r\" (c)
-      : [a] \"r\" (a), [b] \"r\" (b)
-    );
-    return c;
-  }" HAVE_DSPR2)
+    __vector int vi = { 0, 0, 0, 0 };
+    int i[4];
+    vec_st(vi, 0, i);
+    return i[0];
+  }" HAVE_ALTIVEC)
 
 unset(CMAKE_REQUIRED_FLAGS)
 
-if(NOT HAVE_DSPR2)
+if(NOT HAVE_ALTIVEC)
+  simd_fail("SIMD extensions not available for this CPU (PowerPC SPE)")
+  return()
+endif()
+
+set(SIMD_SOURCES powerpc/jccolor-altivec.c powerpc/jcgray-altivec.c
+  powerpc/jcsample-altivec.c powerpc/jdcolor-altivec.c
+  powerpc/jdmerge-altivec.c powerpc/jdsample-altivec.c
+  powerpc/jfdctfst-altivec.c powerpc/jfdctint-altivec.c
+  powerpc/jidctfst-altivec.c powerpc/jidctint-altivec.c
+  powerpc/jquanti-altivec.c)
+
+set_source_files_properties(${SIMD_SOURCES} PROPERTIES
+  COMPILE_FLAGS -maltivec)
+
+if(UNIX)
+  include(CheckSymbolExists)
+  check_symbol_exists(getauxval sys/auxv.h HAVE_GETAUXVAL)
+  if(HAVE_GETAUXVAL)
+    set_source_files_properties(powerpc/jsimdcpu.c PROPERTIES
+      COMPILE_DEFINITIONS HAVE_GETAUXVAL)
+  endif()
+  check_symbol_exists(elf_aux_info sys/auxv.h HAVE_ELF_AUX_INFO)
+  if(HAVE_ELF_AUX_INFO)
+    set_source_files_properties(powerpc/jsimdcpu.c PROPERTIES
+      COMPILE_DEFINITIONS HAVE_ELF_AUX_INFO)
+  endif()
+endif()
+
+add_library(simd OBJECT ${SIMD_SOURCES} powerpc/jsimdcpu.c jsimd.c)
+
+if(CMAKE_POSITION_INDEPENDENT_CODE OR ENABLE_SHARED)
+  set_target_properties(simd PROPERTIES POSITION_INDEPENDENT_CODE 1)
+endif()
+
+
+###############################################################################
+# RISC-V 64-bit (Intrinsics)
+###############################################################################
+
+elseif(CPU_TYPE STREQUAL "riscv64")
+
+set(SIMD_ARCHITECTURE RISCV64 PARENT_SCOPE)
+
+set(CMAKE_REQUIRED_FLAGS -march=rv64gcv)
+
+check_c_source_compiles("
+  #include <riscv_vector.h>
+  int main(int argc, char **argv) {
+    size_t vl = __riscv_vsetvl_e32m8(32);
+    vuint32m8_t tmp0 = __riscv_vmv_v_x_u32m8(argc, vl);
+    vuint16m4_t tmp1 = __riscv_vnclipu_wx_u16m4(tmp0, 1, __RISCV_VXRM_RNU, vl);
+    vuint16m4_t tmp2 = __riscv_vnclipu_wx_u16m4(tmp0, 1, __RISCV_VXRM_RDN, vl);
+    vuint8m2_t tmp3 = __riscv_vmv_v_x_u8m2(argc, vl);
+    vuint8m2_t tmp4 = __riscv_vmv_v_x_u8m2(argc, vl);
+    vuint8m2x2_t tmp5 = __riscv_vcreate_v_u8m2x2(tmp3, tmp4);
+    return __riscv_vmv_x_s_u16m4_u16(tmp1) + __riscv_vmv_x_s_u16m4_u16(tmp2) +
+           __riscv_vmv_x_s_u8m2_u8(__riscv_vget_v_u8m2x2_u8m2(tmp5, 0)) +
+           __riscv_vmv_x_s_u8m2_u8(__riscv_vget_v_u8m2x2_u8m2(tmp5, 1));
+  }" HAVE_RVV)
+
+unset(CMAKE_REQUIRED_FLAGS)
+
+if(NOT HAVE_RVV)
   simd_fail("SIMD extensions not available for this CPU")
   return()
 endif()
 
-add_library(simd OBJECT mips/jsimd_dspr2.S mips/jsimd.c)
+set(SIMD_SOURCES riscv64/jccolor-rvv.c riscv64/jcgray-rvv.c
+  riscv64/jcsample-rvv.c riscv64/jdcolor-rvv.c riscv64/jdmerge-rvv.c
+  riscv64/jdsample-rvv.c riscv64/jfdctfst-rvv.c riscv64/jfdctint-rvv.c
+  riscv64/jidctfst-rvv.c riscv64/jidctint-rvv.c riscv64/jquanti-rvv.c)
+
+enable_language(ASM)
+
+set_source_files_properties(${SIMD_SOURCES} PROPERTIES
+  COMPILE_FLAGS -march=rv64gcv)
+
+if(UNIX)
+  include(CheckSymbolExists)
+  check_symbol_exists(getauxval sys/auxv.h HAVE_GETAUXVAL)
+  if(HAVE_GETAUXVAL)
+    set_source_files_properties(riscv64/jsimdcpu.c PROPERTIES
+      COMPILE_DEFINITIONS HAVE_GETAUXVAL)
+  endif()
+  check_symbol_exists(elf_aux_info sys/auxv.h HAVE_ELF_AUX_INFO)
+  if(HAVE_ELF_AUX_INFO)
+    set_source_files_properties(riscv64/jsimdcpu.c PROPERTIES
+      COMPILE_DEFINITIONS HAVE_ELF_AUX_INFO)
+  endif()
+endif()
+
+add_library(simd OBJECT ${SIMD_SOURCES} jsimd.c riscv64/jsimdcpu.c
+  riscv64/jsimdcpu.S)
 
 if(CMAKE_POSITION_INDEPENDENT_CODE OR ENABLE_SHARED)
   set_target_properties(simd PROPERTIES POSITION_INDEPENDENT_CODE 1)
 endif()
+
 
 ###############################################################################
 # MIPS64 (Intrinsics)
@@ -447,11 +510,13 @@ endif()
 
 elseif(CPU_TYPE STREQUAL "loongson" OR CPU_TYPE MATCHES "^mips64")
 
+set(SIMD_ARCHITECTURE MIPS64 PARENT_SCOPE)
+
 set(CMAKE_REQUIRED_FLAGS -Wa,-mloongson-mmi,-mloongson-ext)
 
 check_c_source_compiles("
   #if !(defined(__mips__) && __mips_isa_rev < 6)
-  #error Loongson MMI can't work with MIPS Release 6+
+  #error \"Loongson MMI can't work with MIPS Release 6+\"
   #endif
   int main(void) {
     int c = 0, a = 0, b = 0;
@@ -486,47 +551,7 @@ foreach(file ${SIMD_SOURCES})
     " -Wa,-mloongson-mmi,-mloongson-ext")
 endforeach()
 
-add_library(simd OBJECT ${SIMD_SOURCES} mips64/jsimd.c)
-
-if(CMAKE_POSITION_INDEPENDENT_CODE OR ENABLE_SHARED)
-  set_target_properties(simd PROPERTIES POSITION_INDEPENDENT_CODE 1)
-endif()
-
-###############################################################################
-# PowerPC (Intrinsics)
-###############################################################################
-
-elseif(CPU_TYPE STREQUAL "powerpc")
-
-set(CMAKE_REQUIRED_FLAGS -maltivec)
-
-check_c_source_compiles("
-  #include <altivec.h>
-  int main(void) {
-    __vector int vi = { 0, 0, 0, 0 };
-    int i[4];
-    vec_st(vi, 0, i);
-    return i[0];
-  }" HAVE_ALTIVEC)
-
-unset(CMAKE_REQUIRED_FLAGS)
-
-if(NOT HAVE_ALTIVEC)
-  simd_fail("SIMD extensions not available for this CPU (PowerPC SPE)")
-  return()
-endif()
-
-set(SIMD_SOURCES powerpc/jccolor-altivec.c powerpc/jcgray-altivec.c
-  powerpc/jcsample-altivec.c powerpc/jdcolor-altivec.c
-  powerpc/jdmerge-altivec.c powerpc/jdsample-altivec.c
-  powerpc/jfdctfst-altivec.c powerpc/jfdctint-altivec.c
-  powerpc/jidctfst-altivec.c powerpc/jidctint-altivec.c
-  powerpc/jquanti-altivec.c)
-
-set_source_files_properties(${SIMD_SOURCES} PROPERTIES
-  COMPILE_FLAGS -maltivec)
-
-add_library(simd OBJECT ${SIMD_SOURCES} powerpc/jsimd.c)
+add_library(simd OBJECT ${SIMD_SOURCES} mips64/jsimdcpu.c jsimd.c)
 
 if(CMAKE_POSITION_INDEPENDENT_CODE OR ENABLE_SHARED)
   set_target_properties(simd PROPERTIES POSITION_INDEPENDENT_CODE 1)

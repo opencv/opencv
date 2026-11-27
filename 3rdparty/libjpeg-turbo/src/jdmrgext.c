@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1994-1996, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2011, 2015, 2020, 2022-2023, D. R. Commander.
+ * Copyright (C) 2011, 2015, 2020, 2022-2023, 2025, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -21,9 +21,8 @@
 
 INLINE
 LOCAL(void)
-h2v1_merged_upsample_internal(j_decompress_ptr cinfo, _JSAMPIMAGE input_buf,
-                              JDIMENSION in_row_group_ctr,
-                              _JSAMPARRAY output_buf)
+h2v1_merged_upsample(j_decompress_ptr cinfo, _JSAMPIMAGE input_buf,
+                     JDIMENSION in_row_group_ctr, _JSAMPARRAY output_buf)
 {
   my_merged_upsample_ptr upsample = (my_merged_upsample_ptr)cinfo->upsample;
   register int y, cred, cgreen, cblue;
@@ -93,9 +92,8 @@ h2v1_merged_upsample_internal(j_decompress_ptr cinfo, _JSAMPIMAGE input_buf,
 
 INLINE
 LOCAL(void)
-h2v2_merged_upsample_internal(j_decompress_ptr cinfo, _JSAMPIMAGE input_buf,
-                              JDIMENSION in_row_group_ctr,
-                              _JSAMPARRAY output_buf)
+h2v2_merged_upsample(j_decompress_ptr cinfo, _JSAMPIMAGE input_buf,
+                     JDIMENSION in_row_group_ctr, _JSAMPARRAY output_buf)
 {
   my_merged_upsample_ptr upsample = (my_merged_upsample_ptr)cinfo->upsample;
   register int y, cred, cgreen, cblue;

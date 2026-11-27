@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1994-1998, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2015, 2022, D. R. Commander.
+ * Copyright (C) 2015, 2022, 2026, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -122,6 +122,23 @@
 #define MULTIPLY(var, const)  ((DCTELEM)DESCALE((var) * (const), CONST_BITS))
 
 
+/* When decompressing an 8-bit-per-sample lossy JPEG image, we allow the caller
+ * to request 12-bit-per-sample output in order to facilitate shadow recovery
+ * in underexposed images.  This is accomplished by using the 12-bit-per-sample
+ * decompression pipeline and multiplying the DCT coefficients from the
+ * 8-bit-per-sample JPEG image by 16 (the equivalent of left shifting by 4
+ * bits.)
+ */
+
+#if BITS_IN_JSAMPLE == 12
+#define SCALING_FACTOR \
+  DCTELEM scaling_factor = (cinfo->master->jpeg_data_precision == 8 && \
+                            cinfo->data_precision == 12 ? 16 : 1);
+#else
+#define SCALING_FACTOR
+#endif
+
+
 /* Dequantize a coefficient by multiplying it by the multiplier-table
  * entry; produce a DCTELEM result.  For 8-bit data a 16x16->16
  * multiplication will do.  For 12-bit data, the multiplier table is
@@ -132,7 +149,7 @@
 #define DEQUANTIZE(coef, quantval)  (((IFAST_MULT_TYPE)(coef)) * (quantval))
 #else
 #define DEQUANTIZE(coef, quantval) \
-  DESCALE((coef) * (quantval), IFAST_SCALE_BITS - PASS1_BITS)
+  DESCALE((coef) * (quantval) * scaling_factor, IFAST_SCALE_BITS - PASS1_BITS)
 #endif
 
 
@@ -184,6 +201,7 @@ _jpeg_idct_ifast(j_decompress_ptr cinfo, jpeg_component_info *compptr,
   int workspace[DCTSIZE2];      /* buffers data between passes */
   SHIFT_TEMPS                   /* for DESCALE */
   ISHIFT_TEMPS                  /* for IDESCALE */
+  SCALING_FACTOR
 
   /* Pass 1: process columns from input, store into work array. */
 

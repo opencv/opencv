@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1994-1997, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2022, 2024, D. R. Commander.
+ * Copyright (C) 2022, 2024-2025, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -17,6 +17,9 @@
 #include "jinclude.h"
 #include "jpeglib.h"
 #include "jsamplecomp.h"
+#ifdef WITH_PROFILE
+#include "tjutil.h"
+#endif
 
 
 /* We use a full-image coefficient buffer when doing Huffman optimization,
@@ -203,12 +206,25 @@ compress_data(j_compress_ptr cinfo, _JSAMPIMAGE input_buf)
       /* Try to write the MCU.  In event of a suspension failure, we will
        * re-DCT the MCU on restart (a bit inefficient, could be fixed...)
        */
+#ifdef WITH_PROFILE
+      cinfo->master->start = getTime();
+#endif
       if (!(*cinfo->entropy->encode_mcu) (cinfo, coef->MCU_buffer)) {
         /* Suspension forced; update state counters and exit */
         coef->MCU_vert_offset = yoffset;
         coef->mcu_ctr = MCU_col_num;
+#ifdef WITH_PROFILE
+        cinfo->master->entropy_elapsed += getTime() - cinfo->master->start;
+        cinfo->master->entropy_mcoeffs +=
+          (double)cinfo->blocks_in_MCU * DCTSIZE2 / 1000000.;
+#endif
         return FALSE;
       }
+#ifdef WITH_PROFILE
+      cinfo->master->entropy_elapsed += getTime() - cinfo->master->start;
+      cinfo->master->entropy_mcoeffs +=
+        (double)cinfo->blocks_in_MCU * DCTSIZE2 / 1000000.;
+#endif
     }
     /* Completed an MCU row, but perhaps not an iMCU row */
     coef->mcu_ctr = 0;
@@ -380,12 +396,25 @@ compress_output(j_compress_ptr cinfo, _JSAMPIMAGE input_buf)
         }
       }
       /* Try to write the MCU. */
+#ifdef WITH_PROFILE
+      cinfo->master->start = getTime();
+#endif
       if (!(*cinfo->entropy->encode_mcu) (cinfo, coef->MCU_buffer)) {
         /* Suspension forced; update state counters and exit */
         coef->MCU_vert_offset = yoffset;
         coef->mcu_ctr = MCU_col_num;
+#ifdef WITH_PROFILE
+        cinfo->master->entropy_elapsed += getTime() - cinfo->master->start;
+        cinfo->master->entropy_mcoeffs +=
+          (double)cinfo->blocks_in_MCU * DCTSIZE2 / 1000000.;
+#endif
         return FALSE;
       }
+#ifdef WITH_PROFILE
+      cinfo->master->entropy_elapsed += getTime() - cinfo->master->start;
+      cinfo->master->entropy_mcoeffs +=
+        (double)cinfo->blocks_in_MCU * DCTSIZE2 / 1000000.;
+#endif
     }
     /* Completed an MCU row, but perhaps not an iMCU row */
     coef->mcu_ctr = 0;

@@ -15,12 +15,11 @@
 ; --------------------------------------------------------------------------
     SECTION     SEG_TEXT
     BITS        32
-;
+
 ; Check if the CPU supports SIMD instructions
 ;
 ; GLOBAL(unsigned int)
 ; jpeg_simd_cpu_support(void)
-;
 
     align       32
     GLOBAL_FUNCTION(jpeg_simd_cpu_support)
@@ -37,7 +36,7 @@ EXTN(jpeg_simd_cpu_support):
     pushfd
     pop         eax
     mov         edx, eax
-    xor         eax, 1<<21              ; flip ID bit in EFLAGS
+    xor         eax, 1 << 21            ; flip ID bit in EFLAGS
     push        eax
     popfd
     pushfd
@@ -59,16 +58,16 @@ EXTN(jpeg_simd_cpu_support):
     xor         ecx, ecx
     cpuid
     mov         eax, ebx
-    test        eax, 1<<5               ; bit5:AVX2
+    test        eax, 1 << 5             ; bit5:AVX2
     jz          short .no_avx2
 
     ; Check for AVX2 O/S support
     mov         eax, 1
     xor         ecx, ecx
     cpuid
-    test        ecx, 1<<27
+    test        ecx, 1 << 27
     jz          short .no_avx2          ; O/S does not support XSAVE
-    test        ecx, 1<<28
+    test        ecx, 1 << 28
     jz          short .no_avx2          ; CPU does not support AVX2
 
     xor         ecx, ecx
@@ -88,15 +87,15 @@ EXTN(jpeg_simd_cpu_support):
     mov         eax, edx                ; eax = Standard feature flags
 
     ; Check for MMX instruction support
-    test        eax, 1<<23              ; bit23:MMX
+    test        eax, 1 << 23            ; bit23:MMX
     jz          short .no_mmx
     or          edi, byte JSIMD_MMX
 .no_mmx:
-    test        eax, 1<<25              ; bit25:SSE
+    test        eax, 1 << 25            ; bit25:SSE
     jz          short .no_sse
     or          edi, byte JSIMD_SSE
 .no_sse:
-    test        eax, 1<<26              ; bit26:SSE2
+    test        eax, 1 << 26            ; bit26:SSE2
     jz          short .no_sse2
     or          edi, byte JSIMD_SSE2
 .no_sse2:
@@ -111,7 +110,7 @@ EXTN(jpeg_simd_cpu_support):
     cpuid
     mov         eax, edx                ; eax = Extended feature flags
 
-    test        eax, 1<<31              ; bit31:3DNow!(vendor independent)
+    test        eax, 1 << 31            ; bit31:3DNow!(vendor independent)
     jz          short .no_3dnow
     or          edi, byte JSIMD_3DNOW
 .no_3dnow:

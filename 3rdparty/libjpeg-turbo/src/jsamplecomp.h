@@ -1,7 +1,7 @@
 /*
  * jsamplecomp.h
  *
- * Copyright (C) 2022, D. R. Commander.
+ * Copyright (C) 2022, 2026, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  */
@@ -93,10 +93,12 @@
 
 /* Image I/O functions (cdjpeg.h) */
 #ifdef C_LOSSLESS_SUPPORTED
+#define _jinit_read_png  j16init_read_png
 #define _jinit_read_ppm  j16init_read_ppm
 #endif
 
 #ifdef D_LOSSLESS_SUPPORTED
+#define _jinit_write_png  j16init_write_png
 #define _jinit_write_ppm  j16init_write_ppm
 #endif
 
@@ -209,6 +211,8 @@
 
 /* Image I/O functions (cdjpeg.h) */
 #define _jinit_write_gif  j12init_write_gif
+#define _jinit_read_png  j12init_read_png
+#define _jinit_write_png  j12init_write_png
 #define _jinit_read_ppm  j12init_read_ppm
 #define _jinit_write_ppm  j12init_write_ppm
 
@@ -323,6 +327,8 @@
 
 /* Image I/O functions (cdjpeg.h) */
 #define _jinit_write_gif  jinit_write_gif
+#define _jinit_read_png  jinit_read_png
+#define _jinit_write_png  jinit_write_png
 #define _jinit_read_ppm  jinit_read_ppm
 #define _jinit_write_ppm  jinit_write_ppm
 

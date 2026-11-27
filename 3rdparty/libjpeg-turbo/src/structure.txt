@@ -5,7 +5,7 @@ Copyright (C) 1991-2012, Thomas G. Lane, Guido Vollbeding.
 Lossless JPEG Modifications:
 Copyright (C) 1999, Ken Murchison.
 libjpeg-turbo Modifications:
-Copyright (C) 2022-2023, D. R. Commander.
+Copyright (C) 2022-2023, 2026, D. R. Commander.
 For conditions of distribution and use, see the accompanying README.ijg file.
 
 
@@ -333,16 +333,16 @@ The objects shown above are:
   separate component planes.  Processes one pixel row at a time.
 
 * Downsampling: performs reduction of chroma components as required.
-  Optionally may perform pixel-level smoothing as well.  Processes a "row
-  group" at a time, where a row group is defined as Vmax pixel rows of each
-  component before downsampling, and Vk sample rows afterwards (remember Vk
-  differs across components).  Some downsampling or smoothing algorithms may
-  require context rows above and below the current row group; the
-  preprocessing controller is responsible for supplying these rows via proper
-  buffering.  The downsampler is responsible for edge expansion at the right
-  edge (i.e., extending each sample row to a multiple of 8 samples); but the
-  preprocessing controller is responsible for vertical edge expansion (i.e.,
-  duplicating the bottom sample row as needed to make a multiple of 8 rows).
+  Optionally may perform component-level smoothing as well.  Processes a "row
+  group" at a time, where a row group is defined as Vmax rows of each component
+  before downsampling, and Vk sample rows afterwards (remember Vk differs
+  across components).  Some downsampling or smoothing algorithms may require
+  context rows above and below the current row group; the preprocessing
+  controller is responsible for supplying these rows via proper buffering.  The
+  downsampler is responsible for edge expansion at the right edge (i.e.,
+  extending each sample row to a multiple of 8 samples); but the preprocessing
+  controller is responsible for vertical edge expansion (i.e., duplicating the
+  bottom sample row as needed to make a multiple of 8 rows).
 
 * Coefficient controller: buffer controller for the DCT-coefficient data.
   This controller handles MCU assembly, including insertion of dummy DCT

@@ -5,7 +5,7 @@
  * Copyright (C) 1994-1998, Thomas G. Lane.
  * Modified 2003-2010 by Guido Vollbeding.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2022, 2024, D. R. Commander.
+ * Copyright (C) 2022, 2024-2026, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -24,6 +24,9 @@
 #include "jinclude.h"
 #include "jpeglib.h"
 #include "jcmaster.h"
+#ifdef WITH_SIMD
+#include "../simd/jsimdconst.h"
+#endif
 
 
 /*
@@ -103,6 +106,12 @@ jpeg_CreateCompress(j_compress_ptr cinfo, int version, size_t structsize)
       (*cinfo->mem->alloc_small) ((j_common_ptr)cinfo, JPOOL_PERMANENT,
                                   sizeof(my_comp_master));
   memset(cinfo->master, 0, sizeof(my_comp_master));
+#ifdef WITH_SIMD
+  cinfo->master->simd_support = JSIMD_UNDEFINED;
+#ifndef WITH_SIMDE
+  cinfo->master->simd_huffman = 1;
+#endif
+#endif
 }
 
 

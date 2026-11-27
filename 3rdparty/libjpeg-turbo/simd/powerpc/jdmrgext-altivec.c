@@ -1,7 +1,7 @@
 /*
- * AltiVec optimizations for libjpeg-turbo
+ * Merged Upsampling/Color Conversion (AltiVec)
  *
- * Copyright (C) 2015, 2024, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2015, 2024-2025, D. R. Commander.
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -23,10 +23,11 @@
 /* This file is included by jdmerge-altivec.c */
 
 
-void jsimd_h2v1_merged_upsample_altivec(JDIMENSION output_width,
-                                        JSAMPIMAGE input_buf,
-                                        JDIMENSION in_row_group_ctr,
-                                        JSAMPARRAY output_buf)
+HIDDEN void
+jsimd_h2v1_merged_upsample_altivec(JDIMENSION output_width,
+                                   JSAMPIMAGE input_buf,
+                                   JDIMENSION in_row_group_ctr,
+                                   JSAMPARRAY output_buf)
 {
   JSAMPROW outptr, inptr0, inptr1, inptr2;
   int pitch = output_width * RGB_PIXELSIZE, num_cols, yloop;
@@ -305,10 +306,11 @@ void jsimd_h2v1_merged_upsample_altivec(JDIMENSION output_width,
 }
 
 
-void jsimd_h2v2_merged_upsample_altivec(JDIMENSION output_width,
-                                        JSAMPIMAGE input_buf,
-                                        JDIMENSION in_row_group_ctr,
-                                        JSAMPARRAY output_buf)
+HIDDEN void
+jsimd_h2v2_merged_upsample_altivec(JDIMENSION output_width,
+                                   JSAMPIMAGE input_buf,
+                                   JDIMENSION in_row_group_ctr,
+                                   JSAMPARRAY output_buf)
 {
   JSAMPROW inptr, outptr;
 

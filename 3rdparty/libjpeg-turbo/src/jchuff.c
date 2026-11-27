@@ -6,7 +6,7 @@
  * Lossless JPEG Modifications:
  * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2009-2011, 2014-2016, 2018-2025, D. R. Commander.
+ * Copyright (C) 2009-2011, 2014-2016, 2018-2026, D. R. Commander.
  * Copyright (C) 2015, Matthieu Darbois.
  * Copyright (C) 2018, Matthias Räncker.
  * Copyright (C) 2020, Arm Limited.
@@ -30,10 +30,9 @@
 #include "jinclude.h"
 #include "jpeglib.h"
 #ifdef WITH_SIMD
-#include "jsimd.h"
-#else
-#include "jchuff.h"             /* Declarations shared with jc*huff.c */
+#include "../simd/jsimd.h"
 #endif
+#include "jchuff.h"             /* Declarations shared with jc*huff.c */
 #include <limits.h>
 #include "jpeg_nbits.h"
 
@@ -50,13 +49,8 @@ typedef unsigned long long bit_buf_type;
 typedef size_t bit_buf_type;
 #endif
 
-/* NOTE: The more optimal Huffman encoding algorithm is only used by the
- * intrinsics implementation of the Arm Neon SIMD extensions, which is why we
- * retain the old Huffman encoder behavior when using the GAS implementation.
- */
-#if defined(WITH_SIMD) && !(defined(__arm__) || defined(__aarch64__) || \
-                            defined(_M_ARM) || defined(_M_ARM64) || \
-                            defined(_M_ARM64EC))
+#if defined(WITH_SIMD) && \
+    SIMD_ARCHITECTURE != ARM64 && SIMD_ARCHITECTURE != ARM
 typedef unsigned long long simd_bit_buf_type;
 #else
 typedef bit_buf_type simd_bit_buf_type;
@@ -80,7 +74,6 @@ typedef struct {
 #endif
   } put_buffer;                         /* current bit accumulation buffer */
   int free_bits;                        /* # of bits available in it */
-                                        /* (Neon GAS: # of bits now in it) */
   int last_dc_val[MAX_COMPS_IN_SCAN];   /* last DC coef for each component */
 } savable_state;
 
@@ -103,7 +96,7 @@ typedef struct {
 #endif
 
 #ifdef WITH_SIMD
-  int simd;
+  unsigned int simd;
 #endif
 } huff_entropy_encoder;
 
@@ -119,7 +112,7 @@ typedef struct {
   savable_state cur;            /* Current bit buffer & DC state */
   j_compress_ptr cinfo;         /* dump_buffer needs access to this */
 #ifdef WITH_SIMD
-  int simd;
+  unsigned int simd;
 #endif
 } working_state;
 
@@ -160,7 +153,7 @@ start_pass_huff(j_compress_ptr cinfo, boolean gather_statistics)
   }
 
 #ifdef WITH_SIMD
-  entropy->simd = jsimd_can_huff_encode_one_block();
+  entropy->simd = jsimd_set_huff_encode_one_block(cinfo);
 #endif
 
   for (ci = 0; ci < cinfo->comps_in_scan; ci++) {
@@ -204,11 +197,7 @@ start_pass_huff(j_compress_ptr cinfo, boolean gather_statistics)
 #ifdef WITH_SIMD
   if (entropy->simd) {
     entropy->saved.put_buffer.simd = 0;
-#if defined(__aarch64__) && !defined(NEON_INTRINSICS)
-    entropy->saved.free_bits = 0;
-#else
     entropy->saved.free_bits = SIMD_BIT_BUF_SIZE;
-#endif
   } else
 #endif
   {
@@ -486,11 +475,7 @@ flush_bits(working_state *state)
 
 #ifdef WITH_SIMD
   if (state->simd) {
-#if defined(__aarch64__) && !defined(NEON_INTRINSICS)
-    put_bits = state->cur.free_bits;
-#else
     put_bits = SIMD_BIT_BUF_SIZE - state->cur.free_bits;
-#endif
     put_buffer = state->cur.put_buffer.simd;
   } else
 #endif
@@ -515,11 +500,7 @@ flush_bits(working_state *state)
 #ifdef WITH_SIMD
   if (state->simd) {                    /* and reset bit buffer to empty */
     state->cur.put_buffer.simd = 0;
-#if defined(__aarch64__) && !defined(NEON_INTRINSICS)
-    state->cur.free_bits = 0;
-#else
     state->cur.free_bits = SIMD_BIT_BUF_SIZE;
-#endif
   } else
 #endif
   {
@@ -549,8 +530,10 @@ encode_one_block_simd(working_state *state, JCOEFPTR block, int last_dc_val,
 
   LOAD_BUFFER()
 
-  buffer = jsimd_huff_encode_one_block(state, buffer, block, last_dc_val,
-                                       dctbl, actbl);
+  buffer = state->cinfo->entropy->huff_encode_one_block_simd(state, buffer,
+                                                             block,
+                                                             last_dc_val,
+                                                             dctbl, actbl);
 
   STORE_BUFFER()
 
@@ -947,7 +930,10 @@ GLOBAL(void)
 jpeg_gen_optimal_table(j_compress_ptr cinfo, JHUFF_TBL *htbl, long freq[])
 {
 #define MAX_CLEN  32            /* assumed maximum initial code length */
-  UINT8 bits[MAX_CLEN + 1];     /* bits[k] = # of symbols with code length k */
+  /* The array length is MAX_CLEN + 2 rather than MAX_CLEN + 1 to work around a
+   * -Wstringop-overflow false positive with GCC 12 and later.
+   */
+  UINT8 bits[MAX_CLEN + 2];     /* bits[k] = # of symbols with code length k */
   int bit_pos[MAX_CLEN + 1];    /* # of symbols with smaller code length */
   int codesize[257];            /* codesize[k] = code length of symbol k */
   int nz_index[257];            /* index of nonzero symbol in the original freq

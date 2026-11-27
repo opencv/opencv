@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1994-1996, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2010, 2015-2020, 2022-2025, D. R. Commander.
+ * Copyright (C) 2010, 2015-2020, 2022-2026, D. R. Commander.
  * Copyright (C) 2015, Google, Inc.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
@@ -30,6 +30,9 @@
 #include "jdmerge.h"
 #include "jdsample.h"
 #include "jmemsys.h"
+#ifdef WITH_PROFILE
+#include "tjutil.h"
+#endif
 
 #if BITS_IN_JSAMPLE == 8
 
@@ -197,7 +200,7 @@ _jpeg_crop_scanline(j_decompress_ptr cinfo, JDIMENSION *xoffset,
   if (cinfo->data_precision != BITS_IN_JSAMPLE)
     ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
 
-  if (cinfo->master->lossless)
+  if (cinfo->master->lossless || cinfo->raw_data_out)
     ERREXIT(cinfo, JERR_NOTIMPL);
 
   if ((cinfo->global_state != DSTATE_SCANNING &&
@@ -279,7 +282,11 @@ _jpeg_crop_scanline(j_decompress_ptr cinfo, JDIMENSION *xoffset,
                                        compptr->_DCT_scaled_size),
                                 (long)(cinfo->max_h_samp_factor *
                                        cinfo->_min_DCT_scaled_size));
-    if (compptr->downsampled_width < 2 && orig_downsampled_width >= 2)
+    if (compptr->downsampled_width < 2 &&
+#ifdef UPSAMPLE_MERGING_SUPPORTED
+        !master->using_merged_upsample &&
+#endif
+        orig_downsampled_width >= 2)
       reinit_upsampler = TRUE;
 
     /* Set the first and last iMCU columns that we must decompress.  These
@@ -408,7 +415,10 @@ read_and_discard_scanlines(j_decompress_ptr cinfo, JDIMENSION num_lines)
   void (*color_quantize) (j_decompress_ptr cinfo, _JSAMPARRAY input_buf,
                           _JSAMPARRAY output_buf, int num_rows) = NULL;
 
-  if (!master->using_merged_upsample && cinfo->cconvert &&
+  if (cinfo->cconvert &&
+#ifdef UPSAMPLE_MERGING_SUPPORTED
+      !master->using_merged_upsample &&
+#endif
       cinfo->cconvert->_color_convert) {
     color_convert = cinfo->cconvert->_color_convert;
     cinfo->cconvert->_color_convert = noop_convert;
@@ -452,9 +462,8 @@ increment_simple_rowgroup_ctr(j_decompress_ptr cinfo, JDIMENSION rows)
 {
   JDIMENSION rows_left;
   my_main_ptr main_ptr = (my_main_ptr)cinfo->main;
-  my_master_ptr master = (my_master_ptr)cinfo->master;
 
-  if (master->using_merged_upsample && cinfo->max_v_samp_factor == 2) {
+  if (!cinfo->upsample->need_context_rows && cinfo->max_v_samp_factor != 1) {
     read_and_discard_scanlines(cinfo, rows);
     return;
   }
@@ -488,7 +497,6 @@ _jpeg_skip_scanlines(j_decompress_ptr cinfo, JDIMENSION num_lines)
   my_main_ptr main_ptr = (my_main_ptr)cinfo->main;
   my_coef_ptr coef = (my_coef_ptr)cinfo->coef;
   my_master_ptr master = (my_master_ptr)cinfo->master;
-  my_upsample_ptr upsample = (my_upsample_ptr)cinfo->upsample;
   JDIMENSION i, x;
   int y;
   JDIMENSION lines_per_iMCU_row, lines_left_in_iMCU_row, lines_after_iMCU_row;
@@ -564,6 +572,7 @@ _jpeg_skip_scanlines(j_decompress_ptr cinfo, JDIMENSION num_lines)
     main_ptr->rowgroup_ctr = 0;
     main_ptr->context_state = CTX_PREPARE_FOR_IMCU;
     if (!master->using_merged_upsample) {
+      my_upsample_ptr upsample = (my_upsample_ptr)cinfo->upsample;
       upsample->next_row_out = cinfo->max_v_samp_factor;
       upsample->rows_to_go = cinfo->output_height - cinfo->output_scanline;
     }
@@ -578,7 +587,15 @@ _jpeg_skip_scanlines(j_decompress_ptr cinfo, JDIMENSION num_lines)
       cinfo->output_scanline += lines_left_in_iMCU_row;
       main_ptr->buffer_full = FALSE;
       main_ptr->rowgroup_ctr = 0;
-      if (!master->using_merged_upsample) {
+#ifdef UPSAMPLE_MERGING_SUPPORTED
+      if (master->using_merged_upsample) {
+        my_merged_upsample_ptr upsample =
+          (my_merged_upsample_ptr)cinfo->upsample;
+        upsample->spare_full = FALSE;
+      } else
+#endif
+      {
+        my_upsample_ptr upsample = (my_upsample_ptr)cinfo->upsample;
         upsample->next_row_out = cinfo->max_v_samp_factor;
         upsample->rows_to_go = cinfo->output_height - cinfo->output_scanline;
       }
@@ -616,8 +633,17 @@ _jpeg_skip_scanlines(j_decompress_ptr cinfo, JDIMENSION num_lines)
       cinfo->output_iMCU_row += lines_to_skip / lines_per_iMCU_row;
       increment_simple_rowgroup_ctr(cinfo, lines_to_read);
     }
-    if (!master->using_merged_upsample)
+#ifdef UPSAMPLE_MERGING_SUPPORTED
+    if (master->using_merged_upsample) {
+      my_merged_upsample_ptr upsample =
+        (my_merged_upsample_ptr)cinfo->upsample;
       upsample->rows_to_go = cinfo->output_height - cinfo->output_scanline;
+    } else
+#endif
+    {
+      my_upsample_ptr upsample = (my_upsample_ptr)cinfo->upsample;
+      upsample->rows_to_go = cinfo->output_height - cinfo->output_scanline;
+    }
     return num_lines;
   }
 
@@ -631,7 +657,15 @@ _jpeg_skip_scanlines(j_decompress_ptr cinfo, JDIMENSION num_lines)
          */
         if (!cinfo->entropy->insufficient_data)
           cinfo->master->last_good_iMCU_row = cinfo->input_iMCU_row;
+#ifdef WITH_PROFILE
+        cinfo->master->start = getTime();
+#endif
         (*cinfo->entropy->decode_mcu) (cinfo, NULL);
+#ifdef WITH_PROFILE
+        cinfo->master->entropy_elapsed += getTime() - cinfo->master->start;
+        cinfo->master->entropy_mcoeffs +=
+          (double)cinfo->blocks_in_MCU * DCTSIZE2 / 1000000.;
+#endif
       }
     }
     cinfo->input_iMCU_row++;
@@ -660,8 +694,16 @@ _jpeg_skip_scanlines(j_decompress_ptr cinfo, JDIMENSION num_lines)
    * bit odd, since "rows_to_go" seems to be redundantly keeping track of
    * output_scanline.
    */
-  if (!master->using_merged_upsample)
+#ifdef UPSAMPLE_MERGING_SUPPORTED
+  if (master->using_merged_upsample) {
+    my_merged_upsample_ptr upsample = (my_merged_upsample_ptr)cinfo->upsample;
     upsample->rows_to_go = cinfo->output_height - cinfo->output_scanline;
+  } else
+#endif
+  {
+    my_upsample_ptr upsample = (my_upsample_ptr)cinfo->upsample;
+    upsample->rows_to_go = cinfo->output_height - cinfo->output_scanline;
+  }
 
   /* Always skip the requested number of lines. */
   return num_lines;

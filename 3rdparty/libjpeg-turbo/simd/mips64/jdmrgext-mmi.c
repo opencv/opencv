@@ -1,10 +1,9 @@
 /*
- * Loongson MMI optimizations for libjpeg-turbo
+ * Merged Upsampling/Color Conversion (64-bit MMI)
  *
  * Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
- * Copyright (C) 2015, 2019, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2015, 2019, 2025, D. R. Commander.
  * Copyright (C) 2016-2018, Loongson Technology Corporation Limited, BeiJing.
- *                          All Rights Reserved.
  * Authors:  ZhangLixia <zhanglixia-hf@loongson.cn>
  *
  * Based on the x86 SIMD extension for IJG JPEG library
@@ -87,10 +86,10 @@
 #endif
 
 
-void jsimd_h2v1_merged_upsample_mmi(JDIMENSION output_width,
-                                    JSAMPIMAGE input_buf,
-                                    JDIMENSION in_row_group_ctr,
-                                    JSAMPARRAY output_buf)
+HIDDEN void
+jsimd_h2v1_merged_upsample_mmi(JDIMENSION output_width, JSAMPIMAGE input_buf,
+                               JDIMENSION in_row_group_ctr,
+                               JSAMPARRAY output_buf)
 {
   JSAMPROW outptr, inptr0, inptr1, inptr2;
   int num_cols, col;
@@ -120,8 +119,8 @@ void jsimd_h2v1_merged_upsample_mmi(JDIMENSION output_width,
     mask = decenter = 0.0;
     mask = _mm_cmpeq_pi16(mask, mask);
     decenter = _mm_cmpeq_pi16(decenter, decenter);
-    mask = _mm_srli_pi16(mask, BYTE_BIT);   /* {0xFF 0x00 0xFF 0x00 ..} */
-    decenter = _mm_slli_pi16(decenter, 7);  /* {0xFF80 0xFF80 0xFF80 0xFF80} */
+    mask = _mm_srli_pi16(mask, BYTE_BIT);     /* { 0xFF 0x00 0xFF 0x00 .. } */
+    decenter = _mm_slli_pi16(decenter, 7);  /* { 0xFF80 0xFF80 0xFF80 0xFF80 } */
 
     cbl = _mm_unpacklo_pi8(cb, zero);         /* Cb(0123) */
     cbh = _mm_unpackhi_pi8(cb, zero);         /* Cb(4567) */
@@ -143,15 +142,15 @@ void jsimd_h2v1_merged_upsample_mmi(JDIMENSION output_width,
      * B = Y - 0.22800 * Cb + Cb + Cb
      */
 
-    cbl2 = _mm_add_pi16(cbl, cbl);            /* 2*CbL */
-    cbh2 = _mm_add_pi16(cbh, cbh);            /* 2*CbH */
-    crl2 = _mm_add_pi16(crl, crl);            /* 2*CrL */
-    crh2 = _mm_add_pi16(crh, crh);            /* 2*CrH */
+    cbl2 = _mm_add_pi16(cbl, cbl);            /* 2 * CbL */
+    cbh2 = _mm_add_pi16(cbh, cbh);            /* 2 * CbH */
+    crl2 = _mm_add_pi16(crl, crl);            /* 2 * CrL */
+    crh2 = _mm_add_pi16(crh, crh);            /* 2 * CrH */
 
-    bl = _mm_mulhi_pi16(cbl2, PW_MF0228);     /* (2*CbL * -FIX(0.22800) */
-    bh = _mm_mulhi_pi16(cbh2, PW_MF0228);     /* (2*CbH * -FIX(0.22800) */
-    rl = _mm_mulhi_pi16(crl2, PW_F0402);      /* (2*CrL * FIX(0.40200)) */
-    rh = _mm_mulhi_pi16(crh2, PW_F0402);      /* (2*CrH * FIX(0.40200)) */
+    bl = _mm_mulhi_pi16(cbl2, PW_MF0228);     /* (2 * CbL * -FIX(0.22800) */
+    bh = _mm_mulhi_pi16(cbh2, PW_MF0228);     /* (2 * CbH * -FIX(0.22800) */
+    rl = _mm_mulhi_pi16(crl2, PW_F0402);      /* (2 * CrL * FIX(0.40200)) */
+    rh = _mm_mulhi_pi16(crh2, PW_F0402);      /* (2 * CrH * FIX(0.40200)) */
 
     bl = _mm_add_pi16(bl, PW_ONE);
     bh = _mm_add_pi16(bh, PW_ONE);
@@ -164,10 +163,10 @@ void jsimd_h2v1_merged_upsample_mmi(JDIMENSION output_width,
 
     bl = _mm_add_pi16(bl, cbl);
     bh = _mm_add_pi16(bh, cbh);
-    bl = _mm_add_pi16(bl, cbl);               /* (CbL * FIX(1.77200))=(B-Y)L */
-    bh = _mm_add_pi16(bh, cbh);               /* (CbH * FIX(1.77200))=(B-Y)H */
-    rl = _mm_add_pi16(rl, crl);               /* (CrL * FIX(1.40200))=(R-Y)L */
-    rh = _mm_add_pi16(rh, crh);               /* (CrH * FIX(1.40200))=(R-Y)H */
+    bl = _mm_add_pi16(bl, cbl);           /* (CbL * FIX(1.77200)) = (B - Y)L */
+    bh = _mm_add_pi16(bh, cbh);           /* (CbH * FIX(1.77200)) = (B - Y)H */
+    rl = _mm_add_pi16(rl, crl);           /* (CrL * FIX(1.40200)) = (R - Y)L */
+    rh = _mm_add_pi16(rh, crh);           /* (CrH * FIX(1.40200)) = (R - Y)H */
 
     ga = _mm_unpacklo_pi16(cbl, crl);
     gb = _mm_unpackhi_pi16(cbl, crl);
@@ -187,10 +186,10 @@ void jsimd_h2v1_merged_upsample_mmi(JDIMENSION output_width,
     gc = _mm_srai_pi32(gc, SCALEBITS);
     gd = _mm_srai_pi32(gd, SCALEBITS);
 
-    gl = _mm_packs_pi32(ga, gb);           /* CbL*-FIX(0.344)+CrL*FIX(0.285) */
-    gh = _mm_packs_pi32(gc, gd);           /* CbH*-FIX(0.344)+CrH*FIX(0.285) */
-    gl = _mm_sub_pi16(gl, crl);    /* CbL*-FIX(0.344)+CrL*-FIX(0.714)=(G-Y)L */
-    gh = _mm_sub_pi16(gh, crh);    /* CbH*-FIX(0.344)+CrH*-FIX(0.714)=(G-Y)H */
+    gl = _mm_packs_pi32(ga, gb);     /* CbL * -FIX(0.344) + CrL * FIX(0.285) */
+    gh = _mm_packs_pi32(gc, gd);     /* CbH * -FIX(0.344) + CrH * FIX(0.285) */
+    gl = _mm_sub_pi16(gl, crl);  /* CbL * -FIX(0.344) + CrL * -FIX(0.714) = (G - Y)L */
+    gh = _mm_sub_pi16(gh, crh);  /* CbH * -FIX(0.344) + CrH * -FIX(0.714) = (G - Y)H */
 
     ythise = _mm_and_si64(mask, ythis);       /* Y(0246) */
     ythiso = _mm_srli_pi16(ythis, BYTE_BIT);  /* Y(1357) */
@@ -220,38 +219,47 @@ void jsimd_h2v1_merged_upsample_mmi(JDIMENSION output_width,
 
 #if RGB_PIXELSIZE == 3
 
-    /* mmA=(00 02 04 06 08 0A 0C 0E), mmB=(01 03 05 07 09 0B 0D 0F) */
-    /* mmC=(10 12 14 16 18 1A 1C 1E), mmD=(11 13 15 17 19 1B 1D 1F) */
-    /* mmE=(20 22 24 26 28 2A 2C 2E), mmF=(21 23 25 27 29 2B 2D 2F) */
-    mmG = _mm_unpacklo_pi8(mmA, mmC);         /* (00 10 02 12 04 14 06 16) */
-    mmA = _mm_unpackhi_pi8(mmA, mmC);         /* (08 18 0A 1A 0C 1C 0E 1E) */
-    mmH = _mm_unpacklo_pi8(mmE, mmB);         /* (20 01 22 03 24 05 26 07) */
-    mmE = _mm_unpackhi_pi8(mmE, mmB);         /* (28 09 2A 0B 2C 0D 2E 0F) */
-    mmC = _mm_unpacklo_pi8(mmD, mmF);         /* (11 21 13 23 15 25 17 27) */
-    mmD = _mm_unpackhi_pi8(mmD, mmF);         /* (19 29 1B 2B 1D 2D 1F 2F) */
+    /* NOTE: The values of RGB_RED, RGB_GREEN, and RGB_BLUE determine the
+     * mapping of components A, B, and C to red, green, and blue.
+     *
+     * mmA = (A0 A2 A4 A6 A8 Aa Ac Ae) = AE
+     * mmB = (A1 A3 A5 A7 A9 Ab Ad Af) = AO
+     * mmC = (B0 B2 B4 B6 B8 Ba Bc Be) = BE
+     * mmD = (B1 B3 B5 B7 B9 Bb Bd Bf) = BO
+     * mmE = (C0 C2 C4 C6 C8 Ca Cc Ce) = CE
+     * mmF = (C1 C3 C5 C7 C9 Cb Cd Cf) = CO
+     * mmG = (** ** ** ** ** ** ** **)
+     * mmH = (** ** ** ** ** ** ** **)
+     */
+    mmG = _mm_unpacklo_pi8(mmA, mmC);         /* (A0 B0 A2 B2 A4 B4 A6 B6) */
+    mmA = _mm_unpackhi_pi8(mmA, mmC);         /* (A8 B8 Aa Ba Ac Bc Ae Be) */
+    mmH = _mm_unpacklo_pi8(mmE, mmB);         /* (C0 A1 C2 A3 C4 A5 C6 A7) */
+    mmE = _mm_unpackhi_pi8(mmE, mmB);         /* (C8 A9 Ca Ab Cc Ad Ce Af) */
+    mmC = _mm_unpacklo_pi8(mmD, mmF);         /* (B1 C1 B3 C3 B5 C5 B7 C7) */
+    mmD = _mm_unpackhi_pi8(mmD, mmF);         /* (B9 C9 Bb Cb Bd Cd Bf Cf) */
 
-    mmB = _mm_unpacklo_pi16(mmG, mmA);        /* (00 10 08 18 02 12 0A 1A) */
-    mmA = _mm_unpackhi_pi16(mmG, mmA);        /* (04 14 0C 1C 06 16 0E 1E) */
-    mmF = _mm_unpacklo_pi16(mmH, mmE);        /* (20 01 28 09 22 03 2A 0B) */
-    mmE = _mm_unpackhi_pi16(mmH, mmE);        /* (24 05 2C 0D 26 07 2E 0F) */
-    mmH = _mm_unpacklo_pi16(mmC, mmD);        /* (11 21 19 29 13 23 1B 2B) */
-    mmG = _mm_unpackhi_pi16(mmC, mmD);        /* (15 25 1D 2D 17 27 1F 2F) */
+    mmB = _mm_unpacklo_pi16(mmG, mmA);        /* (A0 B0 A8 B8 A2 B2 Aa Ba) */
+    mmA = _mm_unpackhi_pi16(mmG, mmA);        /* (A4 B4 Ac Bc A6 B6 Ae Be) */
+    mmF = _mm_unpacklo_pi16(mmH, mmE);        /* (C0 A1 C8 A9 C2 A3 Ca Ab) */
+    mmE = _mm_unpackhi_pi16(mmH, mmE);        /* (C4 A5 Cc Ad C6 A7 Ce Af) */
+    mmH = _mm_unpacklo_pi16(mmC, mmD);        /* (B1 C1 B9 C9 B3 C3 Bb Cb) */
+    mmG = _mm_unpackhi_pi16(mmC, mmD);        /* (B5 C5 Bd Cd B7 C7 Bf Cf) */
 
-    mmC = _mm_unpacklo_pi16(mmB, mmF);        /* (00 10 20 01 08 18 28 09) */
+    mmC = _mm_unpacklo_pi16(mmB, mmF);        /* (A0 B0 C0 A1 A8 B8 C8 A9) */
     mmB = _mm_srli_si64(mmB, 4 * BYTE_BIT);
-    mmB = _mm_unpacklo_pi16(mmH, mmB);        /* (11 21 02 12 19 29 0A 1A) */
-    mmD = _mm_unpackhi_pi16(mmF, mmH);        /* (22 03 13 23 2A 0B 1B 2B) */
-    mmF = _mm_unpacklo_pi16(mmA, mmE);        /* (04 14 24 05 0C 1C 2C 0D) */
+    mmB = _mm_unpacklo_pi16(mmH, mmB);        /* (B1 C1 A2 B2 B9 C9 Aa Ba) */
+    mmD = _mm_unpackhi_pi16(mmF, mmH);        /* (C2 A3 B3 C3 Ca Ab Bb Cb) */
+    mmF = _mm_unpacklo_pi16(mmA, mmE);        /* (A4 B4 C4 A5 Ac Bc Cc Ad) */
     mmA = _mm_srli_si64(mmA, 4 * BYTE_BIT);
-    mmH = _mm_unpacklo_pi16(mmG, mmA);        /* (15 25 06 16 1D 2D 0E 1E) */
-    mmG = _mm_unpackhi_pi16(mmE, mmG);        /* (26 07 17 27 2E 0F 1F 2F) */
+    mmH = _mm_unpacklo_pi16(mmG, mmA);        /* (B5 C5 A6 B6 Bd Cd Ae Be) */
+    mmG = _mm_unpackhi_pi16(mmE, mmG);        /* (C6 A7 B7 C7 Ce Af Bf Cf) */
 
-    mmA = _mm_unpacklo_pi32(mmC, mmB);        /* (00 10 20 01 11 21 02 12) */
-    mmE = _mm_unpackhi_pi32(mmC, mmB);        /* (08 18 28 09 19 29 0A 1A) */
-    mmB = _mm_unpacklo_pi32(mmD, mmF);        /* (22 03 13 23 04 14 24 05) */
-    mmF = _mm_unpackhi_pi32(mmD, mmF);        /* (2A 0B 1B 2B 0C 1C 2C 0D) */
-    mmC = _mm_unpacklo_pi32(mmH, mmG);        /* (15 25 06 16 26 07 17 27) */
-    mmG = _mm_unpackhi_pi32(mmH, mmG);        /* (1D 2D 0E 1E 2E 0F 1F 2F) */
+    mmA = _mm_unpacklo_pi32(mmC, mmB);        /* (A0 B0 C0 A1 B1 C1 A2 B2) */
+    mmE = _mm_unpackhi_pi32(mmC, mmB);        /* (A8 B8 C8 A9 B9 C9 Aa Ba) */
+    mmB = _mm_unpacklo_pi32(mmD, mmF);        /* (C2 A3 B3 C3 A4 B4 C4 A5) */
+    mmF = _mm_unpackhi_pi32(mmD, mmF);        /* (Ca Ab Bb Cb Ac Bc Cc Ad) */
+    mmC = _mm_unpacklo_pi32(mmH, mmG);        /* (B5 C5 A6 B6 C6 A7 B7 C7) */
+    mmG = _mm_unpackhi_pi32(mmH, mmG);        /* (Bd Cd Ae Be Ce Af Bf Cf) */
 
     if (num_cols >= 8) {
       if (!(((long)outptr) & 7)) {
@@ -367,40 +375,48 @@ void jsimd_h2v1_merged_upsample_mmi(JDIMENSION output_width,
     xe = _mm_xor_si64(xe, xe);
     xo = _mm_xor_si64(xo, xo);
 #endif
-    /* mmA=(00 02 04 06 08 0A 0C 0E), mmB=(01 03 05 07 09 0B 0D 0F) */
-    /* mmC=(10 12 14 16 18 1A 1C 1E), mmD=(11 13 15 17 19 1B 1D 1F) */
-    /* mmE=(20 22 24 26 28 2A 2C 2E), mmF=(21 23 25 27 29 2B 2D 2F) */
-    /* mmG=(30 32 34 36 38 3A 3C 3E), mmH=(31 33 35 37 39 3B 3D 3F) */
 
-    mm8 = _mm_unpacklo_pi8(mmA, mmC);         /* (00 10 02 12 04 14 06 16) */
-    mm9 = _mm_unpackhi_pi8(mmA, mmC);         /* (08 18 0A 1A 0C 1C 0E 1E) */
-    mmA = _mm_unpacklo_pi8(mmE, mmG);         /* (20 30 22 32 24 34 26 36) */
-    mmE = _mm_unpackhi_pi8(mmE, mmG);         /* (28 38 2A 3A 2C 3C 2E 3E) */
+    /* NOTE: The values of RGB_RED, RGB_GREEN, and RGB_BLUE determine the
+     * mapping of components A, B, C, and D to red, green, and blue.
+     *
+     * mmA = (A0 A2 A4 A6 A8 Aa Ac Ae) = AE
+     * mmB = (A1 A3 A5 A7 A9 Ab Ad Af) = AO
+     * mmC = (B0 B2 B4 B6 B8 Ba Bc Be) = BE
+     * mmD = (B1 B3 B5 B7 B9 Bb Bd Bf) = BO
+     * mmE = (C0 C2 C4 C6 C8 Ca Cc Ce) = CE
+     * mmF = (C1 C3 C5 C7 C9 Cb Cd Cf) = CO
+     * mmG = (D0 D2 D4 D6 D8 Da Dc De) = DE
+     * mmH = (D1 D3 D5 D7 D9 Db Dd Df) = DO
+     */
+    mm8 = _mm_unpacklo_pi8(mmA, mmC);         /* (A0 B0 A2 B2 A4 B4 A6 B6) */
+    mm9 = _mm_unpackhi_pi8(mmA, mmC);         /* (A8 B8 Aa Ba Ac Bc Ae Be) */
+    mmA = _mm_unpacklo_pi8(mmE, mmG);         /* (C0 D0 C2 D2 C4 D4 C6 D6) */
+    mmE = _mm_unpackhi_pi8(mmE, mmG);         /* (C8 D8 Ca Da Cc Dc Ce De) */
 
-    mmG = _mm_unpacklo_pi8(mmB, mmD);         /* (01 11 03 13 05 15 07 17) */
-    mmB = _mm_unpackhi_pi8(mmB, mmD);         /* (09 19 0B 1B 0D 1D 0F 1F) */
-    mmD = _mm_unpacklo_pi8(mmF, mmH);         /* (21 31 23 33 25 35 27 37) */
-    mmF = _mm_unpackhi_pi8(mmF, mmH);         /* (29 39 2B 3B 2D 3D 2F 3F) */
+    mmG = _mm_unpacklo_pi8(mmB, mmD);         /* (A1 B1 A3 B3 A5 B5 A7 B7) */
+    mmB = _mm_unpackhi_pi8(mmB, mmD);         /* (A9 B9 Ab Bb Ad Bd Af Bf) */
+    mmD = _mm_unpacklo_pi8(mmF, mmH);         /* (C1 D1 C3 D3 C5 D5 C7 D7) */
+    mmF = _mm_unpackhi_pi8(mmF, mmH);         /* (C9 D9 Cb Db Cd Dd Cf Df) */
 
-    mmH = _mm_unpacklo_pi16(mm8, mmA);        /* (00 10 20 30 02 12 22 32) */
-    mm8 = _mm_unpackhi_pi16(mm8, mmA);        /* (04 14 24 34 06 16 26 36) */
-    mmA = _mm_unpacklo_pi16(mmG, mmD);        /* (01 11 21 31 03 13 23 33) */
-    mmD = _mm_unpackhi_pi16(mmG, mmD);        /* (05 15 25 35 07 17 27 37) */
+    mmH = _mm_unpacklo_pi16(mm8, mmA);        /* (A0 B0 C0 D0 A2 B2 C2 D2) */
+    mm8 = _mm_unpackhi_pi16(mm8, mmA);        /* (A4 B4 C4 D4 A6 B6 C6 D6) */
+    mmA = _mm_unpacklo_pi16(mmG, mmD);        /* (A1 B1 C1 D1 A3 B3 C3 D3) */
+    mmD = _mm_unpackhi_pi16(mmG, mmD);        /* (A5 B5 C5 D5 A7 B7 C7 D7) */
 
-    mmG = _mm_unpackhi_pi16(mm9, mmE);        /* (0C 1C 2C 3C 0E 1E 2E 3E) */
-    mm9 = _mm_unpacklo_pi16(mm9, mmE);        /* (08 18 28 38 0A 1A 2A 3A) */
-    mmE = _mm_unpacklo_pi16(mmB, mmF);        /* (09 19 29 39 0B 1B 2B 3B) */
-    mmF = _mm_unpackhi_pi16(mmB, mmF);        /* (0D 1D 2D 3D 0F 1F 2F 3F) */
+    mmG = _mm_unpackhi_pi16(mm9, mmE);        /* (Ac Bc Cc Dc Ae Be Ce De) */
+    mm9 = _mm_unpacklo_pi16(mm9, mmE);        /* (A8 B8 C8 D8 Aa Ba Ca Da) */
+    mmE = _mm_unpacklo_pi16(mmB, mmF);        /* (A9 B9 C9 D9 Ab Bb Cb Db) */
+    mmF = _mm_unpackhi_pi16(mmB, mmF);        /* (Ad Bd Cd Dd Af Bf Cf Df) */
 
-    mmB = _mm_unpackhi_pi32(mmH, mmA);        /* (02 12 22 32 03 13 23 33) */
-    mmA = _mm_unpacklo_pi32(mmH, mmA);        /* (00 10 20 30 01 11 21 31) */
-    mmC = _mm_unpacklo_pi32(mm8, mmD);        /* (04 14 24 34 05 15 25 35) */
-    mmD = _mm_unpackhi_pi32(mm8, mmD);        /* (06 16 26 36 07 17 27 37) */
+    mmB = _mm_unpackhi_pi32(mmH, mmA);        /* (A2 B2 C2 D2 A3 B3 C3 D3) */
+    mmA = _mm_unpacklo_pi32(mmH, mmA);        /* (A0 B0 C0 D0 A1 B1 C1 D1) */
+    mmC = _mm_unpacklo_pi32(mm8, mmD);        /* (A4 B4 C4 D4 A5 B5 C5 D5) */
+    mmD = _mm_unpackhi_pi32(mm8, mmD);        /* (A6 B6 C6 D6 A7 B7 C7 D7) */
 
-    mmH = _mm_unpackhi_pi32(mmG, mmF);        /* (0E 1E 2E 3E 0F 1F 2F 3F) */
-    mmG = _mm_unpacklo_pi32(mmG, mmF);        /* (0C 1C 2C 3C 0D 1D 2D 3D) */
-    mmF = _mm_unpackhi_pi32(mm9, mmE);        /* (0A 1A 2A 3A 0B 1B 2B 3B) */
-    mmE = _mm_unpacklo_pi32(mm9, mmE);        /* (08 18 28 38 09 19 29 39) */
+    mmH = _mm_unpackhi_pi32(mmG, mmF);        /* (Ae Be Ce De Af Bf Cf Df) */
+    mmG = _mm_unpacklo_pi32(mmG, mmF);        /* (Ac Bc Cc Dc Ad Bd Cd Dd) */
+    mmF = _mm_unpackhi_pi32(mm9, mmE);        /* (Aa Ba Ca Da Ab Bb Cb Db) */
+    mmE = _mm_unpacklo_pi32(mm9, mmE);        /* (A8 B8 C8 D8 A9 B9 C9 D9) */
 
     if (num_cols >= 8) {
       if (!(((long)outptr) & 7)) {
@@ -505,17 +521,17 @@ void jsimd_h2v1_merged_upsample_mmi(JDIMENSION output_width,
 
       decenter = 0.0;
       decenter = _mm_cmpeq_pi16(decenter, decenter);
-      decenter = _mm_slli_pi16(decenter, 7);  /* {0xFF80 0xFF80 0xFF80 0xFF80} */
+      decenter = _mm_slli_pi16(decenter, 7);  /* { 0xFF80 0xFF80 0xFF80 0xFF80 } */
 
       cbl = _mm_unpacklo_pi8(cb, zero);       /* Cb(0123) */
       crl = _mm_unpacklo_pi8(cr, zero);       /* Cr(0123) */
       cbl = _mm_add_pi16(cbl, decenter);
       crl = _mm_add_pi16(crl, decenter);
 
-      cbl2 = _mm_add_pi16(cbl, cbl);          /* 2*CbL */
-      crl2 = _mm_add_pi16(crl, crl);          /* 2*CrL */
-      bl = _mm_mulhi_pi16(cbl2, PW_MF0228);   /* (2*CbL * -FIX(0.22800) */
-      rl = _mm_mulhi_pi16(crl2, PW_F0402);    /* (2*CrL * FIX(0.40200)) */
+      cbl2 = _mm_add_pi16(cbl, cbl);          /* 2 * CbL */
+      crl2 = _mm_add_pi16(crl, crl);          /* 2 * CrL */
+      bl = _mm_mulhi_pi16(cbl2, PW_MF0228);   /* (2 * CbL * -FIX(0.22800) */
+      rl = _mm_mulhi_pi16(crl2, PW_F0402);    /* (2 * CrL * FIX(0.40200)) */
 
       bl = _mm_add_pi16(bl, PW_ONE);
       bl = _mm_srai_pi16(bl, 1);              /* (CbL * -FIX(0.22800)) */
@@ -523,15 +539,15 @@ void jsimd_h2v1_merged_upsample_mmi(JDIMENSION output_width,
       rl = _mm_srai_pi16(rl, 1);              /* (CrL * FIX(0.40200)) */
 
       bl = _mm_add_pi16(bl, cbl);
-      bl = _mm_add_pi16(bl, cbl);             /* (CbL * FIX(1.77200))=(B-Y)L */
-      rl = _mm_add_pi16(rl, crl);             /* (CrL * FIX(1.40200))=(R-Y)L */
+      bl = _mm_add_pi16(bl, cbl);         /* (CbL * FIX(1.77200)) = (B - Y)L */
+      rl = _mm_add_pi16(rl, crl);         /* (CrL * FIX(1.40200)) = (R - Y)L */
 
       gl = _mm_unpacklo_pi16(cbl, crl);
       gl = _mm_madd_pi16(gl, PW_MF0344_F0285);
       gl = _mm_add_pi32(gl, PD_ONEHALF);
       gl = _mm_srai_pi32(gl, SCALEBITS);
-      gl = _mm_packs_pi32(gl, zero);       /* CbL*-FIX(0.344)+CrL*FIX(0.285) */
-      gl = _mm_sub_pi16(gl, crl);  /* CbL*-FIX(0.344)+CrL*-FIX(0.714)=(G-Y)L */
+      gl = _mm_packs_pi32(gl, zero);  /* CbL * -FIX(0.344) + CrL * FIX(0.285) */
+      gl = _mm_sub_pi16(gl, crl);  /* CbL * -FIX(0.344) + CrL * -FIX(0.714) = (G - Y)L */
 
       yl = _mm_unpacklo_pi8(y, zero);         /* Y(0123) */
       rl = _mm_add_pi16(rl, yl);              /* (R0 R1 R2 R3) */
@@ -581,10 +597,10 @@ void jsimd_h2v1_merged_upsample_mmi(JDIMENSION output_width,
 }
 
 
-void jsimd_h2v2_merged_upsample_mmi(JDIMENSION output_width,
-                                    JSAMPIMAGE input_buf,
-                                    JDIMENSION in_row_group_ctr,
-                                    JSAMPARRAY output_buf)
+HIDDEN void
+jsimd_h2v2_merged_upsample_mmi(JDIMENSION output_width, JSAMPIMAGE input_buf,
+                               JDIMENSION in_row_group_ctr,
+                               JSAMPARRAY output_buf)
 {
   JSAMPROW inptr, outptr;
 

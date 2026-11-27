@@ -1,9 +1,8 @@
 /*
- * Loongson MMI optimizations for libjpeg-turbo
+ * Accurate Integer Inverse DCT (64-bit MMI)
  *
- * Copyright (C) 2014-2015, 2018, 2020, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2014-2015, 2018, 2020, 2025, D. R. Commander.
  * Copyright (C) 2016-2017, Loongson Technology Corporation Limited, BeiJing.
- *                          All Rights Reserved.
  * Authors:  ZhuChen     <zhuchen@loongson.cn>
  *           CaiWanwei   <caiwanwei@loongson.cn>
  *           SunZhangzhi <sunzhangzhi-cq@loongson.cn>
@@ -28,8 +27,6 @@
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
-/* ACCUATE INTEGER INVERSE DCT */
-
 #include "jsimd_mmi.h"
 
 
@@ -39,18 +36,18 @@
 #define DESCALE_P2  (CONST_BITS + PASS1_BITS + 3)
 #define CENTERJSAMPLE  128
 
-#define FIX_0_298  ((short)2446)  /* FIX(0.298631336) */
-#define FIX_0_390  ((short)3196)  /* FIX(0.390180644) */
-#define FIX_0_899  ((short)7373)  /* FIX(0.899976223) */
-#define FIX_0_541  ((short)4433)  /* FIX(0.541196100) */
-#define FIX_0_765  ((short)6270)  /* FIX(0.765366865) */
-#define FIX_1_175  ((short)9633)  /* FIX(1.175875602) */
-#define FIX_1_501  ((short)12299) /* FIX(1.501321110) */
-#define FIX_1_847  ((short)15137) /* FIX(1.847759065) */
-#define FIX_1_961  ((short)16069) /* FIX(1.961570560) */
-#define FIX_2_053  ((short)16819) /* FIX(2.053119869) */
-#define FIX_2_562  ((short)20995) /* FIX(2.562915447) */
-#define FIX_3_072  ((short)25172) /* FIX(3.072711026) */
+#define FIX_0_298  ((short)2446)   /* FIX(0.298631336) */
+#define FIX_0_390  ((short)3196)   /* FIX(0.390180644) */
+#define FIX_0_899  ((short)7373)   /* FIX(0.899976223) */
+#define FIX_0_541  ((short)4433)   /* FIX(0.541196100) */
+#define FIX_0_765  ((short)6270)   /* FIX(0.765366865) */
+#define FIX_1_175  ((short)9633)   /* FIX(1.175875602) */
+#define FIX_1_501  ((short)12299)  /* FIX(1.501321110) */
+#define FIX_1_847  ((short)15137)  /* FIX(1.847759065) */
+#define FIX_1_961  ((short)16069)  /* FIX(1.961570560) */
+#define FIX_2_053  ((short)16819)  /* FIX(2.053119869) */
+#define FIX_2_562  ((short)20995)  /* FIX(2.562915447) */
+#define FIX_3_072  ((short)25172)  /* FIX(3.072711026) */
 
 enum const_index {
   index_PW_F130_F054,
@@ -108,8 +105,7 @@ static uint64_t const_value[] = {
 
 #define DO_IDCT_COMMON(PASS) { \
   __m64 tmp0_3l, tmp0_3h, tmp1_2l, tmp1_2h; \
-  __m64 tmp0l, tmp0h, tmp1l, tmp1h, tmp2l, tmp2h, tmp3l, tmp3h; \
-  __m64 z34l, z34h, z3l, z3h, z4l, z4h, z3, z4; \
+  __m64 z34l, z34h, z3l, z3h, z4l, z4h, z4; \
   __m64 out0l, out0h, out1l, out1h, out2l, out2h, out3l, out3h; \
   __m64 out4l, out4h, out5l, out5h, out6l, out6h, out7l, out7h; \
   \
@@ -256,10 +252,9 @@ static uint64_t const_value[] = {
   __m64 col0l, col1l, col2l, col3l, col4l, col5l, col6l, col7l; \
   __m64 quant0l, quant1l, quant2l, quant3l; \
   __m64 quant4l, quant5l, quant6l, quant7l; \
-  __m64 z23, z2, z3, z23l, z23h; \
+  __m64 z23, z2, z23l, z23h; \
   __m64 row01a, row01b, row01c, row01d, row23a, row23b, row23c, row23d; \
   __m64 row0l, row0h, row1l, row1h, row2l, row2h, row3l, row3h; \
-  __m64 tmp0l, tmp0h, tmp1l, tmp1h, tmp2l, tmp2h, tmp3l, tmp3h; \
   __m64 tmp10l, tmp10h, tmp11l, tmp11h, tmp12l, tmp12h, tmp13l, tmp13h; \
   __m32 col0a, col1a, mm0; \
   \
@@ -294,15 +289,15 @@ static uint64_t const_value[] = {
       quant0l = _mm_load_si64((__m64 *)&quantptr[DCTSIZE * 0]); \
       \
       dcval = _mm_mullo_pi16(col0l, quant0l); \
-      dcval = _mm_slli_pi16(dcval, PASS1_BITS);  /* dcval=(00 10 20 30) */ \
+      dcval = _mm_slli_pi16(dcval, PASS1_BITS);  /* dcval = (00 10 20 30) */ \
       \
-      dcvall = _mm_unpacklo_pi16(dcval, dcval);  /* dcvall=(00 00 10 10) */ \
-      dcvalh = _mm_unpackhi_pi16(dcval, dcval);  /* dcvalh=(20 20 30 30) */ \
+      dcvall = _mm_unpacklo_pi16(dcval, dcval);  /* dcvall = (00 00 10 10) */ \
+      dcvalh = _mm_unpackhi_pi16(dcval, dcval);  /* dcvalh = (20 20 30 30) */ \
       \
-      row0 = _mm_unpacklo_pi32(dcvall, dcvall);  /* row0=(00 00 00 00) */ \
-      row1 = _mm_unpackhi_pi32(dcvall, dcvall);  /* row1=(10 10 10 10) */ \
-      row2 = _mm_unpacklo_pi32(dcvalh, dcvalh);  /* row2=(20 20 20 20) */ \
-      row3 = _mm_unpackhi_pi32(dcvalh, dcvalh);  /* row3=(30 30 30 30) */ \
+      row0 = _mm_unpacklo_pi32(dcvall, dcvall);  /* row0 = (00 00 00 00) */ \
+      row1 = _mm_unpackhi_pi32(dcvall, dcvall);  /* row1 = (10 10 10 10) */ \
+      row2 = _mm_unpacklo_pi32(dcvalh, dcvalh);  /* row2 = (20 20 20 20) */ \
+      row3 = _mm_unpackhi_pi32(dcvalh, dcvalh);  /* row3 = (30 30 30 30) */ \
       \
       _mm_store_si64((__m64 *)&wsptr[DCTSIZE * 0], row0); \
       _mm_store_si64((__m64 *)&wsptr[DCTSIZE * 0 + 4], row0); \
@@ -393,32 +388,33 @@ static uint64_t const_value[] = {
   \
   DO_IDCT_COMMON(1) \
   \
-  /* out0=(00 10 20 30), out1=(01 11 21 31) */ \
-  /* out2=(02 12 22 32), out3=(03 13 23 33) */ \
-  /* out4=(04 14 24 34), out5=(05 15 25 35) */ \
-  /* out6=(06 16 26 36), out7=(07 17 27 37) */ \
+  /* out0 = (00 10 20 30), out1 = (01 11 21 31) \
+   * out2 = (02 12 22 32), out3 = (03 13 23 33) \
+   * out4 = (04 14 24 34), out5 = (05 15 25 35) \
+   * out6 = (06 16 26 36), out7 = (07 17 27 37) \
+   */ \
   \
   /* Transpose coefficients */ \
   \
-  row01a = _mm_unpacklo_pi16(out0, out1);     /* row01a=(00 01 10 11) */ \
-  row23a = _mm_unpackhi_pi16(out0, out1);     /* row23a=(20 21 30 31) */ \
-  row01d = _mm_unpacklo_pi16(out6, out7);     /* row01d=(06 07 16 17) */ \
-  row23d = _mm_unpackhi_pi16(out6, out7);     /* row23d=(26 27 36 37) */ \
+  row01a = _mm_unpacklo_pi16(out0, out1);     /* row01a = (00 01 10 11) */ \
+  row23a = _mm_unpackhi_pi16(out0, out1);     /* row23a = (20 21 30 31) */ \
+  row01d = _mm_unpacklo_pi16(out6, out7);     /* row01d = (06 07 16 17) */ \
+  row23d = _mm_unpackhi_pi16(out6, out7);     /* row23d = (26 27 36 37) */ \
   \
-  row01b = _mm_unpacklo_pi16(out2, out3);     /* row01b=(02 03 12 13) */ \
-  row23b = _mm_unpackhi_pi16(out2, out3);     /* row23b=(22 23 32 33) */ \
-  row01c = _mm_unpacklo_pi16(out4, out5);     /* row01c=(04 05 14 15) */ \
-  row23c = _mm_unpackhi_pi16(out4, out5);     /* row23c=(24 25 34 35) */ \
+  row01b = _mm_unpacklo_pi16(out2, out3);     /* row01b = (02 03 12 13) */ \
+  row23b = _mm_unpackhi_pi16(out2, out3);     /* row23b = (22 23 32 33) */ \
+  row01c = _mm_unpacklo_pi16(out4, out5);     /* row01c = (04 05 14 15) */ \
+  row23c = _mm_unpackhi_pi16(out4, out5);     /* row23c = (24 25 34 35) */ \
   \
-  row0l = _mm_unpacklo_pi32(row01a, row01b);  /* row0l=(00 01 02 03) */ \
-  row1l = _mm_unpackhi_pi32(row01a, row01b);  /* row1l=(10 11 12 13) */ \
-  row2l = _mm_unpacklo_pi32(row23a, row23b);  /* row2l=(20 21 22 23) */ \
-  row3l = _mm_unpackhi_pi32(row23a, row23b);  /* row3l=(30 31 32 33) */ \
+  row0l = _mm_unpacklo_pi32(row01a, row01b);  /* row0l = (00 01 02 03) */ \
+  row1l = _mm_unpackhi_pi32(row01a, row01b);  /* row1l = (10 11 12 13) */ \
+  row2l = _mm_unpacklo_pi32(row23a, row23b);  /* row2l = (20 21 22 23) */ \
+  row3l = _mm_unpackhi_pi32(row23a, row23b);  /* row3l = (30 31 32 33) */ \
   \
-  row0h = _mm_unpacklo_pi32(row01c, row01d);  /* row0h=(04 05 06 07) */ \
-  row1h = _mm_unpackhi_pi32(row01c, row01d);  /* row1h=(14 15 16 17) */ \
-  row2h = _mm_unpacklo_pi32(row23c, row23d);  /* row2h=(24 25 26 27) */ \
-  row3h = _mm_unpackhi_pi32(row23c, row23d);  /* row3h=(34 35 36 37) */ \
+  row0h = _mm_unpacklo_pi32(row01c, row01d);  /* row0h = (04 05 06 07) */ \
+  row1h = _mm_unpackhi_pi32(row01c, row01d);  /* row1h = (14 15 16 17) */ \
+  row2h = _mm_unpacklo_pi32(row23c, row23d);  /* row2h = (24 25 26 27) */ \
+  row3h = _mm_unpackhi_pi32(row23c, row23d);  /* row3h = (34 35 36 37) */ \
   \
   _mm_store_si64((__m64 *)&wsptr[DCTSIZE * 0], row0l); \
   _mm_store_si64((__m64 *)&wsptr[DCTSIZE * 0 + 4], row0h); \
@@ -436,7 +432,6 @@ static uint64_t const_value[] = {
   __m64 col0123a, col0123b, col0123c, col0123d; \
   __m64 col01l, col01h, col23l, col23h, row06, row17, row24, row35; \
   __m64 col0, col1, col2, col3; \
-  __m64 tmp0l, tmp0h, tmp1l, tmp1h, tmp2l, tmp2h, tmp3l, tmp3h; \
   __m64 tmp10l, tmp10h, tmp11l, tmp11h, tmp12l, tmp12h, tmp13l, tmp13h; \
   \
   row0l = _mm_load_si64((__m64 *)&wsptr[DCTSIZE * 0]);  /* (00 01 02 03) */ \
@@ -499,15 +494,15 @@ static uint64_t const_value[] = {
   \
   DO_IDCT_COMMON(2) \
   \
-  /* out0=(00 01 02 03), out1=(10 11 12 13) */ \
-  /* out2=(20 21 22 23), out3=(30 31 32 33) */ \
-  /* out4=(40 41 42 43), out5=(50 51 52 53) */ \
-  /* out6=(60 61 62 63), out7=(70 71 72 73) */ \
-  \
-  row06 = _mm_packs_pi16(out0, out6);  /* row06=(00 01 02 03 60 61 62 63) */ \
-  row17 = _mm_packs_pi16(out1, out7);  /* row17=(10 11 12 13 70 71 72 73) */ \
-  row24 = _mm_packs_pi16(out2, out4);  /* row24=(20 21 22 23 40 41 42 43) */ \
-  row35 = _mm_packs_pi16(out3, out5);  /* row35=(30 31 32 33 50 51 52 53) */ \
+  /* out0 = (00 01 02 03), out1 = (10 11 12 13) \
+   * out2 = (20 21 22 23), out3 = (30 31 32 33) \
+   * out4 = (40 41 42 43), out5 = (50 51 52 53) \
+   * out6 = (60 61 62 63), out7 = (70 71 72 73) \
+   */ \
+  row06 = _mm_packs_pi16(out0, out6);  /* row06 = (00 01 02 03 60 61 62 63) */ \
+  row17 = _mm_packs_pi16(out1, out7);  /* row17 = (10 11 12 13 70 71 72 73) */ \
+  row24 = _mm_packs_pi16(out2, out4);  /* row24 = (20 21 22 23 40 41 42 43) */ \
+  row35 = _mm_packs_pi16(out3, out5);  /* row35 = (30 31 32 33 50 51 52 53) */ \
   \
   row06 = _mm_add_pi8(row06, PB_CENTERJSAMP); \
   row17 = _mm_add_pi8(row17, PB_CENTERJSAMP); \
@@ -516,20 +511,20 @@ static uint64_t const_value[] = {
   \
   /* Transpose coefficients */ \
   \
-  col0123a = _mm_unpacklo_pi8(row06, row17);  /* col0123a=(00 10 01 11 02 12 03 13) */ \
-  col0123d = _mm_unpackhi_pi8(row06, row17);  /* col0123d=(60 70 61 71 62 72 63 73) */ \
-  col0123b = _mm_unpacklo_pi8(row24, row35);  /* col0123b=(20 30 21 31 22 32 23 33) */ \
-  col0123c = _mm_unpackhi_pi8(row24, row35);  /* col0123c=(40 50 41 51 42 52 43 53) */ \
+  col0123a = _mm_unpacklo_pi8(row06, row17);  /* col0123a = (00 10 01 11 02 12 03 13) */ \
+  col0123d = _mm_unpackhi_pi8(row06, row17);  /* col0123d = (60 70 61 71 62 72 63 73) */ \
+  col0123b = _mm_unpacklo_pi8(row24, row35);  /* col0123b = (20 30 21 31 22 32 23 33) */ \
+  col0123c = _mm_unpackhi_pi8(row24, row35);  /* col0123c = (40 50 41 51 42 52 43 53) */ \
   \
-  col01l = _mm_unpacklo_pi16(col0123a, col0123b);  /* col01l=(00 10 20 30 01 11 21 31) */ \
-  col23l = _mm_unpackhi_pi16(col0123a, col0123b);  /* col23l=(02 12 22 32 03 13 23 33) */ \
-  col01h = _mm_unpacklo_pi16(col0123c, col0123d);  /* col01h=(40 50 60 70 41 51 61 71) */ \
-  col23h = _mm_unpackhi_pi16(col0123c, col0123d);  /* col23h=(42 52 62 72 43 53 63 73) */ \
+  col01l = _mm_unpacklo_pi16(col0123a, col0123b);  /* col01l = (00 10 20 30 01 11 21 31) */ \
+  col23l = _mm_unpackhi_pi16(col0123a, col0123b);  /* col23l = (02 12 22 32 03 13 23 33) */ \
+  col01h = _mm_unpacklo_pi16(col0123c, col0123d);  /* col01h = (40 50 60 70 41 51 61 71) */ \
+  col23h = _mm_unpackhi_pi16(col0123c, col0123d);  /* col23h = (42 52 62 72 43 53 63 73) */ \
   \
-  col0 = _mm_unpacklo_pi32(col01l, col01h);   /* col0=(00 10 20 30 40 50 60 70) */ \
-  col1 = _mm_unpackhi_pi32(col01l, col01h);   /* col1=(01 11 21 31 41 51 61 71) */ \
-  col2 = _mm_unpacklo_pi32(col23l, col23h);   /* col2=(02 12 22 32 42 52 62 72) */ \
-  col3 = _mm_unpackhi_pi32(col23l, col23h);   /* col3=(03 13 23 33 43 53 63 73) */ \
+  col0 = _mm_unpacklo_pi32(col01l, col01h);  /* col0 = (00 10 20 30 40 50 60 70) */ \
+  col1 = _mm_unpackhi_pi32(col01l, col01h);  /* col1 = (01 11 21 31 41 51 61 71) */ \
+  col2 = _mm_unpacklo_pi32(col23l, col23h);  /* col2 = (02 12 22 32 42 52 62 72) */ \
+  col3 = _mm_unpackhi_pi32(col23l, col23h);  /* col3 = (03 13 23 33 43 53 63 73) */ \
   \
   _mm_store_si64((__m64 *)(output_buf[ctr + 0] + output_col), col0); \
   _mm_store_si64((__m64 *)(output_buf[ctr + 1] + output_col), col1); \
@@ -537,10 +532,13 @@ static uint64_t const_value[] = {
   _mm_store_si64((__m64 *)(output_buf[ctr + 3] + output_col), col3); \
 }
 
-void jsimd_idct_islow_mmi(void *dct_table, JCOEFPTR coef_block,
-                          JSAMPARRAY output_buf, JDIMENSION output_col)
+HIDDEN void
+jsimd_idct_islow_mmi(void *dct_table, JCOEFPTR coef_block,
+                     JSAMPARRAY output_buf, JDIMENSION output_col)
 {
   __m64 tmp0, tmp1, tmp2, tmp3;
+  __m64 tmp0l, tmp0h, tmp1l, tmp1h, tmp2l, tmp2h, tmp3l, tmp3h;
+  __m64 z3;
   __m64 out0, out1, out2, out3, out4, out5, out6, out7;
   JCOEFPTR inptr;
   ISLOW_MULT_TYPE *quantptr;

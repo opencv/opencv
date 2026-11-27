@@ -1,12 +1,11 @@
 /*
- * Loongson MMI optimizations for libjpeg-turbo
+ * Integer Quantization (64-bit MMI)
  *
  * Copyright (C) 2016-2017, Loongson Technology Corporation Limited, BeiJing.
- *                          All Rights Reserved.
  * Authors:  ZhuChen     <zhuchen@loongson.cn>
  *           CaiWanwei   <caiwanwei@loongson.cn>
  *           SunZhangzhi <sunzhangzhi-cq@loongson.cn>
- * Copyright (C) 2018-2019, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2018-2019, 2025, D. R. Commander.
  *
  * Based on the x86 SIMD extension for IJG JPEG library
  * Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -27,8 +26,6 @@
  *    misrepresented as being the original software.
  * 3. This notice may not be removed or altered from any source distribution.
  */
-
-/* INTEGER QUANTIZATION AND SAMPLE CONVERSION */
 
 #include "jsimd_mmi.h"
 
@@ -62,9 +59,10 @@
   rowl = _mm_mulhi_pi16(rowl, recipl); \
   rowh = _mm_mulhi_pi16(rowh, reciph); \
   \
-  /* reciprocal is always negative (MSB=1), so we always need to add the */ \
-  /* initial value (input value is never negative as we inverted it at the */ \
-  /* start of this routine) */ \
+  /* reciprocal is always negative (MSB = 1), so we always need to add the \
+   * initial value.  (The input value is never negative, as we inverted it at \
+   * the start of this routine.) \
+   */ \
   rowlsave = rowl = _mm_add_pi16(rowl, rowlsave); \
   rowhsave = rowh = _mm_add_pi16(rowh, rowhsave); \
   \
@@ -108,8 +106,8 @@
 }
 
 
-void jsimd_quantize_mmi(JCOEFPTR coef_block, DCTELEM *divisors,
-                        DCTELEM *workspace)
+HIDDEN void
+jsimd_quantize_mmi(JCOEFPTR coef_block, DCTELEM *divisors, DCTELEM *workspace)
 {
   JCOEFPTR output_ptr = coef_block;
 

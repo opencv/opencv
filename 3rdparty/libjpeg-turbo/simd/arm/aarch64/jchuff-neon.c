@@ -1,8 +1,8 @@
 /*
- * Huffman entropy encoding (64-bit Arm Neon)
+ * Huffman Encoding (64-bit Arm Neon)
  *
- * Copyright (C) 2020-2021, Arm Limited.  All Rights Reserved.
- * Copyright (C) 2020, 2022, 2024, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2020-2021, Arm Limited.
+ * Copyright (C) 2020, 2022, 2024-2025, D. R. Commander.
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -24,20 +24,12 @@
  * Recommendation ITU-T T.81 (1992) | ISO/IEC 10918-1:1994.
  */
 
-#define JPEG_INTERNALS
-#include "../../../src/jinclude.h"
-#include "../../../src/jpeglib.h"
-#include "../../../src/jsimd.h"
-#include "../../../src/jdct.h"
-#include "../../../src/jsimddct.h"
-#include "../../jsimd.h"
+#include "../../jsimdint.h"
 #include "../align.h"
 #include "../jchuff.h"
 #include "neon-compat.h"
 
 #include <limits.h>
-
-#include <arm_neon.h>
 
 
 ALIGN(16) static const uint8_t jsimd_huff_encode_one_block_consts[] = {
@@ -70,10 +62,9 @@ ALIGN(16) static const uint8_t jsimd_huff_encode_one_block_consts[] = {
 __attribute__((no_sanitize("alignment")))
 #endif
 #endif
-JOCTET *jsimd_huff_encode_one_block_neon(void *state, JOCTET *buffer,
-                                         JCOEFPTR block, int last_dc_val,
-                                         c_derived_tbl *dctbl,
-                                         c_derived_tbl *actbl)
+HIDDEN JOCTET *
+jsimd_huff_encode_one_block_neon(void *state, JOCTET *buffer, JCOEFPTR block,
+                                 int last_dc_val, void *dctbl, void *actbl)
 {
   uint16_t block_diff[DCTSIZE2];
 
@@ -232,15 +223,16 @@ JOCTET *jsimd_huff_encode_one_block_neon(void *state, JOCTET *buffer,
   unsigned int nbits = 16 - lz;
   /* Emit Huffman-coded symbol and additional diff bits. */
   unsigned int diff = vgetq_lane_u16(row0_diff, 0);
-  PUT_CODE(dctbl->ehufco[nbits], dctbl->ehufsi[nbits], diff)
+  PUT_CODE(((c_derived_tbl *)dctbl)->ehufco[nbits],
+           ((c_derived_tbl *)dctbl)->ehufsi[nbits], diff)
 
   /* Encode AC coefficients. */
 
   unsigned int r = 0;  /* r = run length of zeros */
   unsigned int i = 1;  /* i = number of coefficients encoded */
   /* Code and size information for a run length of 16 zero coefficients */
-  const unsigned int code_0xf0 = actbl->ehufco[0xf0];
-  const unsigned int size_0xf0 = actbl->ehufsi[0xf0];
+  const unsigned int code_0xf0 = ((c_derived_tbl *)actbl)->ehufco[0xf0];
+  const unsigned int size_0xf0 = ((c_derived_tbl *)actbl)->ehufsi[0xf0];
 
   /* The most efficient method of computing nbits and diff depends on the
    * number of non-zero coefficients.  If the bitmap is not too sparse (> 8
@@ -330,7 +322,8 @@ JOCTET *jsimd_huff_encode_one_block_neon(void *state, JOCTET *buffer,
       }
       /* Emit Huffman symbol for run length / number of bits. (F.1.2.2.1) */
       unsigned int rs = (r << 4) + nbits;
-      PUT_CODE(actbl->ehufco[rs], actbl->ehufsi[rs], diff)
+      PUT_CODE(((c_derived_tbl *)actbl)->ehufco[rs],
+               ((c_derived_tbl *)actbl)->ehufsi[rs], diff)
       i++;
       bitmap <<= 1;
     }
@@ -391,7 +384,8 @@ JOCTET *jsimd_huff_encode_one_block_neon(void *state, JOCTET *buffer,
       }
       /* Emit Huffman symbol for run length / number of bits. (F.1.2.2.1) */
       unsigned int rs = (r << 4) + nbits;
-      PUT_CODE(actbl->ehufco[rs], actbl->ehufsi[rs], diff)
+      PUT_CODE(((c_derived_tbl *)actbl)->ehufco[rs],
+               ((c_derived_tbl *)actbl)->ehufsi[rs], diff)
       i++;
       bitmap <<= 1;
     }
@@ -401,7 +395,8 @@ JOCTET *jsimd_huff_encode_one_block_neon(void *state, JOCTET *buffer,
    * The value of RS for the EOB code is 0.
    */
   if (i != 64) {
-    PUT_BITS(actbl->ehufco[0], actbl->ehufsi[0])
+    PUT_BITS(((c_derived_tbl *)actbl)->ehufco[0],
+             ((c_derived_tbl *)actbl)->ehufsi[0])
   }
 
   state_ptr->cur.put_buffer = put_buffer;

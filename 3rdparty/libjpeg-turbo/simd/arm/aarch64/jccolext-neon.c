@@ -1,7 +1,8 @@
 /*
- * Colorspace conversion (64-bit Arm Neon)
+ * RGB-to-YCbCr Color Conversion (64-bit Arm Neon)
  *
- * Copyright (C) 2020, Arm Limited.  All Rights Reserved.
+ * Copyright (C) 2020, Arm Limited.
+ * Copyright (C) 2025, D. R. Commander.
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -43,9 +44,10 @@
  * rounds up or down the result via integer truncation.
  */
 
-void jsimd_rgb_ycc_convert_neon(JDIMENSION image_width, JSAMPARRAY input_buf,
-                                JSAMPIMAGE output_buf, JDIMENSION output_row,
-                                int num_rows)
+HIDDEN void
+jsimd_rgb_ycc_convert_neon(JDIMENSION image_width, JSAMPARRAY input_buf,
+                           JSAMPIMAGE output_buf, JDIMENSION output_row,
+                           int num_rows)
 {
   /* Pointer to RGB(X/A) input data */
   JSAMPROW inptr;
