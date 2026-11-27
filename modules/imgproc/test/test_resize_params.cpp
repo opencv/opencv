@@ -143,7 +143,6 @@ struct AxisGeom
 {
     int inLen, outLen;
     double scale;       // source units per destination unit
-    double trueOutLen;  // inLen*fx when an ONNX mode was given fx (the unfloored length), else outLen
 };
 
 // The ResizeParams rules: an empty dsize is round(size*f), and a given dsize sets the scale, except
@@ -159,8 +158,6 @@ static void referenceGeometry(const ResizeParams& p, Size ssize, Size& dsize, Ax
     gy.inLen = ssize.height; gy.outLen = dsize.height;
     gx.scale = fromScale ? 1./p.fx : (double)ssize.width/dsize.width;
     gy.scale = fromScale ? 1./p.fy : (double)ssize.height/dsize.height;
-    gx.trueOutLen = onnxScale ? ssize.width*p.fx : dsize.width;
-    gy.trueOutLen = onnxScale ? ssize.height*p.fy : dsize.height;
 }
 
 // ONNX coordinate_transformation_mode; PIXEL_CENTER is OpenCV's half-pixel formula.
@@ -171,7 +168,7 @@ static double referenceSrcCoord(ResizeCoord mode, const AxisGeom& g, int dst)
     case ResizeCoord::ASYMMETRIC:
         return dst*g.scale;
     case ResizeCoord::ALIGN_CORNERS:
-        return g.trueOutLen > 1 ? dst*(g.inLen - 1)/(g.trueOutLen - 1) : 0.0;
+        return g.outLen > 1 ? dst*(g.inLen - 1.0)/(g.outLen - 1) : 0.0;
     case ResizeCoord::TF_HALF_PIXEL_FOR_NN:
         return (dst + 0.5)*g.scale;
     case ResizeCoord::PYTORCH_HALF_PIXEL:
@@ -612,14 +609,15 @@ TEST(Resize_Params, RandomConfigs)
 TEST(Resize_Params, KnownValues)
 {
     {
-        // ONNX test_resize_downsample_scales_linear_align_corners
+        // ONNX test_resize_downsample_scales_linear_align_corners: align_corners divides by the
+        // integer output length, so the 0.6 scale does not move the last sample off the corner.
         Mat src = Mat_<float>({2, 4}, {1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f}), dst;
         ResizeParams params(Size(2, 1), 0.6, 0.6);
         params.coordMode = ResizeCoord::ALIGN_CORNERS;
         resize(src, dst, params);
         ASSERT_EQ(Size(2, 1), dst.size());
         EXPECT_NEAR(1.f, dst.at<float>(0, 0), 1e-5);
-        EXPECT_NEAR(3.142857f, dst.at<float>(0, 1), 1e-5);
+        EXPECT_NEAR(4.f, dst.at<float>(0, 1), 1e-5);
     }
     {
         // ONNX test_resize_downsample_scales_linear_half_pixel_symmetric

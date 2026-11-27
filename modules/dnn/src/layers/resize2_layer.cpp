@@ -1323,12 +1323,11 @@ public:
             params.excludeOutside = excludeOutside;
             params.cubicCoeffA = cubicCoeffA;
 
-            // The true scale, not out/in: ONNX steps by 1/scale. Only align_corners with folded
-            // constant scales keeps the shape-derived (in-1)/(out-1), as the layer's own kernels do.
-            const bool shapeDerived = alignCorners && scales.empty();
+            // The true scale, not out/in: ONNX steps by 1/scale. align_corners ignores it and
+            // uses (in-1)/(out-1), as the layer's own kernels do.
             params.dsize = Size(out.size[3], out.size[2]);
-            params.fx = onnxScaleW > 0.f && !shapeDerived ? onnxScaleW : (double)out.size[3] / inp.size[3];
-            params.fy = onnxScaleH > 0.f && !shapeDerived ? onnxScaleH : (double)out.size[2] / inp.size[2];
+            params.fx = onnxScaleW > 0.f ? onnxScaleW : (double)out.size[3] / inp.size[3];
+            params.fy = onnxScaleH > 0.f ? onnxScaleH : (double)out.size[2] / inp.size[2];
             resize(inp, out, params);
         }
         else if(interpolation=="nearest"){

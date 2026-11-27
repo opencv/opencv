@@ -3345,9 +3345,9 @@ struct AxisMap
     }
 };
 
-// trueOutLen is the output length before dsize was floored. ALIGN_CORNERS divides by it, so only
-// an explicit fx/fy pins that mode down.
-AxisMap makeAxisMap(ResizeCoord mode, double scale, int inLen, int outLen, double trueOutLen)
+// ALIGN_CORNERS divides by the integer output length, as the ONNX operator defines it, so it
+// ignores the scale.
+AxisMap makeAxisMap(ResizeCoord mode, double scale, int inLen, int outLen)
 {
     AxisMap m;
     m.mode = mode;
@@ -3355,7 +3355,7 @@ AxisMap makeAxisMap(ResizeCoord mode, double scale, int inLen, int outLen, doubl
     m.symOffset = 0;
     m.degenerate = false;
     if (mode == ResizeCoord::ALIGN_CORNERS)
-        m.scale = trueOutLen > 1 ? (inLen - 1)/(trueOutLen - 1) : 0.0;
+        m.scale = outLen > 1 ? (double)(inLen - 1)/(outLen - 1) : 0.0;
     else if (mode == ResizeCoord::HALF_PIXEL_SYMMETRIC)
         m.symOffset = inLen*0.5 - outLen*scale*0.5;
     else if (mode == ResizeCoord::PYTORCH_HALF_PIXEL)
@@ -3863,9 +3863,6 @@ ResizeKernel* createResizeKernel(KernelSlot& slot, int type, Size ssize, size_t 
     resolveScales(ssize, dsize, params, inv_scale_x, inv_scale_y);
     int interpolation = resolveInterpolation(params, depth);
 
-    const double trueDstW = !classicCoord && params.fx > 0 ? ssize.width *params.fx : (double)dsize.width;
-    const double trueDstH = !classicCoord && params.fy > 0 ? ssize.height*params.fy : (double)dsize.height;
-
     const double scale_x = 1./inv_scale_x, scale_y = 1./inv_scale_y;
     const int iscale_x = saturate_cast<int>(scale_x);
     const int iscale_y = saturate_cast<int>(scale_y);
@@ -3905,8 +3902,8 @@ ResizeKernel* createResizeKernel(KernelSlot& slot, int type, Size ssize, size_t 
         const ResizeCoord nnCoord = classicCoord ? ResizeCoord::ASYMMETRIC : params.coordMode;
         const ResizeNearest nnRound = classicCoord ? ResizeNearest::FLOOR : params.nearestMode;
         return slot.emplace<NearestKernel>(type, ssize, dsize,
-                                           makeAxisMap(nnCoord, scale_x, ssize.width,  dsize.width,  trueDstW),
-                                           makeAxisMap(nnCoord, scale_y, ssize.height, dsize.height, trueDstH),
+                                           makeAxisMap(nnCoord, scale_x, ssize.width,  dsize.width),
+                                           makeAxisMap(nnCoord, scale_y, ssize.height, dsize.height),
                                            nnRound);
     }
 
@@ -3933,8 +3930,8 @@ ResizeKernel* createResizeKernel(KernelSlot& slot, int type, Size ssize, size_t 
 
     // INTER_AREA keeps its own decimation geometry; every other kernel reads its coordinates here.
     return slot.emplace<SeparableKernel>(type, ssize, dsize, interpolation, inv_scale_x, inv_scale_y,
-        makeAxisMap(params.coordMode, scale_x, ssize.width,  dsize.width,  trueDstW),
-        makeAxisMap(params.coordMode, scale_y, ssize.height, dsize.height, trueDstH),
+        makeAxisMap(params.coordMode, scale_x, ssize.width,  dsize.width),
+        makeAxisMap(params.coordMode, scale_y, ssize.height, dsize.height),
         params.cubicCoeffA, params.excludeOutside);
 }
 

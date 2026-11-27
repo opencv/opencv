@@ -2152,15 +2152,16 @@ decimation geometry is tied to #ResizeCoord::PIXEL_CENTER, so it accepts no othe
 @note The bit-exact kernels behind #INTER_NEAREST_EXACT and #INTER_LINEAR_EXACT exist only for
 #ResizeCoord::PIXEL_CENTER, so those two flags are rejected with any other mode.
 
-@note #ResizeCoord::HALF_PIXEL_SYMMETRIC and #ResizeCoord::ALIGN_CORNERS need the true scale --
-pass it via @ref cv::ResizeParams::fx "ResizeParams::fx" / @ref cv::ResizeParams::fy "ResizeParams::fy".
+@note #ResizeCoord::HALF_PIXEL_SYMMETRIC needs the true scale -- pass it via
+@ref cv::ResizeParams::fx "ResizeParams::fx" / @ref cv::ResizeParams::fy "ResizeParams::fy".
+#ResizeCoord::ALIGN_CORNERS uses only the input and output sizes, as ONNX defines it.
 */
 enum class ResizeCoord
 {
     PIXEL_CENTER = 0,       //!< OpenCV's fixed pixel-center formula (default, matches classic #resize)
     HALF_PIXEL,             //!< ONNX Resize "half_pixel": `src = (dst + 0.5) * scale - 0.5`
     PYTORCH_HALF_PIXEL,     //!< ONNX Resize "pytorch_half_pixel": #ResizeCoord::HALF_PIXEL, but `src = 0` when the output axis has length 1
-    ALIGN_CORNERS,          //!< ONNX Resize "align_corners": `src = dst * (srcLen-1)/(dstLen-1)`; see @ref ResizeCoord note
+    ALIGN_CORNERS,          //!< ONNX Resize "align_corners": `src = dst * (srcLen-1)/(dstLen-1)`
     ASYMMETRIC,             //!< ONNX Resize "asymmetric": `src = dst * scale`
     TF_HALF_PIXEL_FOR_NN,   //!< ONNX Resize "tf_half_pixel_for_nn": `src = (dst + 0.5) * scale`
     HALF_PIXEL_SYMMETRIC    //!< ONNX Resize "half_pixel_symmetric"; see @ref ResizeCoord note
