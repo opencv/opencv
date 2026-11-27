@@ -487,7 +487,21 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
                 {
                     // Convolution or pooling.
                     CV_Assert(attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 4 || attribute_proto.ints_size() == 6);
-                    lp.set("pad", parse(attribute_proto.ints()));
+                    // MaxUnpool reads a 2-element "pad" as (w, h), so keep
+                    // it on the old path (gh-31140).
+                    if (attribute_proto.ints_size() == 2 && node_proto.op_type() != "MaxUnpool")
+                    {
+                        // 1D convolution or pooling: pass the begin/end pads of
+                        // the single spatial axis separately via pad_t/pad_b.
+                        lp.set("pad_t", saturate_cast<int32_t>(attribute_proto.ints(0)));
+                        lp.set("pad_b", saturate_cast<int32_t>(attribute_proto.ints(1)));
+                        lp.set("pad_l", 0);
+                        lp.set("pad_r", 0);
+                    }
+                    else
+                    {
+                        lp.set("pad", parse(attribute_proto.ints()));
+                    }
                 }
             }
             else if(attribute_name == "auto_pad")
@@ -3455,6 +3469,25 @@ void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeP
     float inp_sc = getScalarFromMat<float>(getBlob(node_proto, 1));
     int inp_zp = (int)getScalarFromMat<int8_t>(getBlob(node_proto, 2));
 
+    // Asymmetric pads are not supported by the int8 convolution, so route
+    // them through an explicit PaddingInt8 layer (gh-31140).
+    auto addPaddingInt8 = [&](const std::vector<int>& paddings)
+    {
+        LayerParams padLp;
+        padLp.name = layerParams.name + "/pad";
+        padLp.type = "PaddingInt8";
+        padLp.set("paddings", DictValue::arrayInt(&paddings[0], paddings.size()));
+        padLp.set("depth", CV_8S);
+        padLp.set("value", inp_zp);
+
+        opencv_onnx::NodeProto proto;
+        proto.add_input(node_proto.input(0));
+        proto.add_output(padLp.name);
+
+        addLayer(padLp, proto);
+        node_proto.set_input(0, padLp.name);
+    };
+
     if (layerParams.has("pad"))
     {
         bool asymmetricPadding = false;
@@ -3478,19 +3511,22 @@ void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeP
                 paddings.push_back(pads.get<int>(i));
                 paddings.push_back(pads.get<int>(dims + i));
             }
-            LayerParams padLp;
-            padLp.name = layerParams.name + "/pad";
-            padLp.type = "PaddingInt8";
-            padLp.set("paddings", DictValue::arrayInt(&paddings[0], paddings.size()));
-            padLp.set("depth", CV_8S);
-            padLp.set("value", inp_zp);
+            addPaddingInt8(paddings);
+        }
+    }
+    else if (layerParams.has("pad_t") && layerParams.has("pad_b"))
+    {
+        // 1D case: pads arrive via pad_t/pad_b instead of "pad" (gh-31140).
+        // Same escape hatch as above, with one spatial axis.
+        const int pad_t = layerParams.get<int>("pad_t");
+        const int pad_b = layerParams.get<int>("pad_b");
+        if (pad_t != pad_b)
+        {
+            std::vector<int> paddings = {0, 0, 0, 0, pad_t, pad_b};
+            addPaddingInt8(paddings);
 
-            opencv_onnx::NodeProto proto;
-            proto.add_input(node_proto.input(0));
-            proto.add_output(padLp.name);
-
-            addLayer(padLp, proto);
-            node_proto.set_input(0, padLp.name);
+            layerParams.set("pad_t", 0);
+            layerParams.set("pad_b", 0);
         }
     }
 
@@ -3516,6 +3552,7 @@ void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeP
     }
 
     layerParams.type = "ConvolutionInt8";
+    layerParams.set("depth", CV_8S);
     layerParams.set("num_output", outCn);
     layerParams.set("input_zeropoint", inp_zp);
     layerParams.set("input_scale",inp_sc);

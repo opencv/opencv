@@ -1597,6 +1597,19 @@ TEST_P(Test_ONNX_layers, Conv1d_bias)
     testONNXModels("conv1d_bias");
 }
 
+TEST_P(Test_ONNX_layers, Conv1d_asymmetric_pads)
+{
+    // Conv1d with padding="same" and an even kernel: pads=[1, 2].
+    // The end pad must not be dropped (see gh-31140).
+    testONNXModels("conv1d_asym_pads");
+}
+
+TEST_P(Test_ONNX_layers, Conv1d_causal_pads)
+{
+    // Causal Conv1d (left padding only, folded into the Conv): pads=[4, 0].
+    testONNXModels("conv1d_causal_pads");
+}
+
 TEST_P(Test_ONNX_layers, Conv1d_variable_weight)
 {
     if (backend == DNN_BACKEND_CUDA)
@@ -1930,6 +1943,18 @@ TEST_P(Test_ONNX_layers, AvePool1d)
     testONNXModels("average_pooling_1d");
 }
 
+TEST_P(Test_ONNX_layers, MaxPool1d_asymmetric_pads)
+{
+    // MaxPool with kernel_shape=[3] and pads=[0, 2] (see gh-31140).
+    testONNXModels("maxpool1d_asym_pads");
+}
+
+TEST_P(Test_ONNX_layers, AvePool1d_asymmetric_pads)
+{
+    // AveragePool with kernel_shape=[3] and pads=[2, 0] (see gh-31140).
+    testONNXModels("averagepool1d_asym_pads");
+}
+
 TEST_P(Test_ONNX_layers, PoolConv1d)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
@@ -2017,6 +2042,9 @@ TEST_P(Test_ONNX_layers, Quantized_Convolution)
         testONNXModels("quantized_conv_int8_weights", npy, 0.03, 0.5);
         testONNXModels("quantized_conv_per_channel_weights", npy, 0.06, 0.4);
         testONNXModels("quantized_conv_asymmetric_pads_int8_weights");
+        // 1D QLinearConv with pads=[2, 0]. The int8 conv rejects asymmetric
+        // pads, so the importer routes them through a PaddingInt8 layer.
+        testONNXModels("quantized_conv1d_asymmetric_pads");
     }
 
     {
