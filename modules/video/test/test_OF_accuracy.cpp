@@ -177,6 +177,50 @@ TEST(DenseOpticalFlow_DIS, InvalidImgSize_CoarsestLevelLessThanFinestLevel)
     ASSERT_EQ(flow.cols, mat_size);
 }
 
+TEST(DenseOpticalFlow_DIS, small_frame_preserves_finest_scale_and_patch_size)
+{
+    Mat frame1(240, 320, CV_8UC1), frame2(240, 320, CV_8UC1);
+    theRNG().fill(frame1, RNG::UNIFORM, 0, 256);
+    GaussianBlur(frame1, frame1, Size(5, 5), 1.2);
+    Mat warp(Matx23d(1.0, 0.0, 3.5, 0.0, 1.0, -2.0));
+    warpAffine(frame1, frame2, warp, frame1.size(), INTER_LINEAR, BORDER_REFLECT);
+
+    Mat small1 = frame1(Rect(80, 60, 64, 64)).clone();
+    Mat small2 = frame2(Rect(80, 60, 64, 64)).clone();
+
+    // 1. CPU: PRESET_ULTRAFAST (finest_scale = 2, patch_size = 8)
+    {
+        Ptr<DISOpticalFlow> dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_ULTRAFAST);
+        Ptr<DISOpticalFlow> fresh = DISOpticalFlow::create(DISOpticalFlow::PRESET_ULTRAFAST);
+        Mat flowSmall, flowReused, flowFresh;
+        dis->calc(small1, small2, flowSmall);
+        EXPECT_EQ(2, dis->getFinestScale());
+        EXPECT_EQ(8, dis->getPatchSize());
+
+        dis->calc(frame1, frame2, flowReused);
+        fresh->calc(frame1, frame2, flowFresh);
+        ASSERT_TRUE(checkRange(flowReused));
+        EXPECT_EQ(0.0, cvtest::norm(flowReused, flowFresh, NORM_INF));
+    }
+
+    // 2. CPU: PRESET_FAST with setPatchSize(12) (finest_scale = 2, patch_size = 12)
+    {
+        Ptr<DISOpticalFlow> dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_FAST);
+        dis->setPatchSize(12);
+        Ptr<DISOpticalFlow> fresh = DISOpticalFlow::create(DISOpticalFlow::PRESET_FAST);
+        fresh->setPatchSize(12);
+        Mat flowSmall, flowReused, flowFresh;
+        dis->calc(small1, small2, flowSmall);
+        EXPECT_EQ(2, dis->getFinestScale());
+        EXPECT_EQ(12, dis->getPatchSize());
+
+        dis->calc(frame1, frame2, flowReused);
+        fresh->calc(frame1, frame2, flowFresh);
+        ASSERT_TRUE(checkRange(flowReused));
+        EXPECT_EQ(0.0, cvtest::norm(flowReused, flowFresh, NORM_INF));
+    }
+}
+
 TEST(DenseOpticalFlow_VariationalRefinement, ReferenceAccuracy)
 {
     Mat frame1, frame2, GT;
