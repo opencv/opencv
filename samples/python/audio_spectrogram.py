@@ -336,19 +336,11 @@ class AudioDrawing:
             )
         stft = []
 
+        window = None
         if self.windowType == "Hann":
-            # https://en.wikipedia.org/wiki/Window_function#Hann_and_Hamming_windows
-            Hann_wind = []
-            for i in range (1 - self.windLen, self.windLen, 2):
-                Hann_wind.append(i * (0.5 + 0.5 * math.cos(math.pi * i / (self.windLen - 1))))
-            Hann_wind = np.asarray(Hann_wind)
-
+            window = np.hanning(self.windLen)
         elif self.windowType == "Hamming":
-            # https://en.wikipedia.org/wiki/Window_function#Hann_and_Hamming_windows
-            Hamming_wind = []
-            for i in range (1 - self.windLen, self.windLen, 2):
-                Hamming_wind.append(i * (0.53836 - 0.46164 * (math.cos(2 * math.pi * i / (self.windLen - 1)))))
-            Hamming_wind = np.asarray(Hamming_wind)
+            window = np.hamming(self.windLen)
 
         for index in np.arange(0, len(inputAudio), time_step).astype(int):
 
@@ -356,10 +348,8 @@ class AudioDrawing:
             zeroArray = np.zeros(self.windLen - len(section))
             section = np.concatenate((section, zeroArray), axis=None)
 
-            if self.windowType == "Hann":
-                section *= Hann_wind
-            elif self.windowType == "Hamming":
-                section *= Hamming_wind
+            if window is not None:
+                section *= window
 
             dst = np.empty(0)
             dst = cv.dft(section, dst, flags=cv.DFT_COMPLEX_OUTPUT)
