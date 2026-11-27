@@ -557,13 +557,7 @@ class JavaWrapperGenerator(object):
             enumType = None
         else:
             ctype = normalize_class_name(enumType)
-            enum_entry = { "cast_from" : "int", "cast_to" : get_cname(enumType), "j_type" : "int", "jn_type" : "int", "jni_type" : "jint", "suffix" : "I" }
-            type_dict[ctype] = enum_entry
-            for ns in self.namespaces:
-                prefix = ns + "."
-                if enumType.startswith(prefix):
-                    short_ctype = normalize_class_name(enumType[len(prefix):])
-                    type_dict.setdefault(short_ctype, enum_entry)
+            type_dict[ctype] = { "cast_from" : "int", "cast_to" : get_cname(enumType), "j_type" : "int", "jn_type" : "int", "jni_type" : "jint", "suffix" : "I" }
         const_decls = decl[3]
 
         for decl in const_decls:
@@ -676,6 +670,23 @@ class JavaWrapperGenerator(object):
         else:
             return cast_from(t)
 
+    def resolveType(self, ctype, fi):
+        if not ctype or ctype in type_dict:
+            return ctype
+        ns_parts = [p for p in fi.namespace.split(".") if p and p != "cv"]
+        cls_parts = [p for p in fi.classpath.split(".") if p]
+        for i in range(len(cls_parts), 0, -1):
+            scope = "_".join(ns_parts + cls_parts[:i])
+            candidate = "%s_%s" % (scope, ctype)
+            if candidate in type_dict:
+                return candidate
+        for i in range(len(ns_parts), 0, -1):
+            scope = "_".join(ns_parts[:i])
+            candidate = "%s_%s" % (scope, ctype)
+            if candidate in type_dict:
+                return candidate
+        return ctype
+
     def gen_func(self, ci, fi, prop_name=''):
         logging.info("%s", fi)
         j_code   = ci.j_code
@@ -703,6 +714,7 @@ class JavaWrapperGenerator(object):
         # java comment
         j_code.write( "\n    //\n    // C++: %s\n    //\n\n" % c_decl )
         # check if we 'know' all the types
+        fi.ctype = self.resolveType(fi.ctype, fi)
         if fi.ctype not in type_dict: # unsupported ret type
             msg = "// Return type '%s' is not supported, skipping the function\n\n" % fi.ctype
             self.skipped_func_list.append(c_decl + "\n" + msg)
@@ -710,6 +722,7 @@ class JavaWrapperGenerator(object):
             logging.info("SKIP:" + c_decl.strip() + "\t due to RET type " + fi.ctype)
             return
         for a in fi.args:
+            a.ctype = self.resolveType(a.ctype, fi)
             if a.ctype not in type_dict:
                 if not a.defval and a.ctype.endswith("*"):
                     a.defval = 0

@@ -130,3 +130,8 @@ add_custom_target(gen_opencv_java_source DEPENDS ${java_generated_files}
     SOURCES "${JAVA_SOURCE_DIR}/generator/gen_java.py"
             "${CMAKE_CURRENT_BINARY_DIR}/gen_java.json"
 )
+
+if(BUILD_TESTS AND PYTHON_DEFAULT_EXECUTABLE)
+  add_test(NAME opencv_test_gen_java
+           COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/test/test_gen_java.py")
+endif()

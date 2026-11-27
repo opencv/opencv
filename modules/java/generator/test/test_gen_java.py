@@ -81,6 +81,52 @@ class GenJavaTest(unittest.TestCase):
         self.assertIn("cv::xfeatures2d::BEBLID::create( (float)scale_factor )", jni_code)
         self.assertNotIn("cv::xfeatures2d::BEBLID::create()", jni_code)
 
+    def test_unqualified_enum_in_class_scope(self):
+        header = """
+        namespace cv { namespace xfeatures2d {
+        class CV_EXPORTS_W BEBLID {
+        public:
+            enum BeblidSize {
+                SIZE_512_BITS = 100,
+                SIZE_256_BITS = 101
+            };
+            CV_WRAP static Ptr<BEBLID> create(float scale_factor,
+                                              BeblidSize n_bits = SIZE_512_BITS);
+        };
+        }}
+        """
+        java_files, jni_code = self._generate(header, module="xfeatures2d")
+        java_code = java_files["BEBLID.java"]
+
+        self.assertIn("public static BEBLID create(float scale_factor, int n_bits)", java_code)
+        self.assertIn("public static BEBLID create(float scale_factor)", java_code)
+        self.assertNotIn("public static BEBLID create()", java_code)
+        self.assertIn("(cv::xfeatures2d::BEBLID::BeblidSize)n_bits", jni_code)
+
+    def test_shared_enum_name_across_namespaces(self):
+        header = """
+        namespace cv { namespace ns_a {
+        enum Mode { MODE_A = 1 };
+        class CV_EXPORTS_W WorkerA {
+        public:
+            CV_WRAP static void run(int x, Mode m = MODE_A);
+        };
+        }}
+        namespace cv { namespace ns_b {
+        enum Mode { MODE_B = 2 };
+        class CV_EXPORTS_W WorkerB {
+        public:
+            CV_WRAP static void run(int x, Mode m = MODE_B);
+        };
+        }}
+        """
+        java_files, jni_code = self._generate(header, module="multi_ns")
+
+        self.assertIn("public static void run(int x, int m)", java_files["WorkerA.java"])
+        self.assertIn("public static void run(int x, int m)", java_files["WorkerB.java"])
+        self.assertIn("(cv::ns_a::Mode)m", jni_code)
+        self.assertIn("(cv::ns_b::Mode)m", jni_code)
+
     def test_hidden_default_arg_preserves_required_args(self):
         header = """
         namespace cv {
