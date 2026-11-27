@@ -28,10 +28,10 @@ Common style errors and fixes
 These checks use rough rules, not a real TeX parser. Some hits are false.
 Use ``--exclude`` to skip them.
 
-The first full scan found 1,689 hits. ``MULTIPLICATION_SIGN`` was the worst:
-230 of 321 hits were the ``*`` that marks a Doxygen comment line.
-``TEXT_IN_MATH_MODE`` hit ``\texttt{...}`` code most of the time, and
-``UNNECESSARY_MATH_MODE`` hit many lone Greek letters.
+A full scan of the OpenCV tree found 1,576 hits. ``MULTIPLICATION_SIGN`` is
+down to 146 hits, mostly real ``*`` multiplication or ``*`` inside
+``\texttt{...}`` code. ``TEXT_IN_MATH_MODE`` hit ``\texttt{...}`` 408 of 744
+times, and ``UNNECESSARY_MATH_MODE`` hit many lone Greek letters.
 
 Operator names (``BACKSLASH_NEEDED``)
 -------------------------------------
@@ -84,9 +84,9 @@ so read the line first.
 Multiplication sign (``MULTIPLICATION_SIGN``)
 ---------------------------------------------
 
-This check is noisy in OpenCV. Most hits are the ``*`` that starts a Doxygen
-comment line in a long formula, or ``*`` in ``\texttt{...}`` code. Start
-with ``--exclude MULTIPLICATION_SIGN``.
+The old Doxygen ``*`` prefix noise is fixed in the latexcheck fork. Remaining
+hits are real multiplication or ``*`` inside ``\texttt{...}`` code. Use
+``\cdot`` for the math; leave the code alone.
 
 In math mode use ``\cdot``. Use ``\times`` only for size, cross products and
 the like::
