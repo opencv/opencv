@@ -8016,38 +8016,6 @@ CV_ALWAYS_INLINE v_float32 v_fma(const v_int32& a, const v_float32& b, const v_f
     R2.val = vzip1q_f32(_r02b, _r13b);   \
     R3.val = vzip2q_f32(_r02b, _r13b); }
 
-#undef FETCH_INLIERS_32FC3
-#define FETCH_INLIERS_32FC3(row) { \
-    const uint8_t* srcrow = (const uint8_t*)src + row*srcstep; \
-    float32x4x3_t _r0 = vld3q_f32((const chtype*)(srcrow + tl_ofs[0])); \
-    float32x4x3_t _r1 = vld3q_f32((const chtype*)(srcrow + tl_ofs[1])); \
-    float32x4x3_t _r2 = vld3q_f32((const chtype*)(srcrow + tl_ofs[2])); \
-    float32x4x3_t _r3 = vld3q_f32((const chtype*)(srcrow + tl_ofs[3])); \
-    float32x4_t _r02a = vzip1q_f32(_r0.val[0], _r2.val[0]);   \
-    float32x4_t _r02b = vzip2q_f32(_r0.val[0], _r2.val[0]);   \
-    float32x4_t _r13a = vzip1q_f32(_r1.val[0], _r3.val[0]);   \
-    float32x4_t _r13b = vzip2q_f32(_r1.val[0], _r3.val[0]);   \
-    float32x4_t _g02a = vzip1q_f32(_r0.val[1], _r2.val[1]);   \
-    float32x4_t _g02b = vzip2q_f32(_r0.val[1], _r2.val[1]);   \
-    float32x4_t _g13a = vzip1q_f32(_r1.val[1], _r3.val[1]);   \
-    float32x4_t _g13b = vzip2q_f32(_r1.val[1], _r3.val[1]);   \
-    float32x4_t _b02a = vzip1q_f32(_r0.val[2], _r2.val[2]);   \
-    float32x4_t _b02b = vzip2q_f32(_r0.val[2], _r2.val[2]);   \
-    float32x4_t _b13a = vzip1q_f32(_r1.val[2], _r3.val[2]);   \
-    float32x4_t _b13b = vzip2q_f32(_r1.val[2], _r3.val[2]);   \
-    R0.val = vzip1q_f32(_r02a, _r13a);             \
-    R1.val = vzip2q_f32(_r02a, _r13a);             \
-    R2.val = vzip1q_f32(_r02b, _r13b);             \
-    R3.val = vzip2q_f32(_r02b, _r13b);             \
-    G0.val = vzip1q_f32(_g02a, _g13a);             \
-    G1.val = vzip2q_f32(_g02a, _g13a);             \
-    G2.val = vzip1q_f32(_g02b, _g13b);             \
-    G3.val = vzip2q_f32(_g02b, _g13b);             \
-    B0.val = vzip1q_f32(_b02a, _b13a);             \
-    B1.val = vzip2q_f32(_b02a, _b13a);             \
-    B2.val = vzip1q_f32(_b02b, _b13b);             \
-    B3.val = vzip2q_f32(_b02b, _b13b); }
-
 #undef FETCH_INLIERS_32FC4
 #define FETCH_INLIERS_32FC4(row) { \
     const uint8_t* srcrow = (const uint8_t*)src + row*srcstep; \
@@ -8110,6 +8078,39 @@ CV_ALWAYS_INLINE v_float32 v_fma(const v_int32& a, const v_float32& b, const v_f
     BICUBIC_UPDATE_ACC_VEC(acc_b, B0, B1, B2, B3, wy##row); \
     BICUBIC_UPDATE_ACC_VEC(acc_a, A0, A1, A2, A3, wy##row)
 
+#if CV_SIMD128 && CV_SIMD_WIDTH == 16
+static inline void storeBicubicWeights(const v_float32x4& w0, const v_float32x4& w1,
+                                       const v_float32x4& w2, const v_float32x4& w3, float (&weights)[4][4])
+{
+    v_float32x4 p0, p1, p2, p3;
+    v_transpose4x4(w0, w1, w2, w3, p0, p1, p2, p3);
+    v_store(weights[0], p0);
+    v_store(weights[1], p1);
+    v_store(weights[2], p2);
+    v_store(weights[3], p3);
+}
+
+static inline void bicubicWarpRGB(const float* src, size_t step,
+                                  const float* wx, const float* wy, float* dst)
+{
+    const v_float32x4 zero = v_setzero_f32();
+    v_float32x4 columns[3] = {zero, zero, zero};
+    for (int row = 0; row < 4; ++row)
+    {
+        const float* samples = src + size_t(row)*step;
+        const v_float32x4 weight = v_setall_f32(wy[row]);
+        for (int group = 0; group < 3; ++group)
+            columns[group] = v_fma(v_load(samples + 4*group), weight, columns[group]);
+    }
+
+    v_float32x4 weights[3];
+    packRGBWarpWeights(wx, weights);
+    for (int group = 0; group < 3; ++group)
+        columns[group] = v_mul(columns[group], weights[group]);
+    storeWarpRGB(dst, sumFourRGBWarpTaps(columns));
+}
+#endif
+
 template<typename chtype, int NCHANNELS, typename vecfptype, typename vecbuftype>
 static void
 bicubicVec(const float* srcx, const float* srcy, int len,
@@ -8164,6 +8165,19 @@ bicubicVec(const float* srcx, const float* srcy, int len,
                                  wx0, wx1, wx2, wx3, wy0, wy1, wy2, wy3);
 
         if (code > 0) {
+#if CV_SIMD128 && CV_SIMD_WIDTH == 16
+            if constexpr (NCHANNELS == 3 && std::is_same_v<chtype, float>) {
+                float wx[BATCH][4], wy[BATCH][4];
+                storeBicubicWeights(wx0, wx1, wx2, wx3, wx);
+                storeBicubicWeights(wy0, wy1, wy2, wy3, wy);
+                const size_t step = srcstep / sizeof(float);
+                for (int j = 0; j < dlen; ++j) {
+                    const float* top = static_cast<const float*>(src) + size_t(tl_y[j])*step + 3*size_t(tl_x[j]);
+                    bicubicWarpRGB(top, step, wx[j], wy[j], dst + 3*j);
+                }
+                continue;
+            }
+#endif
             if constexpr (NCHANNELS == 1) {
                 vecbuftype R0, R1, R2, R3;
                 acc_r = v_setzero_<vecfptype>();
