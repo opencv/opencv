@@ -309,5 +309,32 @@ TEST_F(SacSegmentationTest, SphereSacSegmentation)
     multiModelSegmentation(5000, sphereCheckDiff);
 }
 
+TEST_F(SacSegmentationTest, SegmentDoesNotModifyCustomConstraints)
+{
+    // A radius-5 sphere centered at the origin
+    const vector<float> sphere = {0, 0, 0, 5};
+    generateSphere(generated_pts, sphere, 0.1f, 200, {-1, 1, -1, 1, -1, 1});
+    pt_cloud = generated_pts;
+
+    sacSegmentation->setSacModelType(cv::SAC_MODEL_SPHERE);
+    sacSegmentation->setSacMethodType(SAC_METHOD_RANSAC);
+    sacSegmentation->setConfidence(1);
+    sacSegmentation->setMaxIterations(2000);
+    sacSegmentation->setNumberOfModelsExpected(1);
+    sacSegmentation->setDistanceThreshold(0.11);
+    sacSegmentation->setCustomModelConstraints(nullptr);
+
+    // The radius limits exclude the sphere
+    sacSegmentation->setRadiusLimits(0.1, 2);
+    EXPECT_EQ(0, sacSegmentation->segment(pt_cloud, label, segmented_models));
+    // segment() must not replace the constraint set by the user
+    EXPECT_TRUE(sacSegmentation->getCustomModelConstraints() == nullptr);
+
+    // Relaxed radius limits must be honoured by the next call on the same object
+    sacSegmentation->setRadiusLimits(0.1, 10);
+    EXPECT_EQ(1, sacSegmentation->segment(pt_cloud, label, segmented_models));
+    EXPECT_TRUE(sacSegmentation->getCustomModelConstraints() == nullptr);
+}
+
 } // namespace
 } // opencv_test

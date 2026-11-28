@@ -51,7 +51,9 @@ SACSegmentationImpl::segmentSingle(Mat &points, std::vector<bool> &label, Mat &m
     const int points_size = points.rows * points.cols / 3;
     const double _radius_min = radius_min, _radius_max = radius_max;
     const ModelConstraintFunction &_custom_constraint = custom_model_constraints;
-    ModelConstraintFunction &constraint_func = custom_model_constraints;
+    // Work on a local copy: the sphere branch below wraps it with a radius check, which must not
+    // overwrite the user's custom_model_constraints (and leak into subsequent segment() calls).
+    ModelConstraintFunction constraint_func = _custom_constraint;
 
     // RANSAC
     using namespace usac;
