@@ -111,11 +111,19 @@ CASE(test_add_uint8)
 #endif
 CASE(test_affine_grid_3d)
     SKIP;
+CASE(test_affine_grid_3d_expanded)
+    SKIP;
 CASE(test_affine_grid_3d_align_corners)
+    SKIP;
+CASE(test_affine_grid_3d_align_corners_expanded)
     SKIP;
 CASE(test_affine_grid_2d)
     SKIP;
+CASE(test_affine_grid_2d_expanded)
+    SKIP;
 CASE(test_affine_grid_2d_align_corners)
+    SKIP;
+CASE(test_affine_grid_2d_align_corners_expanded)
     SKIP;
 CASE(test_and2d)
     // no filter
@@ -892,6 +900,8 @@ CASE(test_dequantizelinear_e4m3fn_zero_point)
     SKIP;
 CASE(test_dequantizelinear_e5m2)
     SKIP;
+CASE(test_dequantizelinear_float4e2m1)
+    SKIP;
 CASE(test_dequantizelinear_int16)
     SKIP;
 CASE(test_dequantizelinear_int4)
@@ -905,6 +915,8 @@ CASE(test_det_2d)
 CASE(test_det_nd)
     SKIP;
 CASE(test_dft)
+    SKIP;
+CASE(test_dft_axis)
     SKIP;
 CASE(test_dft_axis_opset19)
     SKIP;
@@ -2240,6 +2252,8 @@ CASE(test_quantizelinear_int4)
 CASE(test_quantizelinear_uint16)
     SKIP;
 CASE(test_quantizelinear_uint4)
+    SKIP;
+CASE(test_range_bfloat16_type_positive_delta_expanded)
     SKIP;
 CASE(test_range_float_type_positive_delta)
     SKIP;
@@ -3703,6 +3717,8 @@ CASE(test_causal_conv_with_state_basic_expanded)
     SKIP;
 CASE(test_causal_conv_with_state_decode_step_expanded)
     SKIP;
+CASE(test_causal_conv_with_state_fp16_expanded)
+    SKIP;
 CASE(test_causal_conv_with_state_kernel_size_one_expanded)
     SKIP;
 CASE(test_causal_conv_with_state_short_input_no_past_state_expanded)
@@ -3910,6 +3926,12 @@ CASE(test_matmul_4d_1d)
 CASE(test_dft_irfft)
     SKIP;
 CASE(test_dft_irfft_opset19)
+    SKIP;
+CASE(test_tensorscatter)
+    SKIP;
+CASE(test_tensorscatter_3d)
+    SKIP;
+CASE(test_tensorscatter_circular)
     SKIP;
 END_SWITCH()
 #undef EOF_LABEL

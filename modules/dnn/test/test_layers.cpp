@@ -3226,6 +3226,46 @@ TEST_P(Layer_Test_Resize, nearest_int64_keeps_precision)
         EXPECT_EQ(vals[i / 2], outData[i]) << "i=" << i;
 }
 
+// tf_crop_and_resize with a box that reaches the input edge maps the last
+// output pixel exactly onto the last input pixel, which is inside the input.
+// Bilinear used to treat it as out of bounds and write extrapolation_value.
+TEST_P(Layer_Test_Resize, tf_crop_and_resize_bilinear_edge)
+{
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
+    if (backendId != DNN_BACKEND_OPENCV)
+        throw SkipTestException("Resize2 layer is implemented for the OpenCV backend only");
+
+    Mat inp(std::vector<int>{1, 1, 4, 4}, CV_32F);
+    for (int i = 0; i < 16; ++i)
+        inp.ptr<float>()[i] = (float)i;
+
+    LayerParams lp;
+    lp.type = "Resize2";
+    lp.name = "testLayer";
+    lp.set("height", 3);
+    lp.set("width", 3);
+    lp.set("interpolation", "bilinear");
+    lp.set("coordinate_transformation_mode", "tf_crop_and_resize");
+    lp.set("extrapolation_value", -1.f);
+
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInput(inp);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    Mat out = net.forward();
+
+    const float ref[] = {
+         0.f,  1.5f,  3.f,
+         6.f,  7.5f,  9.f,
+        12.f, 13.5f, 15.f
+    };
+    ASSERT_EQ(9, (int)out.total());
+    for (int i = 0; i < 9; ++i)
+        EXPECT_FLOAT_EQ(ref[i], out.ptr<float>()[i]) << "i=" << i;
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Resize, dnnBackendsAndTargets());
 
 struct Layer_Test_Slice : public testing::TestWithParam<tuple<Backend, Target> >
@@ -6249,5 +6289,399 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Reduce_Unsigned, Values(
     CV_32U,
     CV_64U
 ));
+
+TEST(Layer_Test_IsInf, NoDetection)
+{
+    LayerParams lp;
+    lp.type = "IsInf";
+    lp.name = "testIsInf";
+    lp.set("detect_positive", 0);
+    lp.set("detect_negative", 0);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("IsInf", lp);
+
+    const float inf = std::numeric_limits<float>::infinity();
+    float data[] = {1.f, inf, -inf, 0.f};
+    Mat input(1, 4, CV_32F, data);
+    std::vector<Mat> inputs = {input}, outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    for (int i = 0; i < 4; i++)
+        EXPECT_EQ(outputs[0].ptr<uchar>()[i], 0) << "index " << i;
+}
+
+TEST(Test_TensorScatter, DefaultWriteIndices)
+{
+    const int shape_past[] = {2, 3, 4};
+    const int shape_update[] = {2, 1, 4};
+    Mat past(3, shape_past, CV_32F);
+    Mat update(3, shape_update, CV_32F);
+    randu(past, -1.f, 1.f);
+    randu(update, 10.f, 20.f);
+
+    LayerParams lp;
+    lp.type = "TensorScatter";
+    lp.name = "test_ts_default_indices";
+    lp.set("axis", 1);
+    lp.set("mode", "linear");
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    std::vector<Mat> inputs = {past, update};
+    std::vector<Mat> outputs(1, Mat(3, shape_past, CV_32F));
+    std::vector<Mat> internals;
+    layer->finalize(inputs, outputs);
+    layer->forward(inputs, outputs, internals);
+
+    for (int b = 0; b < 2; ++b)
+    {
+        for (int k = 0; k < 4; ++k)
+        {
+            EXPECT_FLOAT_EQ(outputs[0].at<float>(b, 0, k), update.at<float>(b, 0, k));
+            EXPECT_FLOAT_EQ(outputs[0].at<float>(b, 1, k), past.at<float>(b, 1, k));
+            EXPECT_FLOAT_EQ(outputs[0].at<float>(b, 2, k), past.at<float>(b, 2, k));
+        }
+    }
+}
+
+TEST(Test_TensorScatter, CircularWrapAround)
+{
+    const int shape_past[] = {1, 3, 2};
+    const int shape_update[] = {1, 2, 2};
+    Mat past(3, shape_past, CV_32F);
+    Mat update(3, shape_update, CV_32F);
+    randu(past, 0.f, 5.f);
+    randu(update, 100.f, 200.f);
+
+    int32_t indices_data[] = {2};
+    Mat indices(1, 1, CV_32S, indices_data);
+
+    LayerParams lp;
+    lp.type = "TensorScatter";
+    lp.name = "test_ts_circular";
+    lp.set("axis", 1);
+    lp.set("mode", "circular");
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    std::vector<Mat> inputs = {past, update, indices};
+    std::vector<Mat> outputs(1, Mat(3, shape_past, CV_32F));
+    std::vector<Mat> internals;
+    layer->finalize(inputs, outputs);
+    layer->forward(inputs, outputs, internals);
+
+    for (int k = 0; k < 2; ++k)
+    {
+        EXPECT_FLOAT_EQ(outputs[0].at<float>(0, 2, k), update.at<float>(0, 0, k));
+        EXPECT_FLOAT_EQ(outputs[0].at<float>(0, 0, k), update.at<float>(0, 1, k));
+        EXPECT_FLOAT_EQ(outputs[0].at<float>(0, 1, k), past.at<float>(0, 1, k));
+    }
+
+    {
+        const int shape_past_multi[] = {1, 5, 2};
+        const int shape_update_multi[] = {1, 4, 2};
+        Mat past_multi(3, shape_past_multi, CV_32F);
+        Mat update_multi(3, shape_update_multi, CV_32F);
+        randu(past_multi, 0.f, 5.f);
+        randu(update_multi, 100.f, 200.f);
+
+        int32_t idx_multi_data[] = {3};
+        Mat idx_multi(1, 1, CV_32S, idx_multi_data);
+        std::vector<Mat> multi_inputs = {past_multi, update_multi, idx_multi};
+        std::vector<Mat> multi_outputs;
+        runLayer(layer, multi_inputs, multi_outputs);
+
+        for (int k = 0; k < 2; ++k)
+        {
+            EXPECT_FLOAT_EQ(multi_outputs[0].at<float>(0, 3, k), update_multi.at<float>(0, 0, k));
+            EXPECT_FLOAT_EQ(multi_outputs[0].at<float>(0, 4, k), update_multi.at<float>(0, 1, k));
+            EXPECT_FLOAT_EQ(multi_outputs[0].at<float>(0, 0, k), update_multi.at<float>(0, 2, k));
+            EXPECT_FLOAT_EQ(multi_outputs[0].at<float>(0, 1, k), update_multi.at<float>(0, 3, k));
+            EXPECT_FLOAT_EQ(multi_outputs[0].at<float>(0, 2, k), past_multi.at<float>(0, 2, k));
+        }
+    }
+}
+
+
+TEST(Test_TensorScatter, Int64MaxWriteIndexLinear)
+{
+    const int shape_past[] = {1, 4, 2};
+    const int shape_update[] = {1, 1, 2};
+    Mat past(3, shape_past, CV_32F);
+    Mat update(3, shape_update, CV_32F);
+    randu(past, 0.f, 1.f);
+    randu(update, 10.f, 20.f);
+
+    int64_t indices_data[] = {std::numeric_limits<int64_t>::max()};
+    Mat indices(1, 1, CV_64S, indices_data);
+
+    LayerParams lp;
+    lp.type = "TensorScatter";
+    lp.name = "test_ts_int64_max";
+    lp.set("axis", 1);
+    lp.set("mode", "linear");
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    std::vector<Mat> inputs = {past, update, indices};
+    std::vector<Mat> outputs(1, Mat(3, shape_past, CV_32F));
+    std::vector<Mat> internals;
+    layer->finalize(inputs, outputs);
+    EXPECT_THROW(layer->forward(inputs, outputs, internals), cv::Exception);
+}
+
+TEST(Test_TensorScatter, ZeroWorkDomain)
+{
+    LayerParams lp;
+    lp.type = "TensorScatter";
+    lp.name = "test_ts_zero_work";
+    lp.set("axis", 2);
+    lp.set("mode", "linear");
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    // Case 1: Empty intermediate dimension (past=[1, 0, 4], update=[1, 0, 1], axis=2)
+    {
+        const int shape_past[] = {1, 0, 4};
+        const int shape_update[] = {1, 0, 1};
+        Mat past(3, shape_past, CV_32F);
+        Mat update(3, shape_update, CV_32F);
+        std::vector<Mat> inputs = {past, update};
+        std::vector<Mat> outputs;
+        runLayer(layer, inputs, outputs);
+        ASSERT_EQ(outputs.size(), (size_t)1);
+        ASSERT_EQ(shape(outputs[0]), MatShape({1, 0, 4}));
+    }
+
+    // Case 2: Zero-batch tensor (past=[0, 2, 4], update=[0, 2, 1], axis=2)
+    {
+        const int shape_past[] = {0, 2, 4};
+        const int shape_update[] = {0, 2, 1};
+        Mat past(3, shape_past, CV_32F);
+        Mat update(3, shape_update, CV_32F);
+        std::vector<Mat> inputs = {past, update};
+        std::vector<Mat> outputs;
+        runLayer(layer, inputs, outputs);
+        ASSERT_EQ(outputs.size(), (size_t)1);
+        ASSERT_EQ(shape(outputs[0]), MatShape({0, 2, 4}));
+    }
+
+    // Case 3: Zero sequence length (past=[2, 3, 4], update=[2, 0, 4], axis=1) preserves past_cache
+    {
+        LayerParams lp_seq0;
+        lp_seq0.type = "TensorScatter";
+        lp_seq0.name = "test_ts_zero_seq";
+        lp_seq0.set("axis", 1);
+        lp_seq0.set("mode", "linear");
+        Ptr<Layer> layer_seq0 = LayerFactory::createLayerInstance(lp_seq0.type, lp_seq0);
+        ASSERT_TRUE(layer_seq0);
+
+        const int shape_past[] = {2, 3, 4};
+        const int shape_update[] = {2, 0, 4};
+        Mat past(3, shape_past, CV_32F);
+        Mat update(3, shape_update, CV_32F);
+        randu(past, -5.f, 5.f);
+        std::vector<Mat> inputs = {past, update};
+        std::vector<Mat> outputs;
+        runLayer(layer_seq0, inputs, outputs);
+        ASSERT_EQ(outputs.size(), (size_t)1);
+        normAssert(past, outputs[0]);
+    }
+}
+
+
+TEST(Test_TensorScatter, ChunkedWorkDomain)
+{
+    const int shape_past[] = {4, 8, 16};
+    const int shape_update[] = {4, 2, 16};
+    Mat past(3, shape_past, CV_32F);
+    Mat update(3, shape_update, CV_32F);
+    randu(past, -1.f, 1.f);
+    randu(update, 10.f, 20.f);
+
+    int32_t indices_data[] = {1, 3, 0, 6};
+    Mat indices(1, 4, CV_32S, indices_data);
+
+    LayerParams lp;
+    lp.type = "TensorScatter";
+    lp.name = "test_ts_chunked";
+    lp.set("axis", 1);
+    lp.set("mode", "linear");
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    std::vector<Mat> inputs = {past, update, indices};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    ASSERT_EQ(shape(outputs[0]), shape(past));
+
+    for (int b = 0; b < 4; ++b)
+    {
+        int write_offset = indices_data[b];
+        for (int s = 0; s < 8; ++s)
+        {
+            for (int k = 0; k < 16; ++k)
+            {
+                float expected = (s >= write_offset && s < write_offset + 2)
+                                     ? update.at<float>(b, s - write_offset, k)
+                                     : past.at<float>(b, s, k);
+                EXPECT_FLOAT_EQ(outputs[0].at<float>(b, s, k), expected);
+            }
+        }
+    }
+}
+
+TEST(Test_TensorScatter, FullOverwriteAndInplace)
+{
+    // Full overwrite (seq_len == max_seq_len) in linear mode (default write_indices)
+    {
+        const int shape_past[] = {2, 4, 3};
+        Mat past(3, shape_past, CV_32F);
+        Mat update(3, shape_past, CV_32F);
+        randu(past, -1.f, 1.f);
+        randu(update, 10.f, 20.f);
+
+        LayerParams lp;
+        lp.type = "TensorScatter";
+        lp.name = "test_ts_full_linear";
+        lp.set("axis", 1);
+        lp.set("mode", "linear");
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+        ASSERT_TRUE(layer);
+
+        std::vector<Mat> inputs = {past, update};
+        std::vector<Mat> outputs;
+        runLayer(layer, inputs, outputs);
+        ASSERT_EQ(outputs.size(), (size_t)1);
+        normAssert(update, outputs[0]);
+    }
+
+    // Full overwrite (seq_len == max_seq_len) in circular mode
+    {
+        const int shape_past[] = {1, 4, 3};
+        Mat past(3, shape_past, CV_32F);
+        Mat update(3, shape_past, CV_32F);
+        randu(past, -1.f, 1.f);
+        randu(update, 10.f, 20.f);
+
+        int32_t idx_val[] = {2};
+        Mat indices(1, 1, CV_32S, idx_val);
+
+        LayerParams lp;
+        lp.type = "TensorScatter";
+        lp.name = "test_ts_full_circular";
+        lp.set("axis", 1);
+        lp.set("mode", "circular");
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+        ASSERT_TRUE(layer);
+
+        std::vector<Mat> inputs = {past, update, indices};
+        std::vector<Mat> outputs;
+        runLayer(layer, inputs, outputs);
+        ASSERT_EQ(outputs.size(), (size_t)1);
+
+        for (int s = 0; s < 4; ++s)
+        {
+            for (int k = 0; k < 3; ++k)
+            {
+                EXPECT_FLOAT_EQ(outputs[0].at<float>(0, (2 + s) % 4, k), update.at<float>(0, s, k));
+            }
+        }
+    }
+
+    // In-place aliased output buffer (past_cache and outputs[0] share data pointer)
+    {
+        const int shape_past[] = {1, 5, 2};
+        const int shape_update[] = {1, 2, 2};
+        Mat buf(3, shape_past, CV_32F);
+        randu(buf, -2.f, 2.f);
+        Mat orig = buf.clone();
+        Mat update(3, shape_update, CV_32F);
+        randu(update, 50.f, 60.f);
+
+        int32_t idx_val[] = {4};
+        Mat indices(1, 1, CV_32S, idx_val);
+
+        LayerParams lp;
+        lp.type = "TensorScatter";
+        lp.name = "test_ts_inplace";
+        lp.set("axis", 1);
+        lp.set("mode", "circular");
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+        ASSERT_TRUE(layer);
+
+        std::vector<Mat> inputs = {buf, update, indices};
+        std::vector<Mat> outputs = {buf};
+        std::vector<Mat> internals;
+        layer->finalize(inputs, outputs);
+        layer->forward(inputs, outputs, internals);
+
+        for (int k = 0; k < 2; ++k)
+        {
+            EXPECT_FLOAT_EQ(buf.at<float>(0, 4, k), update.at<float>(0, 0, k));
+            EXPECT_FLOAT_EQ(buf.at<float>(0, 0, k), update.at<float>(0, 1, k));
+            EXPECT_FLOAT_EQ(buf.at<float>(0, 1, k), orig.at<float>(0, 1, k));
+            EXPECT_FLOAT_EQ(buf.at<float>(0, 2, k), orig.at<float>(0, 2, k));
+            EXPECT_FLOAT_EQ(buf.at<float>(0, 3, k), orig.at<float>(0, 3, k));
+        }
+    }
+}
+
+TEST(Test_TensorScatter, InplaceNewEngineGraph)
+{
+    const std::string model = findDataFile("dnn/onnx/models/tensorscatter_inplace.onnx");
+    Net net = readNetFromONNX(model, ENGINE_OPENCV);
+    ASSERT_FALSE(net.empty());
+    ASSERT_TRUE(net.getMainGraph());
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(DNN_TARGET_CPU);
+
+    const int shape_past[] = {1, 5, 2};
+    const int shape_update[] = {1, 2, 2};
+    Mat past(3, shape_past, CV_32F);
+    Mat update(3, shape_update, CV_32F);
+    randu(past, 1.f, 5.f);
+    randu(update, 10.f, 20.f);
+    int64_t idx_val[] = {4};
+    Mat indices(1, 1, CV_64S, idx_val);
+
+    net.setInput(past, "past");
+    net.setInput(update, "update");
+    net.setInput(indices, "indices");
+    Mat out = net.forward();
+
+    ASSERT_EQ(shape(out), MatShape({1, 5, 2}));
+    for (int k = 0; k < 2; ++k)
+    {
+        EXPECT_FLOAT_EQ(out.at<float>(0, 4, k), update.at<float>(0, 0, k));
+        EXPECT_FLOAT_EQ(out.at<float>(0, 0, k), update.at<float>(0, 1, k));
+        EXPECT_FLOAT_EQ(out.at<float>(0, 1, k), past.at<float>(0, 1, k));
+        EXPECT_FLOAT_EQ(out.at<float>(0, 2, k), past.at<float>(0, 2, k));
+        EXPECT_FLOAT_EQ(out.at<float>(0, 3, k), past.at<float>(0, 3, k));
+    }
+
+    auto extractBufId = [](const String& dumpStr, const String& argName) -> String {
+        String key = "\"" + argName + "\"";
+        size_t pos = dumpStr.find(key);
+        if (pos == String::npos) return String();
+        size_t bufPos = dumpStr.find("(buf #", pos);
+        size_t endPos = dumpStr.find(")", bufPos);
+        if (bufPos == String::npos || endPos == String::npos) return String();
+        return dumpStr.substr(bufPos, endPos - bufPos + 1);
+    };
+
+    String dumpStr = net.dump();
+    String pastBuf = extractBufId(dumpStr, "past_tmp");
+    String outBuf = extractBufId(dumpStr, "scattered");
+    ASSERT_FALSE(pastBuf.empty());
+    EXPECT_EQ(pastBuf, outBuf);
+}
 
 }} // namespace

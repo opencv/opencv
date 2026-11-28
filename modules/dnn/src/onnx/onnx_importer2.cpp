@@ -298,6 +298,7 @@ protected:
     void parseNonMaxSuppression    (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseTopK2                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBitShift             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseTensorScatter        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBitwise              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBitwiseNot           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseRMSNormalization     (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1519,10 +1520,11 @@ void ONNXImporter2::parseConstant(LayerParams& layerParams, const opencv_onnx::N
         }
         else if (layerParams.has("value_int"))
         {
-            int v = layerParams.get<int>("value_int");
+            // ONNX value_int and value_ints are int64
+            int64 v = layerParams.get<int64>("value_int");
             int sizes[] = { 1 };
-            m.create(1, sizes, CV_32S);
-            m.at<int>(0) = v;
+            m.create(1, sizes, CV_64S);
+            m.at<int64>(0) = v;
         }
         else if (layerParams.has("value_floats"))
         {
@@ -1537,8 +1539,8 @@ void ONNXImporter2::parseConstant(LayerParams& layerParams, const opencv_onnx::N
             const DictValue& arr = layerParams.get("value_ints");
             int n = (int)arr.size();
             int sizes[] = { n };
-            m.create(1, sizes, CV_32S);
-            for (int i = 0; i < n; ++i) m.at<int>(i) = arr.get<int>(i);
+            m.create(1, sizes, CV_64S);
+            for (int i = 0; i < n; ++i) m.at<int64>(i) = arr.get<int64>(i);
         }
         else
         {
@@ -2281,6 +2283,14 @@ void ONNXImporter2::parseUnique(LayerParams& layerParams, const opencv_onnx::Nod
 void ONNXImporter2::parseSize(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "Size";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseTensorScatter(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    CV_Check(node_proto.input_size(), node_proto.input_size() == 2 || node_proto.input_size() == 3,
+             "TensorScatter: 2 or 3 inputs are required.");
+    layerParams.type = "TensorScatter";
     addLayer(layerParams, node_proto);
 }
 
@@ -3733,6 +3743,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["RoiAlign"] = &ONNXImporter2::parseRoiAlign;
     dispatch["Upsample"] = &ONNXImporter2::parseUpsample;
     dispatch["BitShift"] = &ONNXImporter2::parseBitShift;
+    dispatch["TensorScatter"] = &ONNXImporter2::parseTensorScatter;
     dispatch["BitwiseAnd"] = &ONNXImporter2::parseBitwise;
     dispatch["BitwiseOr"] = &ONNXImporter2::parseBitwise;
     dispatch["BitwiseXor"] = &ONNXImporter2::parseBitwise;

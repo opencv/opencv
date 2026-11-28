@@ -1515,6 +1515,49 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_Sign_Int, Combine(
     dnnBackendsAndTargets(false, false, true, false, false, false, false, false)
 ));
 
+typedef testing::TestWithParam<tuple<int, tuple<Backend, Target> > > Test_ReLU_Int;
+TEST_P(Test_ReLU_Int, random)
+{
+    int matType = get<0>(GetParam());
+    tuple<Backend, Target> backend_target= get<1>(GetParam());
+    Backend backend = get<0>(backend_target);
+    Target target = get<1>(backend_target);
+
+    std::vector<int> inShape{2, 3, 4, 5};
+    Mat input(inShape, matType);
+    fillRandomSigned(input, matType, backend);
+    setValueAt(input, 0, minValueAt(matType));
+    setValueAt(input, 1, 0);
+
+    Net net;
+    LayerParams lp;
+    lp.type = "ReLU";
+    lp.name = "testLayer";
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    net.setInput(input);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat re;
+    re = net.forward();
+    EXPECT_EQ(re.depth(), matType);
+    ASSERT_EQ(re.total(), input.total());
+
+    for (int i = 0; i < (int)input.total(); ++i)
+    {
+        int64_t value = getValueAt(input, i);
+        int64_t expected = value < 0 ? 0 : value;
+        EXPECT_EQ(getValueAt(re, i), expected) << "index " << i;
+    }
+}
+
+// Only the OpenCV backend implements the integer kernels.
+INSTANTIATE_TEST_CASE_P(/**/, Test_ReLU_Int, Combine(
+    testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S),
+    dnnBackendsAndTargets(false, false, true, false, false, false, false, false)
+));
+
 // ONNX Neg imports as Power with scale=-1, which is the only form of Power that has an
 // integer path.
 typedef testing::TestWithParam<tuple<int, tuple<Backend, Target> > > Test_Neg_Int;

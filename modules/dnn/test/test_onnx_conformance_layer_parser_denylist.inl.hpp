@@ -4,10 +4,6 @@
 "test_adagrad_multiple",  // ---- same as above ---
 "test_adam",  // Issues::Layer::Can't create layer "onnx_node_output_0!X1_new" of type "ai.onnx.preview.training.Adam" in function 'getLayerInstance'
 "test_adam_multiple",  // ---- same as above ---
-"test_affine_grid_2d_align_corners_expanded",
-"test_affine_grid_2d_expanded",
-"test_affine_grid_3d_align_corners_expanded",
-"test_affine_grid_3d_expanded",
 "test_ai_onnx_ml_array_feature_extractor",
 "test_ai_onnx_ml_binarizer",
 "test_ai_onnx_ml_label_encoder_string_int",
@@ -32,8 +28,6 @@
 "test_castlike_STRING_to_FLOAT",  // Issues::Layer::Can't create layer "onnx_node_output_0!output" of type "CastLike" in function 'getLayerInstance'
 "test_deform_conv_with_mask_bias",
 "test_deform_conv_with_multiple_offset_groups",
-"test_dequantizelinear_float4e2m1",
-"test_dft_axis",
 "test_equal_string",
 "test_equal_string_broadcast",
 "test_identity_opt",  //  23221 illegal hardware instruction
@@ -103,9 +97,6 @@
 "test_strnormalizer_export_monday_empty_output",  // ---- same as above ---
 "test_strnormalizer_export_monday_insensintive_upper_twodim",  // ---- same as above ---
 "test_strnormalizer_nostopwords_nochangecase",  // Issue:: Parser: Can't create layer "onnx_node_output_0!y" of type "StringNormalizer" in function 'getLayerInstance'
-"test_tensorscatter",
-"test_tensorscatter_3d",
-"test_tensorscatter_circular",
 "test_tfidfvectorizer_tf_batch_onlybigrams_skip0",  // Issue:: Parser: Can't create layer "onnx_node_output_0!Y" of type "TfIdfVectorizer" in function 'getLayerInstance'
 "test_tfidfvectorizer_tf_batch_onlybigrams_skip5",  // ---- same as above ---
 "test_tfidfvectorizer_tf_batch_uniandbigrams_skip5",  // ---- same as above ---
@@ -154,10 +145,7 @@
 "test_dequantizelinear_uint2",
 "test_quantizelinear_int2",
 "test_quantizelinear_uint2",
-// misc unsupported (expanded subgraphs / new ops)
-"test_range_bfloat16_type_positive_delta_expanded",
 // ===== ONNX 1.22 additions: forward/accuracy not yet supported =====
 // Attention softcap accuracy
 // CausalConvWithState fp16 (expanded) accuracy
-"test_causal_conv_with_state_fp16_expanded",
 "test_causal_conv_with_state_silu_fp16_expanded",

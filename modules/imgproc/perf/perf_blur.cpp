@@ -33,6 +33,21 @@ PERF_TEST_P(Size_MatType_kSize, medianBlur,
     SANITY_CHECK(dst);
 }
 
+PERF_TEST_P(Size_MatType_kSize, medianBlur_many_channels,
+            testing::Combine(testing::Values(szVGA, sz1080p),
+                             testing::Values(CV_8UC(9)), testing::Values(7, 9)))
+{
+    const Size size = get<0>(GetParam());
+    const int type = get<1>(GetParam());
+    const int ksize = get<2>(GetParam());
+    Mat src(size, type), dst(size, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() medianBlur(src, dst, ksize);
+
+    SANITY_CHECK_NOTHING();
+}
+
 CV_ENUM(BorderType3x3, BORDER_REPLICATE, BORDER_CONSTANT)
 CV_ENUM(BorderType, BORDER_REPLICATE, BORDER_CONSTANT, BORDER_REFLECT, BORDER_REFLECT101)
 

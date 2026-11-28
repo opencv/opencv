@@ -160,6 +160,14 @@ struct IntSignOp
     }
 };
 
+struct IntReluOp
+{
+    template<typename T> static inline T apply(T x)
+    {
+        return x < 0 ? T(0) : x;
+    }
+};
+
 template<typename Body> static inline void blockedParallelFor(size_t total, Body&& body)
 {
     const size_t BLOCK_SIZE = 1 << 16;
@@ -732,6 +740,17 @@ struct ReLUFunctor : public BaseFunctor
 #endif
 
     int64 getFLOPSPerElement() const { return 1; }
+};
+
+template<>
+struct ElementWiseIntDispatch<ReLUFunctor>
+{
+    static inline bool supports(const ReLUFunctor& func, int depth) { return func.slope == 0.f && isIntegerDepth(depth); }
+
+    static inline bool apply(const ReLUFunctor& func, const Mat& src, Mat& dst)
+    {
+        return func.slope == 0.f && intUnaryDispatch<IntReluOp>(src, dst);
+    }
 };
 
 struct ReLU6Functor : public BaseFunctor
