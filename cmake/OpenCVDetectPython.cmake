@@ -21,11 +21,12 @@
 #   packages_path (variable): Output of found Python packages path
 #   numpy_include_dirs (variable): Output of found Python Numpy include dirs
 #   numpy_version (variable): Output of found Python Numpy version
+#   is_freethreaded (variable): Output of free-threaded (PEP 703) interpreter flag
 function(find_python preferred_version min_version library_env include_dir_env
          found executable version_string version_major version_minor
          libs_found libs_version_string libraries library debug_libraries
          debug_library include_path include_dir include_dir2 packages_path
-         numpy_include_dirs numpy_version)
+         numpy_include_dirs numpy_version is_freethreaded)
 if(NOT ${found})
   if(" ${executable}" STREQUAL " PYTHON_EXECUTABLE")
     set(__update_python_vars 0)
@@ -115,6 +116,19 @@ if(NOT ${found})
   if(_found)
     set(_version_major_minor "${_version_major}.${_version_minor}")
 
+    # Detect a free-threaded ("no GIL") Python 3.13+/3.14+ interpreter (PEP 703).
+    # The interpreter's sysconfig provides Py_GIL_DISABLED; on Windows the
+    # ABI suffix ("t" in sys.abiflags on POSIX) is empty, so this config var is
+    # the authoritative source on all platforms.
+    set(_is_freethreaded 0)
+    execute_process(COMMAND ${_executable} -c "import sysconfig; print(int(bool(sysconfig.get_config_var('Py_GIL_DISABLED'))))"
+      RESULT_VARIABLE _cvpy_ft_process
+      OUTPUT_VARIABLE _cvpy_ft_value
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(_cvpy_ft_process EQUAL 0 AND    _cvpy_ft_value EQUAL 1)
+      set(_is_freethreaded 1)
+    endif()
+
     if(NOT ANDROID AND NOT APPLE_FRAMEWORK)
       ocv_check_environment_variables(${library_env} ${include_dir_env})
       if(NOT ${${library_env}} STREQUAL "")
@@ -181,6 +195,34 @@ if(NOT ${found})
         unset(PYTHON_LIBRARY_RELEASE CACHE)
         unset(PYTHON_INCLUDE_DIR CACHE)
         unset(PYTHON_INCLUDE_DIR2 CACHE)
+      endif()
+    endif()
+
+    if(_is_freethreaded AND WIN32 AND NOT CMAKE_CROSSCOMPILING)
+      # Free-threaded CPython on Windows ships the import library as
+      # python3XXt.lib (no plain python3XX.lib). Resolve it next to the
+      # interpreter and use it for linking (issue #27933: LNK1104 'python3.lib').
+      get_filename_component(_ft_py_root "${_executable}" DIRECTORY)
+      set(_ft_lib_name "python${_version_major}${_version_minor}t.lib")
+      set(_ft_lib_candidates
+          "${_ft_py_root}/libs/${_ft_lib_name}"
+          "${_ft_py_root}/${_ft_lib_name}")
+      set(_ft_lib_found "")
+      foreach(_ft_lib_candidate IN LISTS _ft_lib_candidates)
+        if(EXISTS "${_ft_lib_candidate}")
+          set(_ft_lib_found "${_ft_lib_candidate}")
+          break()
+        endif()
+      endforeach()
+      if(_ft_lib_found)
+        set(_library "${_ft_lib_found}")
+        set(_libraries "${_ft_lib_found}")
+        set(_libs_found TRUE)
+        if(NOT _libs_version_string)
+          set(_libs_version_string "${_version_major}.${_version_minor}")
+        endif()
+      else()
+        message(WARNING "Free-threaded Python detected, but the import library '${_ft_lib_name}' was not found next to the interpreter. Build with 'PYTHON3_LIBRARY' pointing to the correct 'python3XXt.lib' if linking fails.")
       endif()
     endif()
 
@@ -267,6 +309,7 @@ if(NOT ${found})
   set(${packages_path} "${_packages_path}" CACHE STRING "Where to install the python packages.")
   set(${numpy_include_dirs} ${_numpy_include_dirs} CACHE PATH "Path to numpy headers")
   set(${numpy_version} "${_numpy_version}" CACHE INTERNAL "")
+  set(${is_freethreaded} "${_is_freethreaded}" CACHE INTERNAL "")
 endif()
 endfunction(find_python)
 
@@ -281,7 +324,8 @@ find_python("${OPENCV_PYTHON3_VERSION}" "${MIN_VER_PYTHON3}" PYTHON3_LIBRARY PYT
     PYTHON3LIBS_VERSION_STRING PYTHON3_LIBRARIES PYTHON3_LIBRARY
     PYTHON3_DEBUG_LIBRARIES PYTHON3_LIBRARY_DEBUG PYTHON3_INCLUDE_PATH
     PYTHON3_INCLUDE_DIR PYTHON3_INCLUDE_DIR2 PYTHON3_PACKAGES_PATH
-    PYTHON3_NUMPY_INCLUDE_DIRS PYTHON3_NUMPY_VERSION)
+    PYTHON3_NUMPY_INCLUDE_DIRS PYTHON3_NUMPY_VERSION
+    PYTHON3_IS_FREETHREADED)
 
 # Problem in numpy >=1.15 <1.17
 OCV_OPTION(PYTHON3_LIMITED_API "Build with Python Limited API (not available with numpy >=1.15 <1.17)" NO
@@ -293,6 +337,13 @@ if(PYTHON3_LIMITED_API)
     set(_default_ver "0x030${PYTHON3_VERSION_MINOR}0000")
   endif()
   set(PYTHON3_LIMITED_API_VERSION ${_default_ver} CACHE STRING "Minimal Python version for Limited API")
+endif()
+
+if(PYTHON3_IS_FREETHREADED AND PYTHON3_LIMITED_API)
+  message(WARNING "Python3 free-threaded (PEP 703, no-GIL) build: Limited API ('abi3') is not supported for "
+                  "free-threaded CPython, because the module must be version-specific. "
+                  "PYTHON3_LIMITED_API is ignored for free-threaded Python builds.")
+  set(PYTHON3_LIMITED_API OFF)
 endif()
 
 if(PYTHON_DEFAULT_EXECUTABLE)
