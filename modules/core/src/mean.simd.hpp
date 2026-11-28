@@ -607,7 +607,7 @@ static int sqsum32f( const float* src, const uchar* mask, double* sum, double* s
 static int sqsum64f( const double* src, const uchar* mask, double* sum, double* sqsum, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sumsqr_(src, mask, sum, sqsum, len, cn); }
 
-static int sqsum16f( const hfloat* src, const uchar* mask, float* sum, double* sqsum, int len, int cn )
+static int sqsum16f( const hfloat* src, const uchar* mask, double* sum, double* sqsum, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sumsqr_(src, mask, sum, sqsum, len, cn); }
 
 static int sqsum16bf( const bfloat* src, const uchar* mask, float* sum, double* sqsum, int len, int cn )
@@ -631,7 +631,7 @@ SumSqrFunc getSumSqrFunc(int depth)
         sumSqrWrap<ushort, int, double, sqsum16u>, sumSqrWrap<short, int, double, sqsum16s>,
         sumSqrWrap<int, double, double, sqsum32s>, sumSqrWrap<float, double, double, sqsum32f>,
         sumSqrWrap<double, double, double, sqsum64f>,
-        sumSqrWrap<hfloat, float, double, sqsum16f>, sumSqrWrap<bfloat, float, double, sqsum16bf>, 0,
+        sumSqrWrap<hfloat, double, double, sqsum16f>, sumSqrWrap<bfloat, float, double, sqsum16bf>, 0,
         sumSqrWrap<uint64, double, double, sqsum64u>, sumSqrWrap<int64, double, double, sqsum64s>,
         sumSqrWrap<unsigned, double, double, sqsum32u>, 0
     };
