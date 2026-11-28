@@ -299,6 +299,11 @@ bool PxMDecoder::readData( Mat& img )
                 else
                 {
                     m_strm.getBytes( src, src_pitch );
+                    if( bit_depth == 8 && m_maxval < 255 )
+                    {
+                        for (int x = 0; x < width3; x++)
+                            src[x] = gray_palette[std::min<int>(src[x], m_maxval)];
+                    }
                     if( bit_depth == 16 && !isBigEndian() )
                     {
                         for (int x = 0; x < width3; x++)
