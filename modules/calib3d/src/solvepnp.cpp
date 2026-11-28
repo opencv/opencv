@@ -911,6 +911,39 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
         PnP.compute_pose(R, tvec);
         Rodrigues(R, rvec);
 
+        // EPnP is not reliable with exactly 4 points. Also try P3P, which solves from 3 points and
+        // uses the 4th one only to rank its solutions, with each of the 4 points in turn as the 4th
+        // one, and keep the pose with the smallest reprojection error. The result does not depend
+        // on the order of the points, and it is never worse than EPnP alone.
+        if (npoints == 4)
+        {
+            std::vector<Point3d> object;
+            std::vector<Point2d> image;
+            opoints.convertTo(object, CV_64F);
+            ipoints.convertTo(image, CV_64F);
+
+            double bestError = squaredReprojectionError(object, image, cameraMatrix, distCoeffs, rvec, tvec);
+            for (int first = 0; first < 4; first++)
+            {
+                std::vector<Mat> rvecs, tvecs;
+                solveP3P(object, image, cameraMatrix, distCoeffs, rvecs, tvecs, SOLVEPNP_P3P);
+                if (!rvecs.empty())
+                {
+                    const double error = squaredReprojectionError(object, image, cameraMatrix, distCoeffs, rvecs[0], tvecs[0]);
+                    if (!cvIsNaN(error) && (error < bestError || cvIsNaN(bestError)))
+                    {
+                        bestError = error;
+                        rvec = rvecs[0];
+                        tvec = tvecs[0];
+                    }
+                }
+
+                // the next pass uses the next point as the 4th one
+                std::rotate(object.begin(), object.begin() + 1, object.end());
+                std::rotate(image.begin(), image.begin() + 1, image.end());
+            }
+        }
+
         vec_rvecs.push_back(rvec);
         vec_tvecs.push_back(tvec);
     }

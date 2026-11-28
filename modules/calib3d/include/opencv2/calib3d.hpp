@@ -1022,6 +1022,7 @@ Check @ref tutorial_homography "the corresponding tutorial" for more details
 This function returns the rotation and the translation vectors that transform a 3D point expressed in the object
 coordinate frame to the camera coordinate frame, using different methods:
 - P3P methods (@ref SOLVEPNP_P3P, @ref SOLVEPNP_AP3P): need 4 input points to return a unique solution.
+- @ref SOLVEPNP_EPNP With exactly 4 input points, the pose of EPnP is compared with the poses of @ref SOLVEPNP_P3P, solved with each of the 4 points in turn as the point that selects the solution, and the pose with the smallest reprojection error is returned. The result does not depend on the order of the points.
 - @ref SOLVEPNP_IPPE Input points must be >= 4 and object points must be coplanar.
 - @ref SOLVEPNP_IPPE_SQUARE Special case suitable for marker pose estimation.
 Number of input points must be 4. Object points must be defined in the following order,
@@ -1254,6 +1255,7 @@ CV_EXPORTS_W void solvePnPRefineVVS( InputArray objectPoints, InputArray imagePo
 This function returns a list of all the possible solutions (a solution is a <rotation vector, translation vector>
 couple), depending on the number of input points and the chosen method:
 - P3P methods (@ref SOLVEPNP_P3P, @ref SOLVEPNP_AP3P): 3 or 4 input points. Number of returned solutions can be between 0 and 4 with 3 input points.
+- @ref SOLVEPNP_EPNP With exactly 4 input points, the pose of EPnP is compared with the poses of @ref SOLVEPNP_P3P, solved with each of the 4 points in turn as the point that selects the solution, and the pose with the smallest reprojection error is returned (1 solution). The result does not depend on the order of the points.
 - @ref SOLVEPNP_IPPE Input points must be >= 4 and object points must be coplanar. Returns 2 solutions.
 - @ref SOLVEPNP_IPPE_SQUARE Special case suitable for marker pose estimation.
 Number of input points must be 4 and 2 solutions are returned. Object points must be defined in the following order,
