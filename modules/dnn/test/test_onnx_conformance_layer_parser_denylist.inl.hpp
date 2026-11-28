@@ -28,8 +28,6 @@
 "test_castlike_STRING_to_FLOAT",  // Issues::Layer::Can't create layer "onnx_node_output_0!output" of type "CastLike" in function 'getLayerInstance'
 "test_deform_conv_with_mask_bias",
 "test_deform_conv_with_multiple_offset_groups",
-"test_dequantizelinear_float4e2m1",
-"test_dft_axis",
 "test_equal_string",
 "test_equal_string_broadcast",
 "test_identity_opt",  //  23221 illegal hardware instruction
@@ -150,10 +148,7 @@
 "test_dequantizelinear_uint2",
 "test_quantizelinear_int2",
 "test_quantizelinear_uint2",
-// misc unsupported (expanded subgraphs / new ops)
-"test_range_bfloat16_type_positive_delta_expanded",
 // ===== ONNX 1.22 additions: forward/accuracy not yet supported =====
 // Attention softcap accuracy
 // CausalConvWithState fp16 (expanded) accuracy
-"test_causal_conv_with_state_fp16_expanded",
 "test_causal_conv_with_state_silu_fp16_expanded",
