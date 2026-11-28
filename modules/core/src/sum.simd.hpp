@@ -380,8 +380,43 @@ static int sum64u( const uint64* src, const uchar* mask, double* dst, int len, i
 static int sum64s( const int64* src, const uchar* mask, double* dst, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
 
+// The scalar unrolled step adds four elements together in the work type before the accumulator
+// sees them. With the default work type that is float, so four values past FLT_MAX/4 overflow to
+// infinity even though the double result holds the true sum easily, and a cancelling pair of
+// infinities leaves NaN. Widening the work type to double fixes it but costs four conversions and
+// four double adds in a loop that masked and high-channel-count sums run through entirely, which
+// is too expensive for how rarely the overflow is reached.
+//
+// So detect the failure instead of preventing it. Every input the float work type gets wrong
+// leaves a non-finite partial sum - overflow gives +/-inf, cancellation gives NaN - and a finite
+// partial sum is the same value the double work type would have produced, because the accumulator
+// is double either way. One isfinite check per channel per call therefore identifies exactly the
+// inputs that need the slow path, and the fast path stays bit-identical.
+//
+// sum_ accumulates into dst rather than overwriting it, so the incoming partial sums are saved
+// and restored before recomputing. src that genuinely holds inf or NaN takes the slow path too
+// and still returns inf or NaN, just by the longer route.
 static int sum32f( const float* src, const uchar* mask, double* dst, int len, int cn )
-{ CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
+{
+    CV_INSTRUMENT_REGION();
+
+    cv::AutoBuffer<double, 16> saved(cn);
+    for( int k = 0; k < cn; k++ )
+        saved[k] = dst[k];
+
+    int n = sum_(src, mask, dst, len, cn);
+
+    for( int k = 0; k < cn; k++ )
+    {
+        if( !std::isfinite(dst[k]) )
+        {
+            for( int j = 0; j < cn; j++ )
+                dst[j] = saved[j];
+            return sum_<float, double, double>(src, mask, dst, len, cn);
+        }
+    }
+    return n;
+}
 
 static int sum64f( const double* src, const uchar* mask, double* dst, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
