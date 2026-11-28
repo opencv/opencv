@@ -4,6 +4,7 @@
 
 #include "precomp.hpp"
 #include "depth_to_3d.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv
 {
@@ -125,9 +126,36 @@ static void depthTo3dMask(const cv::Mat& depth, const cv::Mat& K, const cv::Mat&
     points3d = points3d.reshape(4, 1);
 }
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+// One row of the dense no-mask path, with a scalar tail.
+template<typename T>
+static void depthTo3dRowVec(const T* x_cache, const T* z, T y_val, Vec<T, 4>* point, int n)
+{
+    typedef decltype(vx_load(static_cast<const T*>(nullptr))) VT;
+    const int vl = VTraits<VT>::vlanes();
+    const VT yv = v_setall_<VT>(y_val);
+    const VT zero = v_setzero_<VT>();
+    int i = 0;
+    for (; i + vl <= n; i += vl)
+    {
+        VT zv = vx_load(z + i);
+        VT xv = vx_load(x_cache + i);
+        v_store_interleave(reinterpret_cast<T*>(point + i), v_mul(xv, zv), v_mul(yv, zv), zv, zero);
+    }
+    for (; i < n; ++i)
+    {
+        T zz = z[i];
+        point[i][0] = x_cache[i] * zz;
+        point[i][1] = y_val * zz;
+        point[i][2] = zz;
+        point[i][3] = 0;
+    }
+}
+#endif
+
 /**
  * @param K
- * @param depth the depth image
+ * @param in_depth the depth image
  * @param points3d the resulting 3d points
  */
 template<typename T>
@@ -154,11 +182,29 @@ void depthTo3dNoMask(const cv::Mat& in_depth, const cv::Mat_<T>& K, cv::Mat& poi
         *y_cache_ptr = (y - oy) * inv_fy;
 
     y_cache_ptr = y_cache[0];
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    // Wide 32-bit rows use the vector kernel in a separate loop so that the
+    // scalar loop below keeps its plain form (and its autovectorization): the
+    // vector call is only profitable there (measured on SpacemiT K1, see PR
+    // discussion); 64-bit and narrow rows are as fast or faster scalar.
+    if constexpr (sizeof(T) == 4)
+    {
+        if (in_depth.cols >= 1024)
+        {
+            for (int y = 0; y < in_depth.rows; ++y, ++y_cache_ptr)
+            {
+                cv::Vec<T, 4>* point = points3d.ptr<cv::Vec<T, 4> >(y);
+                depthTo3dRowVec(x_cache[0], z_mat[y], *y_cache_ptr, point, in_depth.cols);
+            }
+            return;
+        }
+    }
+#endif
     for (int y = 0; y < in_depth.rows; ++y, ++y_cache_ptr)
     {
         cv::Vec<T, 4>* point = points3d.ptr<cv::Vec<T, 4> >(y);
-        const T* x_cache_ptr_end = x_cache[0] + in_depth.cols;
         const T* depth = z_mat[y];
+        const T* x_cache_ptr_end = x_cache[0] + in_depth.cols;
         for (x_cache_ptr = x_cache[0]; x_cache_ptr != x_cache_ptr_end; ++x_cache_ptr, ++point, ++depth)
         {
             T z = *depth;
