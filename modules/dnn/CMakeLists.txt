@@ -20,6 +20,7 @@ ocv_add_dispatched_file("layers/cpu_kernels/flash_attention" AVX2)
 # no AVX: below AVX2 the intrinsics are 128-bit and the baseline copy runs faster
 ocv_add_dispatched_file("layers/cpu_kernels/fast_gemm_thin" AVX2 NEON RVV LASX)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/gridsample_kernels" AVX AVX2 NEON RVV LASX)
+ocv_add_dispatched_file_force_all("dnn_utils" AVX AVX2 AVX512_SKX AVX512_ICL NEON RVV LASX)
 
 ocv_add_module(dnn opencv_core opencv_imgproc opencv_geometry OPTIONAL opencv_imgcodecs WRAP python java objc js)
 
