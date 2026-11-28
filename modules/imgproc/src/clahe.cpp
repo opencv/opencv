@@ -42,10 +42,10 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 // ----------------------------------------------------------------------
 // CLAHE
-
 #ifdef HAVE_OPENCL
 
 namespace clahe
@@ -263,6 +263,10 @@ namespace
         void operator ()(const cv::Range& range) const CV_OVERRIDE;
 
     private:
+        void Calc_Res_WithSIMD(int& x, const float& ya, const float& ya1, const T* lutPlane1, const T* lutPlane2,
+                                const T* srcRow, T* dstRow) const;
+
+    private:
         cv::Mat src_;
         mutable cv::Mat dst_;
         cv::Mat lut_;
@@ -277,6 +281,62 @@ namespace
         float * xa_p, * xa1_p;
     };
 
+    template <class T>
+    void CLAHE_Interpolation_Body<T>::Calc_Res_WithSIMD(int& x, const float& ya, const float& ya1, const T* lutPlane1, 
+                                                    const T* lutPlane2, const T* srcRow, T* dstRow) const
+    {
+        (void)x;
+        (void)ya;
+        (void)ya1;
+        (void)lutPlane1;
+        (void)lutPlane2;
+        (void)srcRow;
+        (void)dstRow;
+    }
+    #if CV_SIMD128
+    using namespace cv;
+        template <>
+        void CLAHE_Interpolation_Body<uchar>::Calc_Res_WithSIMD(int& x, const float& ya, const float& ya1, const uchar* lutPlane1, 
+                                                    const uchar* lutPlane2, const uchar* srcRow, uchar* dstRow) const
+        {
+            float g11[16], g12[16], g21[16], g22[16];
+            int v8bit_n = VTraits<v_int8x16>::vlanes();
+            int v32bit_n = VTraits<v_int32x4>::vlanes();
+            v_float32x4 v_ya1 = v_setall_f32(ya1);
+            v_float32x4 v_ya = v_setall_f32(ya);
+
+            for (; x < src_.cols - v8bit_n; x += v8bit_n) {
+                for (int j = 0; j < 16; j++) {
+                    g11[j] = lutPlane1[ind1_p[x + j] + (srcRow[x + j])];
+                    g12[j] = lutPlane1[ind2_p[x + j] + (srcRow[x + j])];
+                    g21[j] = lutPlane2[ind1_p[x + j] + (srcRow[x + j])];
+                    g22[j] = lutPlane2[ind2_p[x + j] + (srcRow[x + j])];
+                }
+                v_float32x4 v_xa1_p = v_load(xa1_p + x);
+                v_float32x4 v_xa_p = v_load(xa_p + x);
+                v_int32x4 res0 = v_round(v_add(v_mul(v_add(v_mul(v_load(g11), v_xa1_p), v_mul(v_load(g12), v_xa_p)), v_ya1),
+                                v_mul(v_add(v_mul(v_load(g21), v_xa1_p), v_mul(v_load(g22), v_xa_p)), v_ya)));
+
+                v_xa1_p = v_load(xa1_p + x + v32bit_n);
+                v_xa_p = v_load(xa_p + x + v32bit_n);
+                v_int32x4 res1 = v_round(v_add(v_mul(v_add(v_mul(v_load(g11 + 4), v_xa1_p), v_mul(v_load(g12 + 4), v_xa_p)), v_ya1),
+                                v_mul(v_add(v_mul(v_load(g21 + 4), v_xa1_p), v_mul(v_load(g22 + 4), v_xa_p)), v_ya)));
+
+                v_xa1_p = v_load(xa1_p + x + 2 * v32bit_n);
+                v_xa_p = v_load(xa_p + x + 2 * v32bit_n);
+                v_int32x4 res2 = v_round(v_add(v_mul(v_add(v_mul(v_load(g11 + 8), v_xa1_p), v_mul(v_load(g12 + 8), v_xa_p)), v_ya1),
+                                v_mul(v_add(v_mul(v_load(g21 + 8), v_xa1_p), v_mul(v_load(g22 + 8), v_xa_p)), v_ya)));
+                            
+                v_xa1_p = v_load(xa1_p + x + 3 * v32bit_n);
+                v_xa_p = v_load(xa_p + x + 3 * v32bit_n);
+                v_int32x4 res3 = v_round(v_add(v_mul(v_add(v_mul(v_load(g11 + 12), v_xa1_p), v_mul(v_load(g12 + 12), v_xa_p)), v_ya1),
+                                v_mul(v_add(v_mul(v_load(g21 + 12), v_xa1_p), v_mul(v_load(g22 + 12), v_xa_p)), v_ya)));
+
+                v_uint8x16 res = v_pack_u(v_pack(res0, res1), v_pack(res2, res3));
+                v_store(dstRow + x, res);
+            }        
+        }
+    #endif
     template <class T>
     void CLAHE_Interpolation_Body<T>::operator ()(const cv::Range& range) const
     {
@@ -299,8 +359,13 @@ namespace
 
             const T* lutPlane1 = lut_.ptr<T>(ty1 * tilesX_);
             const T* lutPlane2 = lut_.ptr<T>(ty2 * tilesX_);
-
-            for (int x = 0; x < src_.cols; ++x)
+            int x = 0;
+            #if CV_SIMD128
+                if (shift_ == 0){
+                    Calc_Res_WithSIMD(x, ya, ya1, lutPlane1, lutPlane2, srcRow, dstRow);
+                }
+            #endif
+            for (; x < src_.cols; ++x)
             {
                 int srcVal = srcRow[x] >> shift_;
 
