@@ -3401,6 +3401,19 @@ cvConvertMaps( const CvArr* arr1, const CvArr* arr2, CvArr* dstarr1, CvArr* dsta
 /****************************************************************************************
 PkLab.net 2018 based on cv::linearPolar from OpenCV by J.L. Blanco, Apr 2009
 ****************************************************************************************/
+static void remapPolarDst(InputArray src, OutputArray dst, const Mat& mapx, const Mat& mapy,
+                          Size dsize, int srcType, int flags)
+{
+    const int borderMode = (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT;
+    if (borderMode == cv::BORDER_TRANSPARENT &&
+        (dst.empty() || dst.size() != dsize || dst.type() != srcType))
+    {
+        dst.create(dsize, srcType);
+        dst.setTo(Scalar::all(0));
+    }
+    remap(src, dst, mapx, mapy, flags & cv::INTER_MAX, borderMode);
+}
+
 void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
                    Point2f center, double maxRadius, int flags)
 {
@@ -3461,7 +3474,7 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
                 my[rho] = (float)y;
             }
         }
-        remap(_src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
+        remapPolarDst(_src, _dst, mapx, mapy, dsize, _src.type(), flags);
     }
     else
     {
@@ -3469,10 +3482,9 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
         // Their number has to cover the interpolation kernel: 2 taps for linear, 4 for cubic, 8 for Lanczos.
         const int interpolation = flags & cv::INTER_MAX;
         const int ANGLE_BORDER = interpolation == INTER_LANCZOS4 ? 4 : interpolation == INTER_CUBIC ? 2 : 1;
-        cv::copyMakeBorder(_src, _dst, ANGLE_BORDER, ANGLE_BORDER, 0, 0, BORDER_WRAP | BORDER_ISOLATED);
-        Mat src = _dst.getMat();
-        Size ssize = _dst.size();
-        ssize.height -= 2 * ANGLE_BORDER;
+        Mat padded;
+        cv::copyMakeBorder(_src, padded, ANGLE_BORDER, ANGLE_BORDER, 0, 0, BORDER_WRAP | BORDER_ISOLATED);
+        Size ssize = _src.size();
         CV_Assert(!ssize.empty());
         const double Kangle = CV_2PI / ssize.height;
         double Kmag;
@@ -3521,8 +3533,7 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
             }
         });
 
-        remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX,
-              (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
+        remapPolarDst(padded, _dst, mapx, mapy, dsize, padded.type(), flags);
     }
 }
 
