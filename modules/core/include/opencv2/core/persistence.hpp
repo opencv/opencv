@@ -370,11 +370,11 @@ public:
      */
     CV_WRAP void write(const String& name, int val);
     /// @overload
-    CV_WRAP void write(const String& name, bool val);
-
     CV_WRAP void write(const String& name, int64_t val);
     /// @overload
     CV_WRAP void write(const String& name, double val);
+    /// @overload
+    CV_WRAP void write(const String& name, bool val);
     /// @overload
     CV_WRAP void write(const String& name, const String& val);
     /// @overload
