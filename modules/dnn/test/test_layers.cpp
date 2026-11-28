@@ -2492,6 +2492,162 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_GlobalPoolingBlock, testing::Combine(
     testing::Bool()),
     GlobalPoolingParamName());
 
+// Normalization of rows whose mean is large against their spread. E[x^2] - E[x]^2 in float loses
+// the variance there; each layer is compared with an FP64 computation from the same input.
+static Mat normRowsRef64F(const Mat& x, int rows, int len, double eps, Mat* invStdDev = NULL)
+{
+    CV_Assert(x.type() == CV_32F && x.isContinuous() && x.total() == (size_t)rows * len);
+    Mat ref(x.dims, x.size.p, CV_32F);
+    if (invStdDev)
+        invStdDev->create(rows, 1, CV_32F);
+    for (int r = 0; r < rows; r++)
+    {
+        const float* xr = x.ptr<float>() + (size_t)r * len;
+        float* yr = ref.ptr<float>() + (size_t)r * len;
+        double mean = 0, var = 0;
+        for (int i = 0; i < len; i++)
+            mean += xr[i];
+        mean /= len;
+        for (int i = 0; i < len; i++)
+            var += (xr[i] - mean) * (xr[i] - mean);
+        const double invStd = 1. / std::sqrt(var / len + eps);
+        for (int i = 0; i < len; i++)
+            yr[i] = (float)((xr[i] - mean) * invStd);
+        if (invStdDev)
+            invStdDev->at<float>(r) = (float)invStd;
+    }
+    return ref;
+}
+
+static Mat runNormLayer(LayerParams& lp, std::vector<Mat> inputs)
+{
+    std::vector<Mat> outputs;
+    runLayer(LayerFactory::createLayerInstance(lp.type, lp), inputs, outputs);
+    return outputs[0];
+}
+
+TEST(Layer_Test_Norm_LargeOffset, Accuracy_CPU)
+{
+    const float eps = 1e-5f;
+    // float holds a mean of 10000 to half an ulp, 2^-11; over the standard deviation 1/sqrt(12),
+    // that moves the outputs by 1.7e-3
+    const double l1 = 2.5e-3, lInf = 2.5e-3;
+    // values around 10000 with a spread of +-0.5: the mean is about 35000 standard deviations
+    Mat x(std::vector<int>{2, 4, 8, 8}, CV_32F);
+    randu(x, -0.5f, 0.5f);
+    x += Scalar(10000);
+    const Mat x3d = x.reshape(1, std::vector<int>{2, 4, 64});
+    const Mat ones64(std::vector<int>{64}, CV_32F, Scalar(1)), zeros64(std::vector<int>{64}, CV_32F, Scalar(0));
+    const Mat ones4(std::vector<int>{4}, CV_32F, Scalar(1)), zeros4(std::vector<int>{4}, CV_32F, Scalar(0));
+    // MVN, LayerNormalization over the last axis and InstanceNormalization all normalize the 64 values of each (n, c)
+    Mat invStdRef;
+    const Mat ref = normRowsRef64F(x, 8, 64, eps, &invStdRef);
+    const Mat ref3d = ref.reshape(1, std::vector<int>{2, 4, 64});
+    {
+        LayerParams lp;
+        lp.type = "MVN";
+        lp.name = "mvn";
+        lp.set("normalize_variance", true);
+        lp.set("eps", eps);
+        normAssert(ref, runNormLayer(lp, {x}), "MVN", l1, lInf);
+        // a 1024 x 1024 plane: on long rows the float sums also drop digits of the mean
+        Mat xl(std::vector<int>{1, 1, 1024, 1024}, CV_32F);
+        randu(xl, -0.5f, 0.5f);
+        xl += Scalar(10000);
+        normAssert(normRowsRef64F(xl, 1, 1024 * 1024, eps), runNormLayer(lp, {xl}), "MVN, 1024 x 1024", l1, lInf);
+    }
+    {
+        LayerParams lp;
+        lp.type = "LayerNormalization";
+        lp.name = "ln";
+        lp.set("axis", 2);
+        lp.set("epsilon", eps);
+        normAssert(ref3d, runNormLayer(lp, {x3d, ones64, zeros64}), "LayerNormalization", l1, lInf);
+        normAssert(ref3d, runNormLayer(lp, {x3d, ones64}), "LayerNormalization without bias", l1, lInf);
+    }
+    {
+        LayerParams lp;
+        lp.type = "InstanceNormalization";
+        lp.name = "in";
+        lp.set("epsilon", eps);
+        normAssert(ref, runNormLayer(lp, {x, ones4, zeros4}), "InstanceNormalization", l1, lInf);
+    }
+    {
+        LayerParams lp;
+        lp.type = "GroupNormalization";
+        lp.name = "gn";
+        lp.set("epsilon", eps);
+        lp.set("num_groups", 2);
+        normAssert(normRowsRef64F(x, 4, 128, eps), runNormLayer(lp, {x, ones4, zeros4}), "GroupNormalization",
+                   l1, lInf);
+    }
+    {
+        // LayerNormalization with its InvStdDev output
+        LayerParams lp;
+        lp.type = "LayerNormalization2";
+        lp.name = "ln2";
+        lp.set("axis", 2);
+        lp.set("epsilon", eps);
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+        std::vector<Mat> inputs = {x3d, ones64, zeros64}, outputs;
+        std::vector<MatShape> inputShapes, outputShapes, internals;
+        for (const Mat& m : inputs)
+            inputShapes.push_back(m.shape());
+        layer->getMemoryShapes(inputShapes, 3, outputShapes, internals);
+        for (const MatShape& s : outputShapes)
+            outputs.push_back(Mat(s, CV_32F));
+        layer->finalize(inputs, outputs);
+        layer->forward(inputs, outputs, std::vector<Mat>());
+        normAssert(ref3d, outputs[0], "LayerNormalization2", l1, lInf);
+        normAssert(invStdRef.reshape(1, (int)outputs[2].total()), outputs[2].reshape(1, (int)outputs[2].total()),
+                   "LayerNormalization2 InvStdDev", 1e-5, 1e-4);
+    }
+    {
+        // GroupNormalization and InstanceNormalization on the block layout, channels in blocks of 8
+        const int C0 = 8, spatial = 8 * 8;
+        Mat xc(std::vector<int>{1, 16, 8, 8}, CV_32F);
+        randu(xc, -0.5f, 0.5f);
+        xc += Scalar(10000);
+        Mat blk(MatShape(std::vector<int>{1, 2, 8, 8, C0}, DATA_LAYOUT_BLOCK, 16), CV_32F);
+        for (int c = 0; c < 16; c++)
+            for (int p = 0; p < spatial; p++)
+                blk.ptr<float>()[((c / C0) * spatial + p) * C0 + c % C0] = xc.ptr<float>()[c * spatial + p];
+        const Mat ones16(std::vector<int>{16}, CV_32F, Scalar(1)), zeros16(std::vector<int>{16}, CV_32F, Scalar(0));
+        auto runBlockNorm = [&](LayerParams& lp) {
+            Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+            std::vector<Mat> inputs = {blk, ones16, zeros16}, outputs;
+            std::vector<MatShape> inputShapes, outputShapes, internals;
+            for (const Mat& m : inputs)
+                inputShapes.push_back(m.shape());
+            layer->getMemoryShapes(inputShapes, 1, outputShapes, internals);
+            outputs.push_back(Mat(outputShapes[0], CV_32F));
+            layer->finalize(inputs, outputs);
+            layer->forward(inputs, outputs, std::vector<Mat>());
+            Mat got(xc.dims, xc.size.p, CV_32F);
+            for (int c = 0; c < 16; c++)
+                for (int p = 0; p < spatial; p++)
+                    got.ptr<float>()[c * spatial + p] = outputs[0].ptr<float>()[((c / C0) * spatial + p) * C0 + c % C0];
+            return got;
+        };
+        // Both block kernels fold the mean into the bias, x * s + (b - mean * s), which rounds at the scale of 10000 * s
+        {
+            LayerParams lp;
+            lp.type = "GroupNormalization";
+            lp.name = "gn_block";
+            lp.set("epsilon", eps);
+            lp.set("num_groups", 4);
+            normAssert(normRowsRef64F(xc, 4, 4 * spatial, eps), runBlockNorm(lp), "GroupNormalization, block layout", 1e-2, 1e-2);
+        }
+        {
+            LayerParams lp;
+            lp.type = "InstanceNormalization";
+            lp.name = "in_block";
+            lp.set("epsilon", eps);
+            normAssert(normRowsRef64F(xc, 16, spatial, eps), runBlockNorm(lp), "InstanceNormalization, block layout", 1e-2, 1e-2);
+        }
+    }
+}
+
 typedef testing::TestWithParam<tuple<Vec4i, int, tuple<Backend, Target> > > Layer_Test_ShuffleChannel;
 TEST_P(Layer_Test_ShuffleChannel, Accuracy)
 {
