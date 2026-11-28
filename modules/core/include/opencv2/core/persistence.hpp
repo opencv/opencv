@@ -69,6 +69,12 @@ YAML (<http://www.yaml.org>) or JSON (<http://www.json.org/>) formats. Also, it 
 and load arbitrarily complex data structures, which include OpenCV data structures, as well as
 primitive data types (integer and floating-point numbers and text strings) as their elements.
 
+    @note FileStorage is not a general-purpose parser for arbitrary
+    XML, YAML or JSON files. Input files must follow the format
+    expected by OpenCV FileStorage. For example, XML files must
+    use the @c opencv_storage root element. Use a dedicated XML,
+    YAML or JSON parser to read arbitrary files in these formats.
+
 Use the following procedure to write something to XML, YAML or JSON:
 -# Create new FileStorage and open it for writing. It can be done with a single call to
 FileStorage::FileStorage constructor that takes a filename, or you can use the default constructor
