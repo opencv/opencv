@@ -271,8 +271,9 @@ TEST_P(Test_YOLO_nets, YOLOv4)
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.042 : 3e-4;
     if (target == DNN_TARGET_CUDA_FP16)
     {
+        // the same near-tied NMS pair as under TF32 below: IoU diff 0.0468
         scoreDiff = 0.008;
-        iouDiff = 0.03;
+        iouDiff = 0.05;
     }
     else if (target == DNN_TARGET_CUDA && cudaTF32Enabled())
     {

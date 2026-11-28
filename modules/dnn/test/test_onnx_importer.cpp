@@ -353,6 +353,31 @@ TEST_P(Test_ONNX_layers, Convolution)
     testONNXModels("conv_asymmetric_pads");
 }
 
+// A conv splits its output plane into about 8 chunks per thread; chunk * plane size passed INT_MAX at
+// 7168x7168 on 30 threads, and 256 threads reach it at this size. One thread gives the reference.
+TEST(Test_ONNX_conv, spatial_chunks_of_a_large_plane)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/convolution.onnx"));
+    Mat inp(std::vector<int>{1, 3, 2200, 2200}, CV_32F);
+    randu(inp, -1.f, 1.f);
+    const int prevThreads = getNumThreads();
+    setNumThreads(1);
+    net.setInput(inp);
+    Mat ref = net.forward().clone();
+    setNumThreads(256);
+    Mat out;
+    try {
+        net.setInput(inp);
+        out = net.forward().clone();
+    } catch (...) {
+        setNumThreads(prevThreads);
+        throw;
+    }
+    setNumThreads(prevThreads);
+    normAssert(ref, out, "", 0, 0);
+}
+
 TEST_P(Test_ONNX_layers, Convolution_variable_weight)
 {
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||

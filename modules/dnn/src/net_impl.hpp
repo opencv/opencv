@@ -126,7 +126,7 @@ struct Net::Impl : public detail::NetImplBase
     std::string importFailure;
     ModelFormat modelFormat;
     DataLayout originalLayout;
-    // int onnx_opset;
+    int onnx_opset = -1;  // ai.onnx opset of the loaded model; -1 for other formats
 
     NamesHash argnames;
     NamesHash dimnames;
@@ -170,6 +170,27 @@ struct Net::Impl : public detail::NetImplBase
     };
     bool fusedSnapshotValid = false;
     std::vector<FusedGraphSnapshot> fusedSnapshot;
+
+    // Backend partition. The first finalizeGraph() pass of finalize() decides where each op runs;
+    // useBlockLayout() lays tensors out for that choice, so the second pass reuses it.
+    enum { PLACED_ON_HOST = -1 };  // a shape op computed on the host inside an accelerated graph
+    std::unordered_map<const LayerInfo*, int> plannedBackend;
+    bool partitionPlanned = false;
+    size_t minAccelSubgraphSize = 1;
+    // An accelerated op that failed at runtime runs on CPU. A bad input can be the cause, so other input
+    // shapes give it one more try on the accelerator; failing again keeps it on CPU for good.
+    enum AccelFailState { ACCEL_FAILED, ACCEL_RETRYING, ACCEL_FAILED_FOR_GOOD };
+    struct AccelFailure { AccelFailState state; std::vector<MatShape> inputShapes; };
+    std::map<const LayerInfo*, AccelFailure> accelFailures;
+    std::vector<MatShape> forwardInputShapes;  // the main graph's input shapes in the current forward
+    const LayerInfo* accelRunningOp = nullptr;  // the accelerated op being run; still set if it threw
+    void planOpPlacement(const Ptr<Graph>& graph, bool useCUDA,
+                         std::vector<int>& placement, std::vector<Ptr<Layer> >& accelExecs);
+    bool isPlannedForAccelerator(const LayerInfo* op) const;
+    bool isAccelBlocked(const LayerInfo* op) const;
+    bool retryAfterAccelFailure(const cv::Exception& e);
+    void retryFailedAccelOps();
+
     TracingMode tracingMode;
     ProfilingMode profilingMode;
     std::vector<int64_t> dimvalues;
@@ -323,7 +344,11 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<uchar> cudaArgHostDirty;    // 1: host copy is authoritative -> needs H2D before device read
     std::vector<uchar> cudaArgDeviceDirty;  // 1: device copy is authoritative -> needs D2H before host read
     std::vector<UMat> cudaTempBuffers;
-    bool cudaPoolTemps = false;
+    // 1: a temp that only CUDA ops touch; it shares cudaTempBuffers by lifetime, like host temps share 'buffers'
+    std::vector<uchar> cudaPooledArg;
+    bool cudaWholeGraph = false;  // every op of the main graph runs on CUDA, so a forward can be recorded
+    bool cudaAnyOp = false;       // some op runs on CUDA
+    void planCudaBuffers();
     // the main graph's forward recorded as one CUDA Graph, and the input shapes it was recorded for
     cudaGraphExec_t cudaGraphExec = nullptr;
     std::vector<MatShape> cudaGraphInputShapes;

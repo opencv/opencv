@@ -63,6 +63,13 @@ static cv::dnn::details::_LayerStaticRegisterer __LayerStaticRegisterer_##type(#
 #define CV_DNN_REGISTER_EXEC_CLASS(type, backendId, class) \
     cv::dnn::LayerFactory::registerExec(#type, backendId, cv::dnn::details::_execDynamicRegisterer<class>);
 
+/** @brief Same as CV_DNN_REGISTER_EXEC_CLASS, limited to model opsets in [minOpset, maxOpset].
+ *  @details Nodes from a model outside that range run on another backend.
+ */
+#define CV_DNN_REGISTER_EXEC_CLASS_OPSET(type, backendId, class, minOpset, maxOpset) \
+    cv::dnn::LayerFactory::registerExec(#type, backendId, cv::dnn::details::_execDynamicRegisterer<class>, \
+                                        minOpset, maxOpset);
+
 namespace details {
 
 template<typename LayerClass>

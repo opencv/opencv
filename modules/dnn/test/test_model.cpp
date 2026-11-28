@@ -125,6 +125,7 @@ public:
 
         model.setPreferableBackend(backend);
         model.setPreferableTarget(target);
+        model.enableTF32(false);  // TF32 moves near-tied heatmap peaks; the references are FP32
 
         points = model.estimate(frame, 0.5);
 
