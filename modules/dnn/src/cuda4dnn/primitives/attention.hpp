@@ -21,6 +21,7 @@
 
 #include <opencv2/core.hpp>
 
+#include <algorithm>
 #include <cstddef>
 #include <vector>
 #include <utility>
@@ -38,6 +39,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
     template <class T>
     class AttentionOp final : public CUDABackendNode {
+        static constexpr std::size_t ATTN_Q_TILE = 256;
+
     public:
         AttentionOp(csl::Stream stream_, csl::cublas::Handle handle,
                     const Mat& weight, const Mat& bias, const AttentionConfiguration& cfg)
@@ -60,16 +63,18 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             const std::size_t B = cfg.batch_size, S = cfg.seq_len, N = cfg.num_heads;
             const std::size_t headV = cfg.qkv_hidden_sizes[2] / N;
+            const std::size_t maxProjWidth = std::max(cfg.qkv_hidden_sizes[0],
+                                                      std::max(cfg.qkv_hidden_sizes[1], cfg.qkv_hidden_sizes[2]));
+            const std::size_t qTile = std::min<std::size_t>(S, ATTN_Q_TILE);
 
             // one require() per span forward() acquires: the allocator rounds each to 256, so the
             // total must be a sum of rounded sizes, not a rounded sum
             csl::WorkspaceBuilder builder;
-            for (int i = 0; i < 3; i++) {
-                builder.require<T>(B * S * cfg.qkv_hidden_sizes[i]);                 // proj[i]
-                builder.require<T>(B * N * S * (cfg.qkv_hidden_sizes[i] / N));       // headMajor[i]
-            }
-            builder.require<T>(B * N * S * S);          // scores
-            builder.require<T>(B * N * S * headV);      // context
+            builder.require<T>(B * S * maxProjWidth);   // proj scratch reused across Q, K, V
+            for (int i = 0; i < 3; i++)
+                builder.require<T>(B * N * S * (cfg.qkv_hidden_sizes[i] / N)); // headMajor[i]
+            builder.require<T>(B * N * qTile * S);      // tiled scores [B*N, qTile, S]
+            builder.require<T>(B * N * S * headV);      // context [B*N, S, headV]
             scratch_mem_in_bytes = builder.required_workspace_size();
         }
 
@@ -82,26 +87,30 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                      "DNN/CUDA Attention: rotary and non-constant weight inputs are not supported");
             CV_Assert(outputs.size() == 1);
 
+            const std::size_t B = config.batch_size, S = config.seq_len, N = config.num_heads;
+            if (B == 0 || S == 0)
+                return;
+
             auto input = csl::viewOf<T>(inputs[0]);
             auto output = csl::spanOf<T>(outputs[0]);
 
-            const std::size_t B = config.batch_size, S = config.seq_len, N = config.num_heads;
             const std::size_t K = config.input_hidden_size;
             const std::size_t headSize[3] = { config.qkv_hidden_sizes[0] / N,
                                               config.qkv_hidden_sizes[1] / N,
                                               config.qkv_hidden_sizes[2] / N };
+            const std::size_t maxProjWidth = std::max(config.qkv_hidden_sizes[0],
+                                                      std::max(config.qkv_hidden_sizes[1], config.qkv_hidden_sizes[2]));
+            const std::size_t qTile = std::min<std::size_t>(S, ATTN_Q_TILE);
 
             csl::WorkspaceAllocator allocator(workspace);
 
-            csl::TensorSpan<T> proj[3], headMajor[3];
+            auto projBuf = allocator.get_span<T>(B * S * maxProjWidth);
+            csl::TensorSpan<T> headMajor[3];
             for (int i = 0; i < 3; i++) {
-                std::vector<std::size_t> flat = { B * S, config.qkv_hidden_sizes[i] };
-                proj[i] = allocator.get_tensor_span<T>(std::begin(flat), std::end(flat));
                 std::vector<std::size_t> hm = { B, N, S, headSize[i] };
                 headMajor[i] = allocator.get_tensor_span<T>(std::begin(hm), std::end(hm));
             }
-            std::vector<std::size_t> scoreShape = { B * N, S, S };
-            auto scores = allocator.get_tensor_span<T>(std::begin(scoreShape), std::end(scoreShape));
+            auto scoresBuf = allocator.get_span<T>(B * N * qTile * S);
             std::vector<std::size_t> ctxShape = { B * N, S, headSize[2] };
             auto context = allocator.get_tensor_span<T>(std::begin(ctxShape), std::end(ctxShape));
 
@@ -110,40 +119,103 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             input2d.reshape(B * S, K);
 
             for (int i = 0; i < 3; i++) {
-                csl::tensor_ops::gemm<T>(cublasHandle, 0.0, proj[i], 1.0,
+                std::size_t flat[2] = { B * S, config.qkv_hidden_sizes[i] };
+                csl::TensorSpan<T> proj(projBuf.data(), flat, flat + 2);
+                csl::tensor_ops::gemm<T>(cublasHandle, 0.0, proj, 1.0,
                                          false, input2d, false, csl::TensorView<T>(weightTensor[i]));
-                kernels::biasN<T>(stream, proj[i], csl::TensorView<T>(proj[i]), 1,
+                kernels::biasN<T>(stream, proj, csl::TensorView<T>(proj), 1,
                                   csl::TensorView<T>(biasTensor[i]));
 
-                auto asHeads = csl::TensorView<T>(proj[i]);
+                auto asHeads = csl::TensorView<T>(proj);
                 while (asHeads.rank() < 4) asHeads.unsqueeze();
                 asHeads.reshape(B, S, N, headSize[i]);
                 kernels::permute<T>(stream, headMajor[i], asHeads, { 0, 2, 1, 3 });
             }
 
-            auto q3 = csl::TensorView<T>(headMajor[0]); while (q3.rank() < 3) q3.unsqueeze(); q3.reshape(B * N, S, headSize[0]);
-            auto k3 = csl::TensorView<T>(headMajor[1]); while (k3.rank() < 3) k3.unsqueeze(); k3.reshape(B * N, S, headSize[1]);
-            auto v3 = csl::TensorView<T>(headMajor[2]); while (v3.rank() < 3) v3.unsqueeze(); v3.reshape(B * N, S, headSize[2]);
-
-            csl::tensor_ops::gemmStridedBatched<T>(cublasHandle, 0.0, scores,
-                                                   static_cast<T>(config.scale), false, q3, true, k3);
-
-            // additive mask, broadcast right-aligned onto [B, N, S, S] before the softmax, as on CPU
+            csl::TensorView<T> mask;
+            std::size_t mB = 1, mN = 1, mQ = 1, mK = 1;
             if (inputs.size() == 2) {
-                auto mask = csl::viewOf<T>(inputs[1]);
+                mask = csl::viewOf<T>(inputs[1]);
                 if (mask.rank() > 4)
                     mask.squeeze_to(4);  // extra leading dims must be 1
-                auto scores4 = csl::TensorSpan<T>(scores);
-                while (scores4.rank() < 4) scores4.unsqueeze();
-                scores4.reshape(B, N, S, S);
-                kernels::eltwise_sum_2<T>(stream, scores4, csl::TensorView<T>(scores4), mask);
+                while (mask.rank() < 4)
+                    mask.unsqueeze();
+                mB = mask.get_axis_size(0);
+                mN = mask.get_axis_size(1);
+                mQ = mask.get_axis_size(2);
+                mK = mask.get_axis_size(3);
             }
 
-            kernels::softmax<T>(stream, csl::Span<T>(scores), csl::View<T>(csl::TensorView<T>(scores)),
-                                static_cast<int>(S), static_cast<int>(B * N * S), 1, false);
+            const std::size_t dQK = headSize[0], dV = headSize[2];
+            const std::size_t batchCount = B * N;
 
-            csl::tensor_ops::gemmStridedBatched<T>(cublasHandle, 0.0, context, 1.0,
-                                                   false, csl::TensorView<T>(scores), false, v3);
+            // Process query positions in ATTN_Q_TILE blocks so scores stay O(B*N*TILE*S) instead of O(B*N*S^2).
+            for (std::size_t q0 = 0; q0 < S; q0 += qTile) {
+                const std::size_t qlen = std::min(qTile, S - q0);
+
+                // Row-major Q_tile [B*N, qlen, dQK] * K^T [B*N, dQK, S] -> scoresTile [B*N, qlen, S]
+                csl::cublas::gemmStridedBatched<T>(
+                    cublasHandle,
+                    true, false,
+                    S, qlen, dQK,
+                    static_cast<T>(config.scale),
+                    csl::DevicePtr<const T>(headMajor[1].get()), dQK, S * dQK,
+                    csl::DevicePtr<const T>(headMajor[0].get()) + static_cast<std::ptrdiff_t>(q0 * dQK), dQK, S * dQK,
+                    static_cast<T>(0.0f),
+                    scoresBuf.data(), S, qlen * S,
+                    batchCount);
+
+                if (inputs.size() == 2) {
+                    if (mQ == 1) {
+                        std::size_t s4[4] = { B, N, qlen, S };
+                        csl::TensorSpan<T> scores4(scoresBuf.data(), s4, s4 + 4);
+                        kernels::eltwise_sum_2<T>(stream, scores4, csl::TensorView<T>(scores4), mask);
+                    } else if (mB == 1 && mN == 1) {
+                        std::size_t s4[4] = { B, N, qlen, S };
+                        std::size_t m4[4] = { 1, 1, qlen, mK };
+                        csl::TensorSpan<T> scores4(scoresBuf.data(), s4, s4 + 4);
+                        csl::TensorView<T> maskTile(mask.get() + static_cast<std::ptrdiff_t>(q0 * mK), m4, m4 + 4);
+                        kernels::eltwise_sum_2<T>(stream, scores4, csl::TensorView<T>(scores4), maskTile);
+                    } else if (mN == 1) {
+                        std::size_t s3[3] = { N, qlen, S };
+                        std::size_t m3[3] = { 1, qlen, mK };
+                        for (std::size_t b = 0; b < B; b++) {
+                            const std::size_t mb = (mB == 1) ? 0 : b;
+                            csl::TensorSpan<T> scoresB(scoresBuf.data() + static_cast<std::ptrdiff_t>(b * N * qlen * S), s3, s3 + 3);
+                            csl::TensorView<T> maskB(mask.get() + static_cast<std::ptrdiff_t>((mb * mQ + q0) * mK), m3, m3 + 3);
+                            kernels::eltwise_sum_2<T>(stream, scoresB, csl::TensorView<T>(scoresB), maskB);
+                        }
+                    } else {
+                        std::size_t s2[2] = { qlen, S };
+                        std::size_t m2[2] = { qlen, mK };
+                        for (std::size_t b = 0; b < B; b++) {
+                            const std::size_t mb = (mB == 1) ? 0 : b;
+                            for (std::size_t n = 0; n < N; n++) {
+                                csl::TensorSpan<T> scoresBN(scoresBuf.data() + static_cast<std::ptrdiff_t>((b * N + n) * qlen * S), s2, s2 + 2);
+                                csl::TensorView<T> maskBN(mask.get() + static_cast<std::ptrdiff_t>(((mb * mN + n) * mQ + q0) * mK), m2, m2 + 2);
+                                kernels::eltwise_sum_2<T>(stream, scoresBN, csl::TensorView<T>(scoresBN), maskBN);
+                            }
+                        }
+                    }
+                }
+
+                kernels::softmax<T>(stream,
+                                    csl::Span<T>(scoresBuf.data(), batchCount * qlen * S),
+                                    csl::View<T>(scoresBuf.data(), batchCount * qlen * S),
+                                    static_cast<int>(S), static_cast<int>(batchCount * qlen), 1, false);
+
+                // Row-major scoresTile [B*N, qlen, S] * V [B*N, S, dV] -> context[:, q0:q0+qlen, :]
+                csl::cublas::gemmStridedBatched<T>(
+                    cublasHandle,
+                    false, false,
+                    dV, qlen, S,
+                    static_cast<T>(1.0f),
+                    csl::DevicePtr<const T>(headMajor[2].get()), dV, S * dV,
+                    csl::DevicePtr<const T>(scoresBuf.data()), S, qlen * S,
+                    static_cast<T>(0.0f),
+                    context.get() + static_cast<std::ptrdiff_t>(q0 * dV), dV, S * dV,
+                    batchCount);
+            }
 
             auto ctx4 = csl::TensorView<T>(context);
             while (ctx4.rank() < 4) ctx4.unsqueeze();

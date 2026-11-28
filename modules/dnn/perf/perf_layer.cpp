@@ -1392,4 +1392,74 @@ PERF_TEST_P_(Layer_DynamicInt8, MatMulInteger)
 
 INSTANTIATE_TEST_CASE_P(/**/, Layer_DynamicInt8, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 
+typedef TestBaseWithParam<tuple<int, tuple<Backend, Target> > > Layer_AttentionONNX;
+PERF_TEST_P_(Layer_AttentionONNX, self_attention)
+{
+    const int seqLen = get<0>(GetParam());
+    const Backend backendId = get<0>(get<1>(GetParam()));
+    const Target targetId = get<1>(get<1>(GetParam()));
+    if (backendId != DNN_BACKEND_OPENCV && backendId != DNN_BACKEND_CUDA)
+        throw SkipTestException("Attention supports OpenCV and CUDA backends");
+
+    const int B = 2, H = 12, Dh = 64, C = H * Dh;
+    Mat X({B, seqLen, C}, CV_32F), W(C, 3 * C, CV_32F), bias(std::vector<int>{3 * C}, CV_32F);
+    randu(X, -0.5f, 0.5f);
+    randu(W, -0.1f, 0.1f);
+    randu(bias, -0.1f, 0.1f);
+
+    struct WireBuf
+    {
+        std::vector<uchar> b;
+        void uvar(uint64_t v) { while (v >= 0x80) { b.push_back((uchar)((v & 0x7f) | 0x80)); v >>= 7; } b.push_back((uchar)v); }
+        void tag(uint32_t f, uint32_t w) { uvar((uint64_t(f) << 3) | w); }
+        void i64(uint32_t f, int64_t v) { tag(f, 0); uvar((uint64_t)v); }
+        void i32(uint32_t f, int32_t v) { tag(f, 0); uvar((uint64_t)(int64_t)v); }
+        void bytes(uint32_t f, const void* p, size_t n) { tag(f, 2); uvar(n); const uchar* q = (const uchar*)p; b.insert(b.end(), q, q + n); }
+        void str(uint32_t f, const std::string& s) { bytes(f, s.data(), s.size()); }
+        void sub(uint32_t f, const WireBuf& c) { bytes(f, c.b.data(), c.b.size()); }
+    };
+    auto viF32 = [&](const std::string& name, const std::vector<int>& dims) {
+        WireBuf sh, tt, tp, vi;
+        for (int d : dims) { WireBuf dm; dm.i64(1, d); sh.sub(1, dm); }
+        tt.i32(1, 1); tt.sub(2, sh); tp.sub(1, tt); vi.str(1, name); vi.sub(2, tp);
+        return vi;
+    };
+    auto tenF32 = [&](const std::string& name, const Mat& m) {
+        WireBuf t;
+        for (int i = 0; i < m.dims; ++i) t.i64(1, m.size[i]);
+        t.i32(2, 1); t.str(8, name); t.bytes(9, m.data, m.total() * sizeof(float));
+        return t;
+    };
+    WireBuf aHeads; aHeads.str(1, "num_heads"); aHeads.i64(3, H); aHeads.i32(20, 2);
+    WireBuf aHidden; aHidden.str(1, "qkv_hidden_sizes");
+    for (int k = 0; k < 3; ++k) aHidden.i64(8, C);
+    aHidden.i32(20, 7);
+    WireBuf node;
+    for (const char* s : {"X", "W", "B"}) node.str(1, s);
+    node.str(2, "Y"); node.str(4, "Attention"); node.sub(5, aHeads); node.sub(5, aHidden); node.str(7, "com.microsoft");
+    WireBuf g; g.sub(1, node); g.str(2, "g");
+    g.sub(5, tenF32("W", W)); g.sub(5, tenF32("B", bias));
+    g.sub(11, viF32("X", {B, seqLen, C})); g.sub(12, viF32("Y", {B, seqLen, C}));
+    WireBuf m; m.i64(1, 8); m.str(2, "perf"); m.sub(7, g);
+    { WireBuf op; op.str(1, ""); op.i64(2, 18); m.sub(8, op); }
+    { WireBuf op; op.str(1, "com.microsoft"); op.i64(2, 1); m.sub(8, op); }
+
+    Net net = readNetFromONNX(m.b);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    net.setInput(X, "X");
+    Mat warm = net.forward();
+
+    TEST_CYCLE()
+    {
+        Mat res = net.forward();
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+INSTANTIATE_TEST_CASE_P(/**/, Layer_AttentionONNX, Combine(
+    Values(512, 1024, 2048),
+    dnnBackendsAndTargets(false, false, true, false, true, false, false, false)
+));
+
 } // namespace
