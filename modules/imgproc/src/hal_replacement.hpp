@@ -569,7 +569,7 @@ inline int hal_ni_remap16s(int src_type, const uchar *src_data, size_t src_step,
    @param dst_step destination image step
    @param width image width
    @param height image height
-   @param depth image depth (one of CV_8U, CV_16U, CV_32F)
+   @param depth image depth (one of CV_8U, CV_16U, CV_16F, CV_32F)
    @param scn source image channels (3 or 4)
    @param dcn destination image channels (3 or 4)
    @param swapBlue if set to true B and R channels will be swapped (BGR->RGB or RGB->BGR)
@@ -617,7 +617,7 @@ inline int hal_ni_cvtBGR5x5toBGR(const uchar * src_data, size_t src_step, uchar 
    @param dst_step destination image step
    @param width image width
    @param height image height
-   @param depth image depth (one of CV_8U, CV_16U or CV_32F)
+   @param depth image depth (one of CV_8U, CV_16U, CV_16F or CV_32F)
    @param scn source image channels (3 or 4)
    @param swapBlue if set to true B and R source channels will be swapped (treat as RGB)
    Convert from BGR, BGRA, RGB or RGBA to 1-channel gray.
@@ -632,7 +632,7 @@ inline int hal_ni_cvtBGRtoGray(const uchar * src_data, size_t src_step, uchar * 
    @param dst_step destination image step
    @param width image width
    @param height image height
-   @param depth image depth (one of CV_8U, CV_16U or CV_32F)
+   @param depth image depth (one of CV_8U, CV_16U, CV_16F or CV_32F)
    @param dcn destination image channels (3 or 4)
    Convert from 1-channel gray to BGR, RGB, RGBA or BGRA.
  */
@@ -769,7 +769,7 @@ inline int hal_ni_cvtXYZtoBGR(const uchar * src_data, size_t src_step, uchar * d
    @param dst_step destination image step
    @param width image width
    @param height image height
-   @param depth image depth (one of CV_8U or CV_32F)
+   @param depth image depth (one of CV_8U, CV_16F or CV_32F)
    @param scn source image channels (3 or 4)
    @param swapBlue if set to true B and R source channels will be swapped (treat as RGB)
    @param isFullRange if set to true write hue in range 0-255 (0-360 for float) otherwise in range 0-180
@@ -786,7 +786,7 @@ inline int hal_ni_cvtBGRtoHSV(const uchar * src_data, size_t src_step, uchar * d
    @param dst_step destination image step
    @param width image width
    @param height image height
-   @param depth image depth (one of CV_8U or CV_32F)
+   @param depth image depth (one of CV_8U, CV_16F or CV_32F)
    @param dcn destination image channels (3 or 4)
    @param swapBlue if set to true B and R destination channels will be swapped (write RGB)
    @param isFullRange if set to true read hue in range 0-255 (0-360 for float) otherwise in range 0-180

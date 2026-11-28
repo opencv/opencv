@@ -262,9 +262,10 @@ struct RGB2HSV_b
 };
 
 
+template<typename _Tp>
 struct RGB2HSV_f
 {
-    typedef float channel_type;
+    typedef _Tp channel_type;
 
     RGB2HSV_f(int _srccn, int _blueIdx, float _hrange)
     : srccn(_srccn), blueIdx(_blueIdx), hrange(_hrange)
@@ -296,7 +297,7 @@ struct RGB2HSV_f
     }
     #endif
 
-    void operator()(const float* src, float* dst, int n) const
+    void operator()(const _Tp* src, _Tp* dst, int n) const
     {
         CV_INSTRUMENT_REGION();
 
@@ -305,35 +306,38 @@ struct RGB2HSV_f
         n *= 3;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-        const int vsize = VTraits<v_float32>::vlanes();
-        const float* const src0 = src;
-        for ( ; i < n; i += 3*vsize, src += scn * vsize)
+        if constexpr (std::is_same<_Tp, float>::value)
         {
-            if ( i > n - 3*vsize ) {
-                if (i == 0 || src0 == dst) {
-                    break;
+            const int vsize = VTraits<v_float32>::vlanes();
+            const float* const src0 = src;
+            for ( ; i < n; i += 3*vsize, src += scn * vsize)
+            {
+                if ( i > n - 3*vsize ) {
+                    if (i == 0 || src0 == dst) {
+                        break;
+                    }
+                    int backup = (i - (n - 3*vsize)) / 3;
+                    i = n - 3*vsize;
+                    src -= backup * scn;
                 }
-                int backup = (i - (n - 3*vsize)) / 3;
-                i = n - 3*vsize;
-                src -= backup * scn;
-            }
-            v_float32 r, g, b, a;
-            if(scn == 4)
-            {
-                v_load_deinterleave(src, r, g, b, a);
-            }
-            else // scn == 3
-            {
-                v_load_deinterleave(src, r, g, b);
-            }
+                v_float32 r, g, b, a;
+                if(scn == 4)
+                {
+                    v_load_deinterleave(src, r, g, b, a);
+                }
+                else // scn == 3
+                {
+                    v_load_deinterleave(src, r, g, b);
+                }
 
-            if(bidx)
-                v_swap(b, r);
+                if(bidx)
+                    v_swap(b, r);
 
-            v_float32 h, s, v;
-            process(b, g, r, h, s, v, hscale);
+                v_float32 h, s, v;
+                process(b, g, r, h, s, v, hscale);
 
-            v_store_interleave(dst + i, h, s, v);
+                v_store_interleave(dst + i, h, s, v);
+            }
         }
 #endif
 
@@ -362,9 +366,9 @@ struct RGB2HSV_f
 
             if( h < 0 ) h += 360.f;
 
-            dst[i] = h*hscale;
-            dst[i+1] = s;
-            dst[i+2] = v;
+            dst[i] = saturate_cast<_Tp>(h*hscale);
+            dst[i+1] = saturate_cast<_Tp>(s);
+            dst[i+2] = saturate_cast<_Tp>(v);
         }
     }
 
@@ -461,15 +465,16 @@ inline void HSV2RGB_native(float h, float s, float v,
 }
 
 
+template<typename _Tp>
 struct HSV2RGB_f
 {
-    typedef float channel_type;
+    typedef _Tp channel_type;
 
     HSV2RGB_f(int _dstcn, int _blueIdx, float _hrange)
     : dstcn(_dstcn), blueIdx(_blueIdx), hscale(6.f/_hrange)
     { }
 
-    void operator()(const float* src, float* dst, int n) const
+    void operator()(const _Tp* src, _Tp* dst, int n) const
     {
         CV_INSTRUMENT_REGION();
 
@@ -479,34 +484,37 @@ struct HSV2RGB_f
         n *= 3;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-        const int vsize = VTraits<v_float32>::vlanes();
-        v_float32 valpha = vx_setall_f32(alpha);
-        float* const dst0 = dst;
-        for (; i < n; i += vsize*3, dst += dcn * vsize)
+        if constexpr (std::is_same<_Tp, float>::value)
         {
-            if ( i > n - vsize*3 ) {
-                if (i == 0 || src == dst0) {
-                    break;
+            const int vsize = VTraits<v_float32>::vlanes();
+            v_float32 valpha = vx_setall_f32(alpha);
+            float* const dst0 = dst;
+            for (; i < n; i += vsize*3, dst += dcn * vsize)
+            {
+                if ( i > n - vsize*3 ) {
+                    if (i == 0 || src == dst0) {
+                        break;
+                    }
+                    int backup = (i - (n - vsize*3)) / 3;
+                    i = n - vsize*3;
+                    dst -= backup * dcn;
                 }
-                int backup = (i - (n - vsize*3)) / 3;
-                i = n - vsize*3;
-                dst -= backup * dcn;
-            }
-            v_float32 h, s, v, b, g, r;
-            v_load_deinterleave(src + i, h, s, v);
+                v_float32 h, s, v, b, g, r;
+                v_load_deinterleave(src + i, h, s, v);
 
-            HSV2RGB_simd(h, s, v, b, g, r, hs);
+                HSV2RGB_simd(h, s, v, b, g, r, hs);
 
-            if(bidx)
-                v_swap(b, r);
+                if(bidx)
+                    v_swap(b, r);
 
-            if(dcn == 4)
-            {
-                v_store_interleave(dst, b, g, r, valpha);
-            }
-            else // dcn == 3
-            {
-                v_store_interleave(dst, b, g, r);
+                if(dcn == 4)
+                {
+                    v_store_interleave(dst, b, g, r, valpha);
+                }
+                else // dcn == 3
+                {
+                    v_store_interleave(dst, b, g, r);
+                }
             }
         }
 #endif
@@ -516,11 +524,11 @@ struct HSV2RGB_f
             float b, g, r;
             HSV2RGB_native(h, s, v, b, g, r, hs);
 
-            dst[bidx] = b;
-            dst[1] = g;
-            dst[bidx^2] = r;
+            dst[bidx] = saturate_cast<_Tp>(b);
+            dst[1] = saturate_cast<_Tp>(g);
+            dst[bidx^2] = saturate_cast<_Tp>(r);
             if(dcn == 4)
-                dst[3] = alpha;
+                dst[3] = saturate_cast<_Tp>(alpha);
         }
     }
 
@@ -684,9 +692,10 @@ struct HSV2RGB_b
 
 ///////////////////////////////////// RGB <-> HLS ////////////////////////////////////////
 
+template<typename _Tp>
 struct RGB2HLS_f
 {
-    typedef float channel_type;
+    typedef _Tp channel_type;
 
     RGB2HLS_f(int _srccn, int _blueIdx, float _hrange)
     : srccn(_srccn), blueIdx(_blueIdx), hscale(_hrange/360.f)
@@ -726,46 +735,49 @@ struct RGB2HLS_f
     }
 #endif
 
-    void operator()(const float* src, float* dst, int n) const
+    void operator()(const _Tp* src, _Tp* dst, int n) const
     {
         CV_INSTRUMENT_REGION();
 
         int i = 0, bidx = blueIdx, scn = srccn;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-        const int vsize = VTraits<v_float32>::vlanes();
-        v_float32 vhscale = vx_setall_f32(hscale);
-
-        for ( ; i < n;
-              i += vsize, src += scn * vsize, dst += 3 * vsize)
+        if constexpr (std::is_same<_Tp, float>::value)
         {
-            if ( i > n - vsize ) {
-                if (i == 0 || src == dst) {
-                    break;
+            const int vsize = VTraits<v_float32>::vlanes();
+            v_float32 vhscale = vx_setall_f32(hscale);
+
+            for ( ; i < n;
+                  i += vsize, src += scn * vsize, dst += 3 * vsize)
+            {
+                if ( i > n - vsize ) {
+                    if (i == 0 || src == dst) {
+                        break;
+                    }
+                    int backup = i - (n - vsize);
+                    i = n - vsize;
+                    src -= backup * scn;
+                    dst -= backup * 3;
                 }
-                int backup = i - (n - vsize);
-                i = n - vsize;
-                src -= backup * scn;
-                dst -= backup * 3;
+                v_float32 r, g, b, h, l, s;
+
+                if(scn == 4)
+                {
+                    v_float32 a;
+                    v_load_deinterleave(src, b, g, r, a);
+                }
+                else // scn == 3
+                {
+                    v_load_deinterleave(src, b, g, r);
+                }
+
+                if(bidx)
+                    v_swap(r, b);
+
+                process(r, g, b, vhscale, h, l, s);
+
+                v_store_interleave(dst, h, l, s);
             }
-            v_float32 r, g, b, h, l, s;
-
-            if(scn == 4)
-            {
-                v_float32 a;
-                v_load_deinterleave(src, b, g, r, a);
-            }
-            else // scn == 3
-            {
-                v_load_deinterleave(src, b, g, r);
-            }
-
-            if(bidx)
-                v_swap(r, b);
-
-            process(r, g, b, vhscale, h, l, s);
-
-            v_store_interleave(dst, h, l, s);
         }
 #endif
 
@@ -799,9 +811,9 @@ struct RGB2HLS_f
                 if( h < 0.f ) h += 360.f;
             }
 
-            dst[0] = h*hscale;
-            dst[1] = l;
-            dst[2] = s;
+            dst[0] = saturate_cast<_Tp>(h*hscale);
+            dst[1] = saturate_cast<_Tp>(l);
+            dst[2] = saturate_cast<_Tp>(s);
         }
     }
 
@@ -984,13 +996,14 @@ struct RGB2HLS_b
     }
 
     int srccn;
-    RGB2HLS_f cvt;
+    RGB2HLS_f<float> cvt;
 };
 
 
+template<typename _Tp>
 struct HLS2RGB_f
 {
-    typedef float channel_type;
+    typedef _Tp channel_type;
 
     HLS2RGB_f(int _dstcn, int _blueIdx, float _hrange)
     : dstcn(_dstcn), blueIdx(_blueIdx), hscale(6.f/_hrange)
@@ -1032,7 +1045,7 @@ struct HLS2RGB_f
     }
 #endif
 
-    void operator()(const float* src, float* dst, int n) const
+    void operator()(const _Tp* src, _Tp* dst, int n) const
     {
         CV_INSTRUMENT_REGION();
 
@@ -1040,34 +1053,37 @@ struct HLS2RGB_f
         float alpha = ColorChannel<float>::max();
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-        static const int vsize = VTraits<v_float32>::vlanes();
-        for (; i < n; i += vsize, src += 3*vsize, dst += dcn*vsize)
+        if constexpr (std::is_same<_Tp, float>::value)
         {
-            if ( i > n - vsize ) {
-                if (i == 0 || src == dst) {
-                    break;
+            static const int vsize = VTraits<v_float32>::vlanes();
+            for (; i < n; i += vsize, src += 3*vsize, dst += dcn*vsize)
+            {
+                if ( i > n - vsize ) {
+                    if (i == 0 || src == dst) {
+                        break;
+                    }
+                    int backup = i - (n - vsize);
+                    i = n - vsize;
+                    src -= backup * 3;
+                    dst -= backup * dcn;
                 }
-                int backup = i - (n - vsize);
-                i = n - vsize;
-                src -= backup * 3;
-                dst -= backup * dcn;
-            }
-            v_float32 h, l, s, r, g, b;
-            v_load_deinterleave(src, h, l, s);
+                v_float32 h, l, s, r, g, b;
+                v_load_deinterleave(src, h, l, s);
 
-            process(h, l, s, b, g, r);
+                process(h, l, s, b, g, r);
 
-            if(bidx)
-                v_swap(b, r);
+                if(bidx)
+                    v_swap(b, r);
 
-            if(dcn == 3)
-            {
-                v_store_interleave(dst, b, g, r);
-            }
-            else
-            {
-                v_float32 a = vx_setall_f32(alpha);
-                v_store_interleave(dst, b, g, r, a);
+                if(dcn == 3)
+                {
+                    v_store_interleave(dst, b, g, r);
+                }
+                else
+                {
+                    v_float32 a = vx_setall_f32(alpha);
+                    v_store_interleave(dst, b, g, r, a);
+                }
             }
         }
 #endif
@@ -1102,11 +1118,11 @@ struct HLS2RGB_f
                 r = tab[sector_data[sector][2]];
             }
 
-            dst[bidx] = b;
-            dst[1] = g;
-            dst[bidx^2] = r;
+            dst[bidx] = saturate_cast<_Tp>(b);
+            dst[1] = saturate_cast<_Tp>(g);
+            dst[bidx^2] = saturate_cast<_Tp>(r);
             if( dcn == 4 )
-                dst[3] = alpha;
+                dst[3] = saturate_cast<_Tp>(alpha);
         }
     }
 
@@ -1292,12 +1308,12 @@ struct HLS2RGB_b
     }
 
     int dstcn;
-    HLS2RGB_f cvt;
+    HLS2RGB_f<float> cvt;
 };
 
 } // namespace anon
 
-// 8u, 32f
+// 8u, 16f, 32f
 void cvtBGRtoHSV(const uchar * src_data, size_t src_step,
                  uchar * dst_data, size_t dst_step,
                  int width, int height,
@@ -1305,25 +1321,29 @@ void cvtBGRtoHSV(const uchar * src_data, size_t src_step,
 {
     CV_INSTRUMENT_REGION();
 
-    int hrange = depth == CV_32F ? 360 : isFullRange ? 256 : 180;
+    int hrange = depth != CV_8U ? 360 : isFullRange ? 256 : 180;
     int blueIdx = swapBlue ? 2 : 0;
     if(isHSV)
     {
         if(depth == CV_8U)
             CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2HSV_b(scn, blueIdx, hrange));
+        else if (depth == CV_16F)
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2HSV_f<hfloat>(scn, blueIdx, static_cast<float>(hrange)));
         else
-            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2HSV_f(scn, blueIdx, static_cast<float>(hrange)));
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2HSV_f<float>(scn, blueIdx, static_cast<float>(hrange)));
     }
     else
     {
         if( depth == CV_8U )
             CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2HLS_b(scn, blueIdx, hrange));
+        else if (depth == CV_16F)
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2HLS_f<hfloat>(scn, blueIdx, static_cast<float>(hrange)));
         else
-            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2HLS_f(scn, blueIdx, static_cast<float>(hrange)));
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2HLS_f<float>(scn, blueIdx, static_cast<float>(hrange)));
     }
 }
 
-// 8u, 32f
+// 8u, 16f, 32f
 void cvtHSVtoBGR(const uchar * src_data, size_t src_step,
                  uchar * dst_data, size_t dst_step,
                  int width, int height,
@@ -1331,21 +1351,25 @@ void cvtHSVtoBGR(const uchar * src_data, size_t src_step,
 {
     CV_INSTRUMENT_REGION();
 
-    int hrange = depth == CV_32F ? 360 : isFullRange ? 255 : 180;
+    int hrange = depth != CV_8U ? 360 : isFullRange ? 255 : 180;
     int blueIdx = swapBlue ? 2 : 0;
     if(isHSV)
     {
         if( depth == CV_8U )
             CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, HSV2RGB_b(dcn, blueIdx, hrange));
+        else if (depth == CV_16F)
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, HSV2RGB_f<hfloat>(dcn, blueIdx, static_cast<float>(hrange)));
         else
-            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, HSV2RGB_f(dcn, blueIdx, static_cast<float>(hrange)));
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, HSV2RGB_f<float>(dcn, blueIdx, static_cast<float>(hrange)));
     }
     else
     {
         if( depth == CV_8U )
             CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, HLS2RGB_b(dcn, blueIdx, hrange));
+        else if (depth == CV_16F)
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, HLS2RGB_f<hfloat>(dcn, blueIdx, static_cast<float>(hrange)));
         else
-            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, HLS2RGB_f(dcn, blueIdx, static_cast<float>(hrange)));
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, HLS2RGB_f<float>(dcn, blueIdx, static_cast<float>(hrange)));
     }
 }
 
