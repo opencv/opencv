@@ -3429,6 +3429,279 @@ TEST_P(Test_ONNX_layers, TopK) {
     test("top_k_smallest");
 }
 
+namespace {
+
+String onnxImporterGuardModel(const char* name)
+{
+    return findDataFile(String("dnn/onnx/models/") + name + ".onnx", true);
+}
+
+Net readONNXImporterGuardModel(const char* name)
+{
+    return readNetFromONNX(onnxImporterGuardModel(name));
+}
+
+void expectONNXImporterGuardRejected(const char* model, const char* expectedMsg)
+{
+    SCOPED_TRACE(model);
+    // Resolve the model outside the try block so a missing file is not
+    // mistaken for an importer rejection.
+    const String path = onnxImporterGuardModel(model);
+    try
+    {
+        (void)readNetFromONNX(path);
+        ADD_FAILURE() << "Expected ONNX model to be rejected: " << model;
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_NE(std::string(e.what()).find(expectedMsg), std::string::npos) << e.what();
+    }
+}
+
+void testQGemmBiasFixture(const char* model, int bias0, int bias1)
+{
+    SCOPED_TRACE(model);
+    Net net;
+    ASSERT_NO_THROW(net = readONNXImporterGuardModel(model));
+    ASSERT_FALSE(net.empty());
+    // The importer folds C into the InnerProductInt8 bias row (input zero point is 0).
+    Ptr<Layer> layer;
+    std::vector<String> names = net.getLayerNames();
+    for (size_t i = 0; i < names.size(); ++i)
+    {
+        Ptr<Layer> candidate = net.getLayer(net.getLayerId(names[i]));
+        if (candidate->type == "InnerProductInt8")
+        {
+            ASSERT_TRUE(layer.empty());
+            layer = candidate;
+        }
+    }
+    ASSERT_FALSE(layer.empty());
+    ASSERT_EQ(layer->blobs.size(), (size_t)3);
+    const Mat& bias = layer->blobs[1];
+    ASSERT_EQ(bias.type(), CV_32SC1);
+    ASSERT_EQ(bias.total(), (size_t)2);
+    EXPECT_EQ(bias.ptr<int>()[0], bias0);
+    EXPECT_EQ(bias.ptr<int>()[1], bias1);
+}
+
+void testConvTransposeOutputShapeFixture(const char* model, int extent, const float* values)
+{
+    SCOPED_TRACE(model);
+    Net net;
+    ASSERT_NO_THROW(net = readONNXImporterGuardModel(model));
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(DNN_TARGET_CPU);
+    const int inputShape[] = {1, 1, 2, 2};
+    net.setInput(Mat(4, inputShape, CV_32F, Scalar(1)));
+    Mat output;
+    ASSERT_NO_THROW(output = net.forward());
+    ASSERT_EQ(output.dims, 4);
+    EXPECT_EQ(output.size[0], 1);
+    EXPECT_EQ(output.size[1], 1);
+    ASSERT_EQ(output.size[2], extent);
+    ASSERT_EQ(output.size[3], extent);
+    Mat expected(extent, extent, CV_32F, const_cast<float*>(values));
+    EXPECT_EQ(0.0, cv::norm(output.reshape(1, extent), expected, NORM_INF));
+}
+
+// The ConvTranspose input is fully static, but a second graph input carries a
+// dynamic channel dimension, so the net has two inputs that both need setting.
+void testConvTransposeWithUnrelatedDynamicInput(const char* model, int extent, const float* values)
+{
+    SCOPED_TRACE(model);
+    Net net;
+    ASSERT_NO_THROW(net = readONNXImporterGuardModel(model));
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(DNN_TARGET_CPU);
+    const int inputShape[] = {1, 1, 2, 2};
+    net.setInput(Mat(4, inputShape, CV_32F, Scalar(1)), "X");
+    const int auxShape[] = {1, 2, 4};
+    net.setInput(Mat(3, auxShape, CV_32F, Scalar(0)), "aux");
+
+    Mat output;
+    ASSERT_NO_THROW(output = net.forward("Y"));
+    ASSERT_EQ(output.dims, 4);
+    EXPECT_EQ(output.size[0], 1);
+    EXPECT_EQ(output.size[1], 1);
+    ASSERT_EQ(output.size[2], extent);
+    ASSERT_EQ(output.size[3], extent);
+    Mat expected(extent, extent, CV_32F, const_cast<float*>(values));
+    EXPECT_EQ(0.0, cv::norm(output.reshape(1, extent), expected, NORM_INF));
+}
+}  // namespace
+
+TEST(Test_ONNX_Importer, QuantizedBiasFixtures)
+{
+    const char* models[] = {
+        "importer_qconv_bias", "importer_qgemm_constant", "importer_qgemm_omitted",
+        "importer_qgemm_omitted_no_output_zp"
+    };
+    for (size_t i = 0; i < sizeof(models) / sizeof(models[0]); ++i)
+    {
+        SCOPED_TRACE(models[i]);
+        Net net;
+        ASSERT_NO_THROW(net = readONNXImporterGuardModel(models[i]));
+        EXPECT_FALSE(net.empty());
+    }
+
+    expectONNXImporterGuardRejected("importer_qconv_float_bias", "Quantized bias must be int32");
+    expectONNXImporterGuardRejected("importer_qconv_short_bias", "Quantized bias length must equal output channels");
+    expectONNXImporterGuardRejected("importer_qconv_bias_rank3", "Quantized bias must be 1D");
+    expectONNXImporterGuardRejected("importer_qconv_bias_constfold_rank3", "Quantized bias must be 1D");
+    expectONNXImporterGuardRejected("importer_qgemm_float_bias", "Quantized bias must be int32");
+}
+
+TEST(Test_ONNX_Importer, QGemmBiasBroadcastFixtures)
+{
+    // C broadcasts to (M, N) = (2, 2) and must not vary along M.
+    testQGemmBiasFixture("importer_qgemm_bias_scalar", 4, 4);
+    testQGemmBiasFixture("importer_qgemm_bias_singleton", 4, 4);
+    testQGemmBiasFixture("importer_qgemm_bias_unit_matrix", 4, 4);
+    testQGemmBiasFixture("importer_qgemm_bias_vector", 2, 4);
+    testQGemmBiasFixture("importer_qgemm_bias_row", 2, 4);
+    testQGemmBiasFixture("importer_qgemm_bias_constfold_row", 2, 4);
+
+    const char* reason = "supported bias C shapes are [], [1], [N], [1, 1] and [1, N]";
+    expectONNXImporterGuardRejected("importer_qgemm_bias_column", reason);
+    expectONNXImporterGuardRejected("importer_qgemm_bias_matrix", reason);
+    expectONNXImporterGuardRejected("importer_qgemm_bias_invalid_rows", reason);
+    expectONNXImporterGuardRejected("importer_qgemm_bias_invalid_columns", reason);
+    expectONNXImporterGuardRejected("importer_qgemm_bias_invalid_rank", reason);
+    // Constant-folded C (Transpose to [2, 1], Reshape to [1, 1, 2]).
+    expectONNXImporterGuardRejected("importer_qgemm_bias_constfold_column", reason);
+    expectONNXImporterGuardRejected("importer_qgemm_bias_constfold_rank3", reason);
+}
+
+TEST(Test_ONNX_Importer, QGemmVariableBiasRejected)
+{
+    expectONNXImporterGuardRejected("importer_qgemm_variable", "non-constant bias C is not supported");
+}
+
+TEST(Test_ONNX_Importer, LSTMRank3Fixture)
+{
+    Net net;
+    ASSERT_NO_THROW(net = readONNXImporterGuardModel("importer_lstm_rank3"));
+    EXPECT_FALSE(net.empty());
+
+    expectONNXImporterGuardRejected("importer_lstm_rank2", "LSTM input must have rank 3");
+    expectONNXImporterGuardRejected("importer_lstm_rank1", "LSTM input must have rank 3");
+}
+
+TEST(Test_ONNX_Importer, ConvTransposeSameOutputShapeFixtures)
+{
+    const float expected[] = {0.5f, 0.5f, 1, 0.5f, 0.5f, 0.5f, 1, 0.5f,
+                              1, 1, 2, 1, 0.5f, 0.5f, 1, 0.5f};
+    testConvTransposeOutputShapeFixture("importer_deconv_same", 4, expected);
+    testConvTransposeOutputShapeFixture("importer_deconv_legacy", 4, expected);
+    const float valid[] = {0.5f, 0.5f, 1, 0.5f, 0.5f, 0.5f, 0.5f, 1, 0.5f, 0.5f,
+                           1, 1, 2, 1, 1, 0.5f, 0.5f, 1, 0.5f, 0.5f,
+                           0.5f, 0.5f, 1, 0.5f, 0.5f};
+    testConvTransposeOutputShapeFixture("importer_deconv_valid", 5, valid);
+
+    expectONNXImporterGuardRejected("importer_deconv_kernel_stride_mismatch", "Kernel and stride ranks must match");
+    expectONNXImporterGuardRejected("importer_deconv_output_shape_rank3", "Output shape rank must match spatial or full tensor rank");
+    expectONNXImporterGuardRejected("importer_deconv_zero_stride_same", "Stride must be positive");
+    expectONNXImporterGuardRejected("importer_deconv_negative_stride", "Stride must be positive");
+    expectONNXImporterGuardRejected("importer_deconv_zero_output_shape", "Output shape must be positive");
+    expectONNXImporterGuardRejected("importer_deconv_negative_output_shape", "Output shape must be positive");
+    expectONNXImporterGuardRejected("importer_deconv_valid_small_output", "Output shape must be at least kernel size for VALID padding");
+}
+
+TEST(Test_ONNX_Importer, ConvTransposeNotsetOutputShapeFixtures)
+{
+    const float expected[] = {0.5f, 1, 0.5f, 0.5f, 1, 2, 1, 1,
+                              0.5f, 1, 0.5f, 0.5f, 0.5f, 1, 0.5f, 0.5f};
+    testConvTransposeOutputShapeFixture("importer_deconv_no_auto_pad", 4, expected);
+    testConvTransposeOutputShapeFixture("importer_deconv_notset", 4, expected);
+    testConvTransposeOutputShapeFixture("importer_deconv_override_pads", 4, expected);
+
+    const float defaultStride[] = {2, 2, 2, 2};
+    testConvTransposeOutputShapeFixture("importer_deconv_default_stride", 2, defaultStride);
+    testConvTransposeOutputShapeFixture("importer_deconv_output_padding", 4, expected);
+
+    expectONNXImporterGuardRejected("importer_deconv_zero_stride_notset", "Stride must be positive");
+    expectONNXImporterGuardRejected("importer_deconv_input_rank_mismatch", "Input rank must match convolution rank");
+    expectONNXImporterGuardRejected("importer_deconv_dilation_rank_mismatch", "Dilation and stride ranks must match");
+    expectONNXImporterGuardRejected("importer_deconv_output_padding_rank_mismatch", "Output padding and stride ranks must match");
+    expectONNXImporterGuardRejected("importer_deconv_nonunit_dilation", "ConvTranspose output_shape requires unit dilation");
+    expectONNXImporterGuardRejected("importer_deconv_negative_output_padding", "Output padding must be non-negative");
+    expectONNXImporterGuardRejected("importer_deconv_large_output_padding", "Output padding must be smaller than stride");
+    expectONNXImporterGuardRejected("importer_deconv_zero_kernel", "Kernel size must be positive");
+    expectONNXImporterGuardRejected("importer_deconv_negative_total_padding", "ConvTranspose output_shape requires unsupported padding");
+    expectONNXImporterGuardRejected("importer_deconv_overflow_total_padding", "ConvTranspose output_shape requires unsupported padding");
+}
+
+TEST(Test_ONNX_Importer, ConvTransposeDynamicSpatialShape)
+{
+    // The deconvolution layer cannot derive fixed pads from a runtime spatial
+    // extent, so accepting these models would silently ignore output_shape.
+    const char* reason = "output_shape with dynamic spatial input is not supported";
+    expectONNXImporterGuardRejected("importer_deconv_dynamic_spatial", reason);
+    expectONNXImporterGuardRejected("importer_deconv_unknown_spatial", reason);
+    expectONNXImporterGuardRejected("importer_deconv_dynamic_output_padding", reason);
+}
+
+TEST(Test_ONNX_Importer, ConvTransposeKernelRankFixtures)
+{
+    // The deconvolution layer supports 2D and 3D kernels, given by kernel_shape
+    // or inferred from the weights.
+    const char* reason = "only 2D and 3D ConvTranspose are supported";
+    expectONNXImporterGuardRejected("importer_deconv_1d", reason);
+    expectONNXImporterGuardRejected("importer_deconv_4d_inferred_kernel", reason);
+}
+
+TEST(Test_ONNX_Importer, ConvTransposeAttributeFixtures)
+{
+    // Strides, pads, dilations and output padding are checked with and without
+    // output_shape, for static and dynamic inputs.
+    Net net;
+    ASSERT_NO_THROW(net = readONNXImporterGuardModel("importer_deconv_3d_output_padding"));
+    EXPECT_FALSE(net.empty());
+
+    const char* padsRank = "Pads must have begin and end values for each spatial axis";
+    expectONNXImporterGuardRejected("importer_deconv_dynamic_pads_rank_mismatch", padsRank);
+    expectONNXImporterGuardRejected("importer_deconv_no_output_shape_pads_rank_mismatch", padsRank);
+    expectONNXImporterGuardRejected("importer_deconv_negative_pads", "Pads must be non-negative");
+    expectONNXImporterGuardRejected("importer_deconv_no_output_shape_stride_rank_mismatch", "Kernel and stride ranks must match");
+    expectONNXImporterGuardRejected("importer_deconv_no_output_shape_zero_stride", "Stride must be positive");
+    expectONNXImporterGuardRejected("importer_deconv_no_output_shape_dilation_rank_mismatch", "Dilation and stride ranks must match");
+    expectONNXImporterGuardRejected("importer_deconv_zero_dilation", "Dilation must be positive");
+    expectONNXImporterGuardRejected("importer_deconv_no_output_shape_output_padding_rank_mismatch", "Output padding and stride ranks must match");
+    expectONNXImporterGuardRejected("importer_deconv_no_output_shape_large_output_padding", "Output padding must be smaller than stride");
+    expectONNXImporterGuardRejected("importer_deconv_dynamic_large_output_padding", "Output padding must be smaller than stride");
+}
+
+TEST(Test_ONNX_Importer, ConvTransposeInputRankFixtures)
+{
+    // The input rank is checked for static and dynamic inputs, with and without
+    // output_shape and auto_pad.
+    const char* reason = "Input rank must match convolution rank";
+    expectONNXImporterGuardRejected("importer_deconv_dynamic_rank_mismatch", reason);
+    expectONNXImporterGuardRejected("importer_deconv_same_rank_mismatch", reason);
+    expectONNXImporterGuardRejected("importer_deconv_no_output_shape_rank_mismatch", reason);
+}
+
+TEST(Test_ONNX_Importer, ConvTransposeUnsupportedAsymmetricPadding)
+{
+    expectONNXImporterGuardRejected("importer_deconv_unsupported_asymmetric", "unsupported asymmetric padding");
+}
+
+TEST(Test_ONNX_Importer, ConvTransposeDynamicShapeScoping)
+{
+    // hasDynamicShapes records whether any graph input has a dynamic dimension,
+    // so it must not decide whether this operator's output_shape is honored.
+    // Only the operator's own spatial input extents matter: an unrelated dynamic
+    // tensor elsewhere in the graph, or a dynamic non-spatial axis on this input,
+    // leaves those extents statically known.
+    const float expected[] = {0.5f, 1, 0.5f, 0.5f, 1, 2, 1, 1,
+                              0.5f, 1, 0.5f, 0.5f, 0.5f, 1, 0.5f, 0.5f};
+    testConvTransposeWithUnrelatedDynamicInput("importer_deconv_unrelated_dynamic", 4, expected);
+    testConvTransposeWithUnrelatedDynamicInput("importer_deconv_dynamic_batch", 4, expected);
+}
+
 TEST_P(Test_ONNX_layers, RandomNormalLike_basic)
 {
     Net net = readNetFromONNX(findDataFile("dnn/onnx/models/random_normal_like.onnx", true));
