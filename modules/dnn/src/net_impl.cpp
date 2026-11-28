@@ -1667,24 +1667,63 @@ static void markLayerWeightsChanged(const Ptr<LayerInfo>& layer)
     layer->weightEpoch++;
 }
 
+static bool updateGraphLayerParam(const Ptr<LayerInfo>& layer, int numParam,
+                                  const Mat& blob, int defaultC0, int accuracy)
+{
+    if (!layer || numParam < 0)
+        return false;
+
+    if (numParam < (int)layer->blobs.size()) {
+        layer->blobs[numParam] = blob;
+        return true;
+    }
+
+    if (numParam == 0) {
+        if (Conv2Layer* conv = dynamic_cast<Conv2Layer*>(layer.get())) {
+            conv->setWeights(blob, Mat(), defaultC0, accuracy);
+            return true;
+        }
+        if (ConvTranspose2Layer* deconv = dynamic_cast<ConvTranspose2Layer*>(layer.get())) {
+            deconv->setWeights(blob, Mat(), defaultC0, accuracy);
+            return true;
+        }
+    }
+    return false;
+}
+
 void Net::Impl::setParam(int layer, int numParam, const Mat& blob)
 {
+    CV_CheckGE(numParam, 0, "DNN: parameter index must be non-negative");
+    if (mainGraph) {
+        Ptr<Layer> l = getLayer(layer);
+        CV_Assert(l);
+        if (!updateGraphLayerParam(l, numParam, blob, defaultC0, accuracy))
+            CV_Error_(Error::StsOutOfRange,
+                      ("DNN: layer #%d has fewer than %d params", layer, numParam + 1));
+        markLayerWeightsChanged(l);
+#ifdef HAVE_CUDA
+        cudaGraphReset();
+#endif
+        return;
+    }
     // FIXIT we should not modify "execution" instance
     std::vector<Mat>& layerBlobs = getLayer(layer)->blobs;
     CV_Assert(numParam < (int)layerBlobs.size());
     // we don't make strong checks, use this function carefully
     layerBlobs[numParam] = blob;
-    if (mainGraph)
-        markLayerWeightsChanged(getLayer(layer));
+    netWasAllocated = false;
 }
 
 void Net::Impl::setParam(const std::string& outputTensorName, int numParam, const Mat& blob)
 {
+    CV_CheckGE(numParam, 0, "DNN: parameter index must be non-negative");
     if (mainGraph) {
+        if (outputTensorName.empty())
+            CV_Error(Error::StsObjectNotFound, "DNN: tensor name must not be empty");
         auto it = argnames.find(outputTensorName);
         if (it == argnames.end()) {
             size_t excl = outputTensorName.rfind('!');
-            if (excl != std::string::npos)
+            if (excl != std::string::npos && excl + 1 < outputTensorName.size())
                 it = argnames.find(outputTensorName.substr(excl + 1));
         }
         if (it == argnames.end()) {
@@ -1699,37 +1738,28 @@ void Net::Impl::setParam(const std::string& outputTensorName, int numParam, cons
         }
 
         int targetIdx = (int)it->second;
-        const std::vector<Ptr<LayerInfo>>& prog = mainGraph->prog();
-        for (const auto& layer : prog) {
-            bool produces = false;
-            for (const Arg& out : layer->outputs)
-                if (out.idx == targetIdx) { produces = true; break; }
-            if (!produces)
-                continue;
+        for (const Ptr<Graph>& graph : allgraphs) {
+            for (const auto& layer : graph->prog()) {
+                if (!layer)
+                    continue;
+                bool produces = false;
+                for (const Arg& out : layer->outputs)
+                    if (out.idx == targetIdx) { produces = true; break; }
+                if (!produces)
+                    continue;
 
-            if (numParam < (int)layer->blobs.size()) {
-                layer->blobs[numParam] = blob;
-                markLayerWeightsChanged(layer);
-                return;
+                if (updateGraphLayerParam(layer, numParam, blob, defaultC0, accuracy)) {
+                    markLayerWeightsChanged(layer);
+#ifdef HAVE_CUDA
+                    cudaGraphReset();
+#endif
+                    return;
+                }
+
+                CV_Error_(Error::StsOutOfRange,
+                          ("DNN: op producing '%s' has fewer than %d params",
+                           outputTensorName.c_str(), numParam + 1));
             }
-
-            Conv2Layer* conv = dynamic_cast<Conv2Layer*>(layer.get());
-            if (conv && numParam == 0) {
-                conv->setWeights(blob, Mat(), defaultC0, accuracy);
-                markLayerWeightsChanged(layer);
-                return;
-            }
-
-            ConvTranspose2Layer* deconv = dynamic_cast<ConvTranspose2Layer*>(layer.get());
-            if (deconv && numParam == 0) {
-                deconv->setWeights(blob, Mat(), defaultC0, accuracy);
-                markLayerWeightsChanged(layer);
-                return;
-            }
-
-            CV_Error_(Error::StsOutOfRange,
-                      ("DNN: op producing '%s' has fewer than %d params",
-                       outputTensorName.c_str(), numParam + 1));
         }
         CV_Error_(Error::StsObjectNotFound,
                   ("DNN: no op found in graph producing tensor '%s'", outputTensorName.c_str()));

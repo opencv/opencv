@@ -665,6 +665,176 @@ static void testForwardOutputsArePrivate(EngineType engine)
     normAssert(dup[0], dup[1]);
 }
 
+typedef testing::TestWithParam<tuple<Backend, Target> > Net_CudaGraphCoherence;
+TEST_P(Net_CudaGraphCoherence, SetParamInvalidatesCapturedGraph)
+{
+    if (static_cast<EngineType>(utils::getConfigurationParameterSizeT(
+            "OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO)) == ENGINE_ORT)
+        throw SkipTestException("ENGINE_ORT does not expose OpenCV graph params for setParam()");
+
+    const Backend backendId = get<0>(GetParam());
+    const Target targetId = get<1>(GetParam());
+    const bool supported =
+        (backendId == DNN_BACKEND_OPENCV && targetId == DNN_TARGET_CPU) ||
+        (backendId == DNN_BACKEND_CUDA && (targetId == DNN_TARGET_CUDA || targetId == DNN_TARGET_CUDA_FP16));
+    if (!supported)
+        throw SkipTestException("Tests mainGraph setParam weight refresh on CPU and CUDA targets");
+
+    double l1 = 0.0, lInf = 0.0;
+    DNNTestLayer::getDefaultThresholds(backendId, targetId, &l1, &lInf);
+
+    // Reference: a fresh CPU net from the same model, with the weight set before its first forward()
+    auto cpuRef = [](const std::string& model, const Mat& inp, const Mat& w) {
+        Net refNet = readNetFromONNX(model, ENGINE_OPENCV);
+        refNet.setPreferableBackend(DNN_BACKEND_OPENCV);
+        refNet.setPreferableTarget(DNN_TARGET_CPU);
+        if (!w.empty())
+            refNet.setParam("Y", 0, w);
+        refNet.setInput(inp);
+        return refNet.forward().clone();
+    };
+
+    // Y = X * W + B with X [M, K], W [K, N], B [N]
+    const std::string gemmModel = findDataFile("dnn/onnx/models/gemm_setparam.onnx");
+    const int M = 4, K = 8, N = 6;
+    Mat W2(K, N, CV_32F), W3(K, N, CV_32F);
+    randu(W2, -1.f, 1.f);
+    randu(W3, -1.f, 1.f);
+
+    Net net = readNetFromONNX(gemmModel, ENGINE_OPENCV);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+
+    Mat X(M, K, CV_32F);
+    randu(X, -1.f, 1.f);
+    net.setInput(X);
+    const Mat refW1 = cpuRef(gemmModel, X, Mat());
+    const Mat refW2 = cpuRef(gemmModel, X, W2);
+    const Mat refW3 = cpuRef(gemmModel, X, W3);
+    ASSERT_GT(cvtest::norm(refW1, refW2, NORM_INF), 0.1)
+        << "the reference does not see W2 set by setParam()";
+    ASSERT_GT(cvtest::norm(refW2, refW3, NORM_INF), 0.1)
+        << "W2 and W3 are too close to distinguish";
+
+    // Call 1 (eager), then setParam BEFORE Call 2 (which would otherwise capture initCUDA's cudaMalloc)
+    normAssert(refW1, net.forward(), "call1_W1", l1, lInf);
+    net.setParam("Y", 0, W2);
+    normAssert(refW2, net.forward(), "call2_after_setParam_W2", l1, lInf);
+    normAssert(refW2, net.forward(), "call3_record_W2", l1, lInf);
+    normAssert(refW2, net.forward(), "call4_replay_W2", l1, lInf);
+
+    // Now setParam AFTER graph replay is active (via layer ID overload, Call 4 replayed W2)
+    const int gemmLayerId = net.getLayerId("gemm_setparam");
+    ASSERT_GE(gemmLayerId, 0);
+    net.setParam(gemmLayerId, 0, W3);
+    normAssert(refW3, net.forward(), "call5_after_replay_setParam_W3", l1, lInf);
+    normAssert(refW3, net.forward(), "call6_record_W3", l1, lInf);
+    normAssert(refW3, net.forward(), "call7_replay_W3", l1, lInf);
+
+    // Also check Conv2 setParam before and after CUDA Graph capture and replay
+    const std::string convModel = findDataFile("dnn/onnx/models/conv_setparam.onnx");
+    Mat cW2({4, 3, 3, 3}, CV_32F), cW3({4, 3, 3, 3}, CV_32F);
+    randu(cW2, -0.5f, 0.5f);
+    randu(cW3, -0.5f, 0.5f);
+
+    Net convNet = readNetFromONNX(convModel, ENGINE_OPENCV);
+    convNet.setPreferableBackend(backendId);
+    convNet.setPreferableTarget(targetId);
+
+    Mat cX({1, 3, 6, 6}, CV_32F);
+    randu(cX, -1.f, 1.f);
+    convNet.setInput(cX);
+    const Mat refConv1 = cpuRef(convModel, cX, Mat());
+    const Mat refConv2 = cpuRef(convModel, cX, cW2);
+    const Mat refConv3 = cpuRef(convModel, cX, cW3);
+    ASSERT_GT(cvtest::norm(refConv1, refConv2, NORM_INF), 0.1)
+        << "the reference does not see cW2 set by setParam()";
+    ASSERT_GT(cvtest::norm(refConv2, refConv3, NORM_INF), 0.1)
+        << "cW2 and cW3 are too close to distinguish";
+
+    normAssert(refConv1, convNet.forward(), "conv_call1", l1, lInf);
+    convNet.setParam("Y", 0, cW2);
+    normAssert(refConv2, convNet.forward(), "conv_call2_W2", l1, lInf);
+    normAssert(refConv2, convNet.forward(), "conv_call3_record_W2", l1, lInf);
+    normAssert(refConv2, convNet.forward(), "conv_call4_replay_W2", l1, lInf);
+
+    const int convLayerId = convNet.getLayerId("conv_setparam");
+    ASSERT_GE(convLayerId, 0);
+    convNet.setParam(convLayerId, 0, cW3);
+    normAssert(refConv3, convNet.forward(), "conv_call5_W3", l1, lInf);
+    normAssert(refConv3, convNet.forward(), "conv_call6_record_W3", l1, lInf);
+    normAssert(refConv3, convNet.forward(), "conv_call7_replay_W3", l1, lInf);
+}
+
+TEST_P(Net_CudaGraphCoherence, ClassicNetSetParamRebuildsBackendNode)
+{
+    const Backend backendId = get<0>(GetParam());
+    const Target targetId = get<1>(GetParam());
+    if (backendId != DNN_BACKEND_OPENCV && backendId != DNN_BACKEND_CUDA)
+        throw SkipTestException("Tests classic Net setParam weight refresh on OpenCV and CUDA backends");
+    if (targetId == DNN_TARGET_OPENCL_FP16)
+        throw SkipTestException("Gemm layer does not accept CV_16F inputs on OpenCL FP16");
+
+    double l1 = 0.0, lInf = 0.0;
+    DNNTestLayer::getDefaultThresholds(backendId, targetId, &l1, &lInf);
+
+    const int M = 3, K = 8, N = 6;
+    Mat W1(K, N, CV_32F), W2(K, N, CV_32F), W3(K, N, CV_32F), B(std::vector<int>{N}, CV_32F);
+    randu(W1, -1.f, 1.f);
+    randu(W2, -1.f, 1.f);
+    randu(W3, -1.f, 1.f);
+    randu(B, -0.5f, 0.5f);
+
+    LayerParams lp;
+    lp.type = "Gemm";
+    lp.name = "classic_gemm";
+    lp.set("transA", false);
+    lp.set("transB", false);
+    lp.set("constB", true);
+    lp.set("constC", true);
+    lp.set("have_bias", true);
+    lp.set("real_ndims_C", 1);
+    lp.blobs.push_back(W1.clone());
+    lp.blobs.push_back(B.clone());
+
+    Net net;
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+
+    Mat X(M, K, CV_32F);
+    randu(X, -1.f, 1.f);
+    auto evalRef = [&](const Mat& W) {
+        Mat ref = X * W;
+        for (int r = 0; r < M; ++r)
+            ref.row(r) += B.reshape(1, 1);
+        return ref;
+    };
+
+    const Mat ref1 = evalRef(W1), ref2 = evalRef(W2), ref3 = evalRef(W3);
+    ASSERT_GT(cvtest::norm(ref1, ref2, NORM_INF), 0.1);
+    ASSERT_GT(cvtest::norm(ref2, ref3, NORM_INF), 0.1);
+
+    net.setInput(X);
+    normAssert(ref1, net.forward(), "classic_W1", l1, lInf);
+
+    net.setParam(id, 0, W2.clone());
+    normAssert(ref2, net.forward(), "classic_W2", l1, lInf);
+
+    net.setParam(lp.name, 0, W3.clone());
+    normAssert(ref3, net.forward(), "classic_W3", l1, lInf);
+
+    // Replace bias with a scalar [1] bias: Gemm flips from CUDA-supported to CPU fallback.
+    // initCUDABackend() must drop the stale CUDABackendNode rather than re-running old weights.
+    const float scalarBias = 2.5f;
+    Mat B4(std::vector<int>{1}, CV_32F, Scalar(scalarBias));
+    const Mat ref4 = X * W3 + scalarBias;
+    ASSERT_GT(cvtest::norm(ref3, ref4, NORM_INF), 0.1);
+    net.setParam(id, 1, B4);
+    normAssert(ref4, net.forward(), "classic_W3_scalar_bias_fallback", l1, lInf);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Net_CudaGraphCoherence, dnnBackendsAndTargets());
+
 typedef testing::TestWithParam<EngineType> Net_ForwardOutputsArePrivate;
 TEST_P(Net_ForwardOutputsArePrivate, Accuracy)
 {
