@@ -60,6 +60,37 @@ TEST(NormalEstimationTest, PlaneNormalEstimation)
     ASSERT_LE(avg_diff_curvature, curvature_thr);
 }
 
+TEST(NormalEstimationTest, variable_neighbor_counts)
+{
+    Mat points(9, 3, CV_32F);
+    for (int i = 0; i < 9; ++i)
+    {
+        points.at<float>(i, 0) = float(i % 3);
+        points.at<float>(i, 1) = float(i / 3);
+        points.at<float>(i, 2) = 0.f;
+    }
+    Mat original = points.clone();
+    std::vector<std::vector<int> > neighbors(9, {0, 1, 2, 3, 4, 5, 6, 7, 8});
+    neighbors[0] = {0, 1, -1};
+    neighbors[1] = {1, 0, 3};
+    neighbors[3] = {3, 0, 1, 99};
+    std::vector<Point3f> normals;
+    std::vector<float> curvatures;
+    normalEstimate(normals, curvatures, points, neighbors, 9);
+    ASSERT_EQ(9u, normals.size());
+    ASSERT_EQ(9u, curvatures.size());
+    EXPECT_EQ(Point3f(0, 0, 0), normals[0]);
+    EXPECT_EQ(0.f, curvatures[0]);
+    for (int i = 1; i < 9; ++i)
+    {
+        EXPECT_NEAR(0.f, normals[i].x, 1e-5f);
+        EXPECT_NEAR(0.f, normals[i].y, 1e-5f);
+        EXPECT_NEAR(1.f, std::abs(normals[i].z), 1e-5f);
+        EXPECT_NEAR(0.f, curvatures[i], 1e-5f);
+    }
+    EXPECT_EQ(0., cvtest::norm(points, original, NORM_INF));
+}
+
 // nn_idx left empty -> normalEstimate must build the kd-tree internally (k = max_neighbor_num)
 // and produce the same plane normals as when the caller supplies the neighbor indices.
 TEST(NormalEstimationTest, InternalKnnMatchesExternal)

@@ -154,6 +154,27 @@ TEST(Imgproc_FindContours, empty_input)
     EXPECT_THROW(findContours(empty, contours, hierarchy, RETR_FLOODFILL, CHAIN_APPROX_SIMPLE), cv::Exception);
 }
 
+TEST(Imgproc_FindContours, hierarchy_submatrix)
+{
+    Mat parent(10, 1, CV_32SC4, Scalar::all(7));
+    Mat hierarchy = parent.rowRange(0, 5);
+    Mat image = Mat::zeros(10, 10, CV_8U);
+    image(Rect(2, 2, 5, 5)).setTo(255);
+    std::vector<std::vector<Point> > contours;
+    findContours(image, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE);
+    ASSERT_EQ(1u, contours.size());
+    ASSERT_EQ(1u, hierarchy.total());
+    EXPECT_EQ(Vec4i(-1, -1, -1, -1), hierarchy.at<Vec4i>(0));
+    EXPECT_EQ(0., cvtest::norm(parent, Mat(10, 1, CV_32SC4, Scalar::all(7)), NORM_INF));
+
+    hierarchy = parent.rowRange(0, 5);
+    image.setTo(0);
+    findContours(image, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE);
+    EXPECT_TRUE(contours.empty());
+    EXPECT_TRUE(hierarchy.empty());
+    EXPECT_EQ(0., cvtest::norm(parent, Mat(10, 1, CV_32SC4, Scalar::all(7)), NORM_INF));
+}
+
 TEST(Imgproc_FindContours, regression_4363_shared_nbd)
 {
     // Create specific test image
