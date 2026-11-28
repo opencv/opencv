@@ -74,4 +74,30 @@ PERF_TEST_P( TestRemap, Remap,
     }
 }
 
+typedef TestBaseWithParam< tuple<Size, bool> > TestRemap32FC2;
+
+PERF_TEST_P(TestRemap32FC2, linearFloatMaps, Combine(Values(szVGA, sz1080p), testing::Bool()))
+{
+    const Size size = get<0>(GetParam());
+    const bool splitMap = get<1>(GetParam());
+    Mat src(size, CV_32FC2), dst(size, CV_32FC2);
+    Mat map(size, CV_32FC2);
+    for (int y = 0; y < size.height; ++y)
+        for (int x = 0; x < size.width; ++x)
+            map.at<Vec2f>(y, x) = Vec2f(x + 0.19f, y - 0.41f);
+
+    Mat map1, map2;
+    if (splitMap)
+    {
+        extractChannel(map, map1, 0);
+        extractChannel(map, map2, 1);
+    }
+    else
+        map1 = map;
+
+    declare.in(src, WARMUP_RNG).out(dst);
+    TEST_CYCLE() remap(src, dst, map1, map2, INTER_LINEAR);
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace

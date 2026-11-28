@@ -1697,6 +1697,10 @@ void cv::remap( InputArray _src, OutputArray _dst,
                     CV_CPU_DISPATCH(remapLinearInvoker_32FC1, ((const float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
                     break;
                 }
+                case CV_32FC2: {
+                    CV_CPU_DISPATCH(remapLinearInvoker_32FC2, ((const float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
+                }
                 case CV_32FC3: {
                     CV_CPU_DISPATCH(remapLinearInvoker_32FC3, ((const float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
                     break;
