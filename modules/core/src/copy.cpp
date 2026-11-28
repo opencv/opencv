@@ -1104,38 +1104,36 @@ void copyMakeConstBorder_8u( const uchar* src, size_t srcstep, cv::Size srcroi,
                              int top, int left, int cn, const uchar* value )
 {
     int i, j;
-    cv::AutoBuffer<uchar> _constBuf(dstroi.width*cn);
+    const size_t srcWidth = (size_t)srcroi.width * cn;
+    const size_t dstWidth = (size_t)dstroi.width * cn;
+    const size_t leftWidth = (size_t)left * cn;
+    const size_t rightWidth = dstWidth - srcWidth - leftWidth;
+    cv::AutoBuffer<uchar> _constBuf(dstWidth);
     uchar* constBuf = _constBuf.data();
-    int right = dstroi.width - srcroi.width - left;
     int bottom = dstroi.height - srcroi.height - top;
 
     for( i = 0; i < dstroi.width; i++ )
     {
         for( j = 0; j < cn; j++ )
-            constBuf[i*cn + j] = value[j];
+            constBuf[(size_t)i*cn + j] = value[j];
     }
 
-    srcroi.width *= cn;
-    dstroi.width *= cn;
-    left *= cn;
-    right *= cn;
-
-    uchar* dstInner = dst + dststep*top + left;
+    uchar* dstInner = dst + dststep*top + leftWidth;
 
     for( i = 0; i < srcroi.height; i++, dstInner += dststep, src += srcstep )
     {
         if( dstInner != src )
-            memcpy( dstInner, src, srcroi.width );
-        memcpy( dstInner - left, constBuf, left );
-        memcpy( dstInner + srcroi.width, constBuf, right );
+            memcpy( dstInner, src, srcWidth );
+        memcpy( dstInner - leftWidth, constBuf, leftWidth );
+        memcpy( dstInner + srcWidth, constBuf, rightWidth );
     }
 
     for( i = 0; i < top; i++ )
-        memcpy(dst + i * dststep, constBuf, dstroi.width);
+        memcpy(dst + i * dststep, constBuf, dstWidth);
 
     dst += (top + srcroi.height) * dststep;
     for( i = 0; i < bottom; i++ )
-        memcpy(dst + i * dststep, constBuf, dstroi.width);
+        memcpy(dst + i * dststep, constBuf, dstWidth);
 }
 
 }
@@ -1241,22 +1239,21 @@ static bool ipp_copyMakeBorder( Mat &_src, Mat &_dst, int top, int bottom,
 }
 #endif
 
-void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
-                         int left, int right, int borderType, const Scalar& value )
+namespace cv {
+
+static Mat getBorderSource(InputArray srcArray, int top, int bottom, int left, int right)
 {
-    CV_INSTRUMENT_REGION();
+    CV_Assert( top >= 0 && bottom >= 0 && left >= 0 && right >= 0 && srcArray.dims() <= 2 );
+    CV_Assert( !srcArray.empty() );
 
-    CV_Assert( top >= 0 && bottom >= 0 && left >= 0 && right >= 0 && _src.dims() <= 2 );
-    CV_Assert( !_src.empty() );
-
-    Mat src = _src.getMat();
+    Mat src = srcArray.getMat();
     CV_Assert( (int64_t)src.rows + top + bottom <= INT_MAX );
     CV_Assert( (int64_t)src.cols + left + right <= INT_MAX );
+    return src;
+}
 
-    CV_OCL_RUN(_dst.isUMat(),
-               ocl_copyMakeBorder(_src, _dst, top, bottom, left, right, borderType, value))
-    int type = src.type();
-
+static void adjustBorderROI(Mat& src, int& top, int& bottom, int& left, int& right, int borderType)
+{
     if( src.isSubmatrix() && (borderType & BORDER_ISOLATED) == 0 )
     {
         Size wholeSize;
@@ -1272,8 +1269,23 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
         bottom -= dbottom;
         right -= dright;
     }
+}
 
-    _dst.create( src.rows + top + bottom, src.cols + left + right, type );
+}
+
+void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
+                         int left, int right, int borderType, const Scalar& value )
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat src = getBorderSource(_src, top, bottom, left, right);
+
+    CV_OCL_RUN(_dst.isUMat(),
+               ocl_copyMakeBorder(_src, _dst, top, bottom, left, right, borderType, value))
+
+    adjustBorderROI(src, top, bottom, left, right, borderType);
+
+    _dst.create( src.rows + top + bottom, src.cols + left + right, src.type() );
     Mat dst = _dst.getMat();
 
     if(top == 0 && left == 0 && bottom == 0 && right == 0)
@@ -1305,5 +1317,31 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
                                 dst.ptr(), dst.step, dst.size(),
                                 top, left, (int)src.elemSize(), (uchar*)buf.data() );
     }
+}
+
+void cv::copyMakeBorderWithBorderValues(InputArray _src, OutputArray _dst,
+                                       int top, int bottom, int left, int right,
+                                       int borderType, InputArray _borderValues)
+{
+    CV_INSTRUMENT_REGION();
+
+    CV_Assert((borderType & ~BORDER_ISOLATED) == BORDER_CONSTANT);
+    Mat src = getBorderSource(_src, top, bottom, left, right);
+    Mat values = _borderValues.getMat();
+    CV_Assert(values.dims >= 1 && values.dims <= 2 && values.checkVector(1, -1, false) == src.channels());
+
+    adjustBorderROI(src, top, bottom, left, right, borderType);
+    if (top == 0 && bottom == 0 && left == 0 && right == 0)
+    {
+        src.copyTo(_dst);
+        return;
+    }
+
+    Mat pixel;
+    values.convertTo(pixel, src.depth());
+    _dst.create(src.rows + top + bottom, src.cols + left + right, src.type());
+    Mat dst = _dst.getMat();
+    copyMakeConstBorder_8u(src.ptr(), src.step, src.size(), dst.ptr(), dst.step, dst.size(),
+                          top, left, (int)src.elemSize(), pixel.ptr());
 }
 /* End of file. */
