@@ -1,4 +1,7 @@
 #include "perf_precomp.hpp"
+#ifdef HAVE_CUDA
+#include <opencv2/core/cuda.hpp>
+#endif
 
 namespace opencv_test
 {
@@ -191,5 +194,48 @@ PERF_TEST_P(Size_MatType, Mat_Transform_Diagonal,
 
     SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
 }
+
+#ifdef HAVE_CUDA
+PERF_TEST_P(Size_MatType, CudaUMat_CopyROI2D,
+            testing::Combine(testing::Values(sz1080p, sz2160p),
+                             testing::Values(CV_8UC1, CV_8UC3, CV_32FC1)))
+{
+    if (cv::cuda::getCudaEnabledDeviceCount() <= 0)
+        throw cvtest::SkipTestException("No CUDA device available");
+
+    const Size sz = get<0>(GetParam());
+    const int type = get<1>(GetParam());
+    const Size padSz(sz.width + 64, sz.height + 32);
+    const Rect srcRoi(16, 8, sz.width, sz.height);
+    const Rect dstRoi(24, 12, sz.width, sz.height);
+
+    Mat hostSrc(padSz, type), hostDst(padSz, type);
+    randu(hostSrc, 0, 100);
+    hostDst.setTo(Scalar::all(0));
+
+    UMat uMid, uDst;
+    uMid.allocator = cv::cuda::getCudaAllocator();
+    uDst.allocator = cv::cuda::getCudaAllocator();
+    hostSrc.copyTo(uMid);
+    hostSrc.copyTo(uDst);
+    ASSERT_TRUE(uMid.u != NULL && uMid.u->currAllocator == cv::cuda::getCudaAllocator() && uMid.u->handle != NULL);
+    ASSERT_TRUE(uDst.u != NULL && uDst.u->currAllocator == cv::cuda::getCudaAllocator() && uDst.u->handle != NULL);
+
+    Mat hostSrcRoi = hostSrc(srcRoi), hostDstRoi = hostDst(dstRoi);
+    UMat midRoi = uMid(dstRoi), dstRoiUMat = uDst(srcRoi);
+    hostSrcRoi.copyTo(midRoi);
+    midRoi.copyTo(dstRoiUMat);
+    dstRoiUMat.copyTo(hostDstRoi);
+
+    TEST_CYCLE()
+    {
+        hostSrcRoi.copyTo(midRoi);
+        midRoi.copyTo(dstRoiUMat);
+        dstRoiUMat.copyTo(hostDstRoi);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+#endif
 
 } // namespace
