@@ -23,12 +23,21 @@ int main(int argc, const char** argv)
     std::string filename = parser.get<std::string>(0);
     //! [Load]
     /// Load the image
-    Mat src = imread( samples::findFile( filename ), IMREAD_COLOR );
-    if (src.empty())
+   std::string imagePath = samples::findFile(filename, false);
+
+    if (imagePath.empty())
     {
-        std::cout << "Cannot read image: " << filename << std::endl;
+        std::cerr << "Cannot find image: " << filename << std::endl;
         return -1;
     }
+
+    Mat src = imread(imagePath, IMREAD_COLOR);
+
+    if (src.empty())
+    {
+        std::cerr << "Cannot read image: " << filename << std::endl;
+        return -1;
+}
     //! [Load]
 
     //! [Create]
