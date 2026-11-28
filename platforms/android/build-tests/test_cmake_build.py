@@ -110,12 +110,32 @@ class TestCmakeBuild(unittest.TestCase):
         retcode = subprocess.call(cmd)
         self.assertEqual(retcode, 0, "make failed")
 
-def suite(workdir, opencv_cmake_path):
+def suite(workdir, opencv_cmake_path, ndk_api_level="21"):
     abis = {
-        "armeabi-v7a": { "ANDROID_ABI": "armeabi-v7a", "ANDROID_TOOLCHAIN": "clang", "ANDROID_STL": "c++_shared", 'ANDROID_NATIVE_API_LEVEL': "21" },
-        "arm64-v8a": { "ANDROID_ABI": "arm64-v8a", "ANDROID_TOOLCHAIN": "clang", "ANDROID_STL": "c++_shared", 'ANDROID_NATIVE_API_LEVEL': "21" },
-        "x86": { "ANDROID_ABI": "x86", "ANDROID_TOOLCHAIN": "clang", "ANDROID_STL": "c++_shared", 'ANDROID_NATIVE_API_LEVEL': "21" },
-        "x86_64": { "ANDROID_ABI": "x86_64", "ANDROID_TOOLCHAIN": "clang", "ANDROID_STL": "c++_shared", 'ANDROID_NATIVE_API_LEVEL': "21" },
+        "armeabi-v7a": {
+            "ANDROID_ABI": "armeabi-v7a",
+            "ANDROID_TOOLCHAIN": "clang",
+            "ANDROID_STL": "c++_shared",
+            "ANDROID_NATIVE_API_LEVEL": ndk_api_level,
+        },
+        "arm64-v8a": {
+            "ANDROID_ABI": "arm64-v8a",
+            "ANDROID_TOOLCHAIN": "clang",
+            "ANDROID_STL": "c++_shared",
+            "ANDROID_NATIVE_API_LEVEL": ndk_api_level,
+        },
+        "x86": {
+            "ANDROID_ABI": "x86",
+            "ANDROID_TOOLCHAIN": "clang",
+            "ANDROID_STL": "c++_shared",
+            "ANDROID_NATIVE_API_LEVEL": ndk_api_level,
+        },
+        "x86_64": {
+            "ANDROID_ABI": "x86_64",
+            "ANDROID_TOOLCHAIN": "clang",
+            "ANDROID_STL": "c++_shared",
+            "ANDROID_NATIVE_API_LEVEL": ndk_api_level,
+        },
     }
 
     suite = unittest.TestSuite()
@@ -131,6 +151,7 @@ if __name__ == '__main__':
     parser.add_argument('--sdk_path', help="Path to Android SDK to use for build")
     parser.add_argument('--ndk_path', help="Path to Android NDK to use for build")
     parser.add_argument("--workdir", default="testspace", help="Working directory (and output)")
+    parser.add_argument("--ndk_api_level", default="21", help="Android Native API level to test build against")
     parser.add_argument("opencv_cmake_path", help="Path to folder with OpenCVConfig.cmake and android.toolchain.cmake (usually <SDK>/sdk/native/jni/")
 
     args = parser.parse_args()
@@ -149,6 +170,6 @@ if __name__ == '__main__':
     workdir = os.path.abspath(args.workdir)
     if not os.path.exists(workdir):
         os.mkdir(workdir)
-    res = unittest.TextTestRunner(verbosity=3).run(suite(workdir, os.path.abspath(args.opencv_cmake_path)))
+    res = unittest.TextTestRunner(verbosity=3).run(suite(workdir, os.path.abspath(args.opencv_cmake_path), args.ndk_api_level))
     if not res.wasSuccessful():
         sys.exit(res)
