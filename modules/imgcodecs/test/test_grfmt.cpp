@@ -712,6 +712,44 @@ TEST(Imgcodecs, imdecode_user_buffer)
     EXPECT_TRUE(result.empty());
 }
 
+
+#ifdef HAVE_IMGCODEC_PXM
+TEST(Imgcodecs_Pxm, binary_matches_ascii_maxval)
+{
+    const int maxima[] = {1, 15, 100, 255};
+    const int modes[] = {IMREAD_UNCHANGED, IMREAD_GRAYSCALE, IMREAD_COLOR, IMREAD_COLOR_RGB};
+    for (int channels : {1, 3})
+    {
+        for (int maxval : maxima)
+        {
+            const std::string header = cv::format("\n3 1\n%d\n", maxval);
+            const std::string asciiHeader = std::string(channels == 1 ? "P2" : "P3") + header;
+            const std::string binaryHeader = std::string(channels == 1 ? "P5" : "P6") + header;
+            std::string ascii = asciiHeader;
+            std::vector<uchar> binary(binaryHeader.begin(), binaryHeader.end());
+            for (int i = 0; i < 3 * channels; ++i)
+            {
+                const int value = (i % 3 == 0) ? 0 : (i % 3 == 1) ? maxval / 2 : maxval;
+                ascii += cv::format("%d ", value);
+                binary.push_back(static_cast<uchar>(value));
+            }
+            const std::vector<uchar> plain(ascii.begin(), ascii.end());
+            for (int mode : modes)
+            {
+                const Mat expected = imdecode(plain, mode);
+                const Mat actual = imdecode(binary, mode);
+                ASSERT_FALSE(expected.empty());
+                ASSERT_FALSE(actual.empty());
+                ASSERT_EQ(expected.type(), actual.type());
+                ASSERT_EQ(expected.size(), actual.size());
+                EXPECT_EQ(0, cvtest::norm(expected, actual, NORM_INF))
+                    << "channels=" << channels << " maxval=" << maxval << " mode=" << mode;
+            }
+        }
+    }
+}
+#endif
+
 }} // namespace
 
 #if defined(HAVE_OPENEXR) && defined(OPENCV_IMGCODECS_ENABLE_OPENEXR_TESTS)
