@@ -462,6 +462,10 @@ static bool arithm_op_ocl(InputArray _src1, InputArray _src2, OutputArray _dst,
     CV_UNUSED(dtype); CV_UNUSED(oclop); CV_UNUSED(muldiv); CV_UNUSED(usrdata);
     return false;
 #else
+    if (cv::oclHasForeignBuffer(_src1) || cv::oclHasForeignBuffer(_src2) ||
+        cv::oclHasForeignBuffer(_dst) || cv::oclHasForeignBuffer(_mask))
+        return false;
+
     const _InputArray *psrc1 = &_src1, *psrc2 = &_src2;
     _InputArray::KindFlag kind1 = psrc1->kind(), kind2 = psrc2->kind();
     bool haveMask = !_mask.empty();
@@ -695,6 +699,10 @@ static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray 
     // header copy (increfs, keeping the old data alive) of the sources in that case only.
     const void* dstObj = (dst.kind() == _InputArray::MAT) ? dst.getObj() : nullptr;
     const bool aliased = dstObj && (dstObj == src1.getObj() || dstObj == src2.getObj());
+    UMat ukeep;
+    if (dst.isUMat() && dst.getObj() &&
+        (dst.getObj() == src1.getObj() || dst.getObj() == src2.getObj() || dst.getObj() == mask.getObj()))
+        ukeep = dst.getUMat();
     Mat m1loc, m2loc, mloc;
     auto asMat = [&](InputArray a, Mat& loc) -> const Mat* {
         if (a.kind() == _InputArray::MAT && !aliased) return (const Mat*)a.getObj();
@@ -1010,6 +1018,9 @@ static double getMaxVal(int depth)
 
 static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op, bool haveScalar)
 {
+    if (cv::oclHasForeignBuffer(_src1) || cv::oclHasForeignBuffer(_src2) || cv::oclHasForeignBuffer(_dst))
+        return false;
+
     const ocl::Device& dev = ocl::Device::getDefault();
     bool doubleSupport = dev.doubleFPConfig() > 0;
     int type1 = _src1.type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1),

@@ -184,6 +184,9 @@ void split(const Mat& src, Mat* mv)
 
 static bool ocl_split( InputArray _m, OutputArrayOfArrays _mv )
 {
+    if (cv::oclHasForeignBuffer(_m) || cv::oclHasForeignBuffer(_mv))
+        return false;
+
     int type = _m.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
             rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
 
@@ -229,6 +232,9 @@ void split(InputArray _m, OutputArrayOfArrays _mv)
     CV_OCL_RUN(_m.dims() <= 2 && _mv.isUMatVector(),
                ocl_split(_m, _mv))
 
+    UMat keepSrc;
+    if (_m.isUMat())
+        keepSrc = _m.getUMat();
     Mat m = _m.getMat();
     if( m.empty() )
     {

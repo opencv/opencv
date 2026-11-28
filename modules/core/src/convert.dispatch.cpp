@@ -57,6 +57,9 @@ static bool ocl_convertTo(InputArray src_, OutputArray dst_, int ddepth, bool no
 {
     CV_INSTRUMENT_REGION();
 
+    if (cv::oclHasForeignBuffer(src_) || cv::oclHasForeignBuffer(dst_))
+        return false;
+
     CV_Assert(ddepth >= 0);
 
     int stype = src_.type();
