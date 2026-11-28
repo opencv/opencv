@@ -517,6 +517,21 @@ struct Gray2RGB5x5
 };
 
 
+// The vector kernels cover a remainder by rewinding the final block so it ends at n, which
+// re-reads source pixels already visited. If dst overlaps src (identical or partially
+// overlapping storage) an earlier store may have overwritten data that re-read needs. Rewind
+// only when the two byte ranges are disjoint; otherwise finish the remainder with the scalar
+// loop, which reads each pixel before it can be overwritten.
+// This must be evaluated on the original pointers: once the loop advances src by
+// vsize*scn and dst by vsize, comparing them (src == dst) no longer detects overlap.
+template<typename _Tp>
+static inline bool rgb2grayBuffersDisjoint(const _Tp* src, _Tp* dst, int n, int scn)
+{
+    const uintptr_t s0 = (uintptr_t)src, d0 = (uintptr_t)dst;
+    return (s0 + (uintptr_t)n * (uintptr_t)scn * sizeof(_Tp) <= d0) ||
+           (d0 + (uintptr_t)n * sizeof(_Tp) <= s0);
+}
+
 struct RGB5x52Gray
 {
     typedef uchar channel_type;
@@ -535,6 +550,9 @@ struct RGB5x52Gray
     {
         int gb = greenBits;
         int i = 0;
+        // Each pixel is 2 source bytes (scn = 2) and 1 destination byte.
+        const bool disjoint = rgb2grayBuffersDisjoint(src, dst, n, 2);
+        CV_UNUSED(disjoint);
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int vsize = VTraits<v_uint16>::vlanes();
 
@@ -549,7 +567,7 @@ struct RGB5x52Gray
             i += vsize, src += vsize*sizeof(ushort), dst += vsize)
         {
             if ( i > n - vsize ) {
-                if (i == 0 || src == dst) {
+                if (i == 0 || !disjoint) {
                     break;
                 }
                 int backup = i - (n - vsize);
@@ -621,21 +639,6 @@ struct RGB5x52Gray
     int greenBits;
 };
 
-
-// The vector kernels cover a remainder by rewinding the final block so it ends at n, which
-// re-reads source pixels already visited. If dst overlaps src (identical or partially
-// overlapping storage) an earlier store may have overwritten data that re-read needs. Rewind
-// only when the two byte ranges are disjoint; otherwise finish the remainder with the scalar
-// loop, which reads each pixel before it can be overwritten.
-// This must be evaluated on the original pointers: once the loop advances src by
-// vsize*scn and dst by vsize, comparing them (src == dst) no longer detects overlap.
-template<typename _Tp>
-static inline bool rgb2grayBuffersDisjoint(const _Tp* src, _Tp* dst, int n, int scn)
-{
-    const uintptr_t s0 = (uintptr_t)src, d0 = (uintptr_t)dst;
-    return (s0 + (uintptr_t)n * (uintptr_t)scn * sizeof(_Tp) <= d0) ||
-           (d0 + (uintptr_t)n * sizeof(_Tp) <= s0);
-}
 
 template<typename _Tp> struct RGB2Gray
 {
