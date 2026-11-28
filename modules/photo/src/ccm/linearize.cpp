@@ -20,6 +20,10 @@ void Polyfit::write(cv::FileStorage& fs) const {
 void Polyfit::read(const cv::FileNode& node) {
     node["deg"] >> deg;
     node["p"] >> p;
+    CV_CheckGE(deg, 0, "Polyfit: degree must be non-negative");
+    CV_CheckTypeEQ(p.type(), CV_64FC1, "Polyfit: coefficients must be CV_64FC1");
+    CV_CheckEQ(p.rows - 1, deg, "Polyfit: coefficients must be a (deg + 1) x 1 column vector");
+    CV_CheckEQ(p.cols, 1, "Polyfit: coefficients must be a (deg + 1) x 1 column vector");
 }
 
 // Global functions to support FileStorage for Polyfit
@@ -53,6 +57,8 @@ Polyfit::Polyfit(Mat x, Mat y, int deg_)
 
 Mat Polyfit::operator()(const Mat& inp)
 {
+    // A missing polyfit node leaves the default (deg 0, empty p) in place without going through read().
+    CV_Assert(p.type() == CV_64FC1 && p.rows - 1 == deg && p.cols == 1);
     return elementWise(inp, [this](double x) -> double { return fromEW(x); });
 };
 

@@ -309,5 +309,94 @@ TEST(Photo_ColorCorrection, serialization)
     EXPECT_EQ(yaml1, yaml2);
 }
 
+static void writePolyfit(FileStorage& fs, const char* name, bool isLog, int deg, const Mat& p)
+{
+    fs << name << "{" << "deg" << deg;
+    if (isLog)
+        writePolyfit(fs, "p", false, deg, p);
+    else
+        fs << "p" << p;
+    fs << "}";
+}
+
+static std::string makeModelWithPolyfit(int linearType, int deg, const Mat& p, bool omitPolyfit = false)
+{
+    const bool isLog = linearType == cv::ccm::LINEARIZATION_GRAYLOGPOLYFIT ||
+                       linearType == cv::ccm::LINEARIZATION_COLORLOGPOLYFIT;
+    const bool isColor = linearType == cv::ccm::LINEARIZATION_COLORPOLYFIT ||
+                         linearType == cv::ccm::LINEARIZATION_COLORLOGPOLYFIT;
+    FileStorage fs("", FileStorage::WRITE | FileStorage::MEMORY);
+    fs << "ColorCorrectionModel" << "{"
+       << "ccm" << Mat::eye(3, 3, CV_64F)
+       << "loss" << 0.
+       << "csEnum" << (int)cv::ccm::COLOR_SPACE_SRGB
+       << "ccm_type" << (int)cv::ccm::CCM_LINEAR
+       << "shape" << 9
+       << "linear" << "{" << "deg" << deg;
+    if (!omitPolyfit)
+    {
+        for (const char* name : isColor ? std::vector<const char*>{"pr", "pg", "pb"} : std::vector<const char*>{"p"})
+            writePolyfit(fs, name, isLog, deg, p);
+    }
+    fs << "}"
+       << "distance" << (int)cv::ccm::DISTANCE_CIE2000
+       << "linear_type" << linearType
+       << "gamma" << 2.2
+       << "deg" << deg
+       << "saturated_threshold" << std::vector<double>{0, 0.98}
+       << "}";
+    return fs.releaseAndGetString();
+}
+
+CV_ENUM(PolyfitLinearization, ccm::LINEARIZATION_GRAYPOLYFIT, ccm::LINEARIZATION_COLORPOLYFIT,
+        ccm::LINEARIZATION_GRAYLOGPOLYFIT, ccm::LINEARIZATION_COLORLOGPOLYFIT)
+
+typedef testing::TestWithParam<PolyfitLinearization> Photo_ColorCorrection_Polyfit;
+
+TEST_P(Photo_ColorCorrection_Polyfit, read_rejects_inconsistent_polyfit)
+{
+    const int type = GetParam();
+    const Mat img(4, 4, CV_8UC3, Scalar(10, 100, 200));
+    const Mat good = Mat_<double>({4, 1}, {0., 1., 0., 0.});
+
+    {
+        cv::ccm::ColorCorrectionModel model;
+        FileStorage fs(makeModelWithPolyfit(type, 3, good), FileStorage::READ | FileStorage::MEMORY);
+        ASSERT_NO_THROW(model.read(fs["ColorCorrectionModel"]));
+        Mat out;
+        ASSERT_NO_THROW(model.correctImage(img, out));
+        EXPECT_EQ(img.size(), out.size());
+    }
+
+    const Mat bad[] = {
+        Mat(1, 1, CV_64F, Scalar(0.5)),                     // fewer coefficients than deg + 1
+        Mat(4, 1, CV_32F, Scalar(0.5)),                     // coefficients are not double
+        Mat(1, 4, CV_64F, Scalar(0.5)),                     // row vector, fromEW indexes (d, 0)
+        Mat(4, 2, CV_64F, Scalar(0.5)),                     // deg + 1 rows but more than one column
+        Mat(std::vector<int>{1, 1, 4}, CV_64F, Scalar(0.5)), // N-D layout with the right total
+        Mat()                                               // empty coefficient Mat
+    };
+    for (const Mat& p : bad)
+    {
+        cv::ccm::ColorCorrectionModel model;
+        FileStorage fs(makeModelWithPolyfit(type, 3, p), FileStorage::READ | FileStorage::MEMORY);
+        EXPECT_THROW(model.read(fs["ColorCorrectionModel"]), cv::Exception) << "dims=" << p.dims << " rows=" << p.rows << " cols=" << p.cols << " type=" << p.type();
+    }
+    {
+        cv::ccm::ColorCorrectionModel model;
+        FileStorage fs(makeModelWithPolyfit(type, -1, good), FileStorage::READ | FileStorage::MEMORY);
+        EXPECT_THROW(model.read(fs["ColorCorrectionModel"]), cv::Exception);
+    }
+    {
+        // missing polyfit node: read() falls back to the default Polyfit, correctImage must throw instead of crashing
+        cv::ccm::ColorCorrectionModel model;
+        FileStorage fs(makeModelWithPolyfit(type, 3, good, true), FileStorage::READ | FileStorage::MEMORY);
+        Mat out;
+        EXPECT_THROW({ model.read(fs["ColorCorrectionModel"]); model.correctImage(img, out); }, cv::Exception);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Photo_ColorCorrection_Polyfit, PolyfitLinearization::all());
+
 } // namespace
 } // namespace opencv_test
