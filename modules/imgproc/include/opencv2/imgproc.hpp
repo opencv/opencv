@@ -2149,6 +2149,9 @@ when the flag #WARP_INVERSE_MAP is set. Otherwise, the transformation is first i
 with #invertAffineTransform and then put in the formula above instead of M. The function cannot
 operate in-place.
 
+Each channel is interpolated independently, including images with more than four channels.
+CPU CV_16F images support linear, cubic, and Lanczos interpolation with float32 accumulation.
+
 @param src input image.
 @param dst output image that has the size dsize and the same type as src .
 @param M \f$2\times 3\f$ transformation matrix.
@@ -2185,6 +2188,9 @@ The function warpPerspective transforms the source image using the specified mat
 
 when the flag #WARP_INVERSE_MAP is set. Otherwise, the transformation is first inverted with invert
 and then put in the formula above instead of M. The function cannot operate in-place.
+
+Each channel is interpolated independently, including images with more than four channels.
+CPU CV_16F images support linear, cubic, and Lanczos interpolation with float32 accumulation.
 
 @param src input image.
 @param dst output image that has the size dsize and the same type as src .
@@ -2230,6 +2236,9 @@ and are typically modest; measure before converting. In the converted case,
 cvFloor(y)) and \f$map_2\f$ contains indices in a table of interpolation coefficients.
 
 This function cannot operate in-place.
+
+Each channel is interpolated independently, including images with more than four channels.
+CPU CV_16F images support linear, cubic, and Lanczos interpolation with float32 accumulation.
 
 @param src Source image.
 @param dst Destination image. It has the same size as map1 and the same type as src .

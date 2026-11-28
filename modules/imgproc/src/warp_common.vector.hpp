@@ -73,6 +73,9 @@
     CV_WARP_##INTER##_VECTOR_SHUFFLE_ALLWITHIN_##CN(uint16_t)
 #define CV_WARP_VECTOR_SHUFFLE_ALLWITHIN_32F(INTER, CN) \
     CV_WARP_##INTER##_VECTOR_SHUFFLE_ALLWITHIN_##CN(float)
+// FT: float or half samples (the enclosing function is a template over T), float interpolation
+#define CV_WARP_VECTOR_SHUFFLE_ALLWITHIN_FT(INTER, CN) \
+    CV_WARP_##INTER##_VECTOR_SHUFFLE_ALLWITHIN_##CN(T)
 #define CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(INTER, CN, DEPTH) \
     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN_##DEPTH(INTER, CN)
 
@@ -172,6 +175,28 @@
     v_store(dstptr + x*4 + uf*2 + vlanes_32, bval_v2_h); \
     v_store(dstptr + x*4 + uf*3,             bval_v3_l); \
     v_store(dstptr + x*4 + uf*3 + vlanes_32, bval_v3_h);
+
+#define CV_WARP_VECTOR_SHUFFLE_STORE_CONSTANT_BORDER_FTC1() \
+    if constexpr (std::is_same_v<T, hfloat>) { \
+        v_pack_store(dstptr + x,             bval_v0_l); \
+        v_pack_store(dstptr + x + vlanes_32, bval_v0_h); \
+    } else { \
+        CV_WARP_VECTOR_SHUFFLE_STORE_CONSTANT_BORDER_32FC1() \
+    }
+#define CV_WARP_VECTOR_SHUFFLE_STORE_CONSTANT_BORDER_FTC4() \
+    if constexpr (std::is_same_v<T, hfloat>) { \
+        v_pack_store(dstptr + x*4,                    bval_v0_l); \
+        v_pack_store(dstptr + x*4 + vlanes_32,        bval_v0_h); \
+        v_pack_store(dstptr + x*4 + uf,               bval_v1_l); \
+        v_pack_store(dstptr + x*4 + uf + vlanes_32,   bval_v1_h); \
+        v_pack_store(dstptr + x*4 + uf*2,             bval_v2_l); \
+        v_pack_store(dstptr + x*4 + uf*2 + vlanes_32, bval_v2_h); \
+        v_pack_store(dstptr + x*4 + uf*3,             bval_v3_l); \
+        v_pack_store(dstptr + x*4 + uf*3 + vlanes_32, bval_v3_h); \
+    } else { \
+        CV_WARP_VECTOR_SHUFFLE_STORE_CONSTANT_BORDER_32FC4() \
+    }
+
 
 #define CV_WARP_VECTOR_FETCH_PIXEL_C1(dy, dx, pixbuf_ofs0, pixbuf_ofs1) \
     if ((((unsigned)(ix + dx) < (unsigned)srccols) & ((unsigned)(iy + dy) < (unsigned)srcrows)) != 0) { \
@@ -568,6 +593,26 @@
     v_store_interleave(dstptr + x*4 + vlanes_32*4, f00rh, f00gh, f00bh, f00ah);
 #define CV_WARP_LINEAR_VECTOR_INTER_STORE_F32F32(CN) \
     CV_WARP_LINEAR_VECTOR_INTER_STORE_F32F32_##CN()
+
+#define CV_WARP_LINEAR_VECTOR_INTER_STORE_F32FT_C1() \
+    if constexpr (std::is_same_v<T, hfloat>) { \
+        v_pack_store(dstptr + x, f00gl); \
+        v_pack_store(dstptr + x + vlanes_32, f00gh); \
+    } else { \
+        CV_WARP_LINEAR_VECTOR_INTER_STORE_F32F32_C1() \
+    }
+#define CV_WARP_LINEAR_VECTOR_INTER_STORE_F32FT_C4() \
+    if constexpr (std::is_same_v<T, hfloat>) { \
+        float tbuf[max_vlanes_32*8]; \
+        v_store_interleave(tbuf, f00rl, f00gl, f00bl, f00al); \
+        v_store_interleave(tbuf + vlanes_32*4, f00rh, f00gh, f00bh, f00ah); \
+        for (int k = 0; k < 8; k++) \
+            v_pack_store(dstptr + x*4 + vlanes_32*k, vx_load(tbuf + vlanes_32*k)); \
+    } else { \
+        CV_WARP_LINEAR_VECTOR_INTER_STORE_F32F32_C4() \
+    }
+#define CV_WARP_LINEAR_VECTOR_INTER_STORE_F32FT(CN) \
+    CV_WARP_LINEAR_VECTOR_INTER_STORE_F32FT_##CN()
 
 #define CV_WARP_LINEAR_VECTOR_INTER_STORE_F16U8_C1() \
     uint8x8_t result = { \
