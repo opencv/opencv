@@ -876,6 +876,11 @@ class ObjectiveCWrapperGenerator(object):
                                      "is_enum": True,
                                      "import_module": import_module,
                                      "from_cpp": "(" + objc_type + ")%(n)s"}
+            if constinfo.classname and constinfo.classname != original_objc_type:
+                class_enum_type = constinfo.classname + "_" + original_objc_type
+                type_dict[class_enum_type] = type_dict[ctype]
+                if objc_type != original_objc_type:
+                    type_dict[constinfo.classname + "_" + objc_type] = type_dict[ctype]
             self.classes[self.Module].member_enums.append(objc_type)
 
         const_decls = decl[3]
