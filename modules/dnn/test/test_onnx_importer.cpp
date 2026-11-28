@@ -3505,6 +3505,32 @@ void testConvTransposeOutputShapeFixture(const char* model, int extent, const fl
     Mat expected(extent, extent, CV_32F, const_cast<float*>(values));
     EXPECT_EQ(0.0, cv::norm(output.reshape(1, extent), expected, NORM_INF));
 }
+
+// The ConvTranspose input is fully static, but a second graph input carries a
+// dynamic channel dimension, so the net has two inputs that both need setting.
+void testConvTransposeWithUnrelatedDynamicInput(const char* model, int extent, const float* values)
+{
+    SCOPED_TRACE(model);
+    Net net;
+    ASSERT_NO_THROW(net = readONNXImporterGuardModel(model));
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(DNN_TARGET_CPU);
+    const int inputShape[] = {1, 1, 2, 2};
+    net.setInput(Mat(4, inputShape, CV_32F, Scalar(1)), "X");
+    const int auxShape[] = {1, 2, 4};
+    net.setInput(Mat(3, auxShape, CV_32F, Scalar(0)), "aux");
+
+    Mat output;
+    ASSERT_NO_THROW(output = net.forward("Y"));
+    ASSERT_EQ(output.dims, 4);
+    EXPECT_EQ(output.size[0], 1);
+    EXPECT_EQ(output.size[1], 1);
+    ASSERT_EQ(output.size[2], extent);
+    ASSERT_EQ(output.size[3], extent);
+    Mat expected(extent, extent, CV_32F, const_cast<float*>(values));
+    EXPECT_EQ(0.0, cv::norm(output.reshape(1, extent), expected, NORM_INF));
+}
 }  // namespace
 
 TEST(Test_ONNX_Importer, QuantizedBiasFixtures)
@@ -3661,6 +3687,19 @@ TEST(Test_ONNX_Importer, ConvTransposeInputRankFixtures)
 TEST(Test_ONNX_Importer, ConvTransposeUnsupportedAsymmetricPadding)
 {
     expectONNXImporterGuardRejected("importer_deconv_unsupported_asymmetric", "unsupported asymmetric padding");
+}
+
+TEST(Test_ONNX_Importer, ConvTransposeDynamicShapeScoping)
+{
+    // hasDynamicShapes records whether any graph input has a dynamic dimension,
+    // so it must not decide whether this operator's output_shape is honored.
+    // Only the operator's own spatial input extents matter: an unrelated dynamic
+    // tensor elsewhere in the graph, or a dynamic non-spatial axis on this input,
+    // leaves those extents statically known.
+    const float expected[] = {0.5f, 1, 0.5f, 0.5f, 1, 2, 1, 1,
+                              0.5f, 1, 0.5f, 0.5f, 0.5f, 1, 0.5f, 0.5f};
+    testConvTransposeWithUnrelatedDynamicInput("importer_deconv_unrelated_dynamic", 4, expected);
+    testConvTransposeWithUnrelatedDynamicInput("importer_deconv_dynamic_batch", 4, expected);
 }
 
 TEST_P(Test_ONNX_layers, RandomNormalLike_basic)

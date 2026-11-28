@@ -2164,8 +2164,11 @@ void ONNXImporter::parseConvTranspose(LayerParams& layerParams, const opencv_onn
             // ONNX derives the pads from output_shape and the spatial input size. The
             // deconvolution layer computes its output size from the runtime input and
             // has no fixed-output-size mode, so output_shape cannot be honored when the
-            // spatial input size is dynamic or unknown at import time.
-            bool knownSpatialInput = !hasDynamicShapes;
+            // spatial input size is dynamic or unknown at import time. Only this
+            // operator's own spatial extents decide that: hasDynamicShapes is
+            // importer-wide, so a dynamic dimension on another tensor, or on a
+            // non-spatial axis of this input, must not reject a static spatial input.
+            bool knownSpatialInput = true;
             for (int i = 0; knownSpatialInput && i < strides.size(); i++)
                 knownSpatialInput = inputShape[2 + i] > 0;
             if (!knownSpatialInput)
