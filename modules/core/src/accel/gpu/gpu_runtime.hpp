@@ -15,13 +15,14 @@
 #  define CV_GPU(name) hip##name
 #  define CV_GPU_NS hip_impl
 #  define CV_GPU_RUNTIME "hip"
+#  define CV_GPU_TUNING_ENV "OPENCV_ACCEL_HIP_TUNING"
 #  define CV_GPU_ERROR_OUT_OF_MEMORY hipErrorOutOfMemory
 #  define CV_GPU_ERROR_NO_KERNEL_IMAGE hipErrorNoBinaryForGpu
 #  define CV_GPU_ATTR_MEMORY_POOLS hipDeviceAttributeMemoryPoolsSupported
 #  define CV_GPU_HOST_ALLOC hipHostMalloc
 #  define CV_GPU_HOST_FREE hipHostFree
-#  define CV_GPU_HOST_ALLOC_PORTABLE hipHostMallocPortable
-#  define CV_GPU_HOST_ALLOC_MAPPED hipHostMallocMapped
+// coarse-grained: on fine-grained memory every GPU access snoops the CPU caches
+#  define CV_GPU_HOST_ALLOC_SHARED (hipHostMallocMapped | hipHostMallocPortable | hipHostMallocNonCoherent)
 typedef hipDeviceProp_t cvGpuDeviceProp;
 typedef hipDeviceAttribute_t cvGpuDeviceAttr;
 #else
@@ -29,13 +30,13 @@ typedef hipDeviceAttribute_t cvGpuDeviceAttr;
 #  define CV_GPU(name) cuda##name
 #  define CV_GPU_NS cuda_impl
 #  define CV_GPU_RUNTIME "cuda"
+#  define CV_GPU_TUNING_ENV "OPENCV_ACCEL_CUDA_TUNING"
 #  define CV_GPU_ERROR_OUT_OF_MEMORY cudaErrorMemoryAllocation
 #  define CV_GPU_ERROR_NO_KERNEL_IMAGE cudaErrorNoKernelImageForDevice
 #  define CV_GPU_ATTR_MEMORY_POOLS cudaDevAttrMemoryPoolsSupported
 #  define CV_GPU_HOST_ALLOC cudaHostAlloc
 #  define CV_GPU_HOST_FREE cudaFreeHost
-#  define CV_GPU_HOST_ALLOC_PORTABLE cudaHostAllocPortable
-#  define CV_GPU_HOST_ALLOC_MAPPED cudaHostAllocMapped
+#  define CV_GPU_HOST_ALLOC_SHARED (cudaHostAllocMapped | cudaHostAllocPortable)
 typedef cudaDeviceProp cvGpuDeviceProp;
 typedef cudaDeviceAttr cvGpuDeviceAttr;
 #endif

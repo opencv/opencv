@@ -13,9 +13,9 @@
 @addtogroup core_accel
 
 UMat data is placed on an accelerator explicitly, with UMat::createOn(), Mat::upload() or
-UMat::upload(). A cv:: function with an accelerator hook (cv::flip and cv::transpose in this
-version) runs on the device of its input UMat when the device's backend implements it, and on the
-CPU otherwise; either way its output UMat is created on that device. Other functions run on the
+UMat::upload(). A cv:: function with an accelerator hook (cv::flip, cv::transpose, cv::GaussianBlur
+and cv::warpAffine in this version) runs on the device of its input UMat when the device's backend
+implements it, and on the CPU otherwise; either way its output UMat is created on that device. Other functions run on the
 CPU and create regular UMats for their outputs.
 
 Device work is queued on one stream per device and CPU thread, and the call returns before the work

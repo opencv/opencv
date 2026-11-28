@@ -2,8 +2,9 @@ Non-CPU HAL: accelerators behind cv:: functions {#non_cpu_hal}
 ===============================================
 
 UMat data can be placed on an accelerator, such as a discrete GPU, an integrated GPU or an NPU.
-A cv:: function with an accelerator hook (cv::flip and cv::transpose in this version) runs on the
-device of its input UMat if the device's backend implements it, and on the CPU otherwise. Either
+A cv:: function with an accelerator hook (cv::flip, cv::transpose, cv::GaussianBlur and
+cv::warpAffine in this version) runs on the device of its input UMat if the device's backend
+implements it, and on the CPU otherwise. Either
 way its output is created on the device, so a pipeline of such functions stays where its data
 is. Functions without a hook run on the CPU and create regular UMats for their outputs.
 
@@ -91,7 +92,10 @@ is not downloaded.
 
 Memory the CPU addresses (an integrated GPU's, when the backend says so with
 `Backend::hostAddress()`) is used in place: `getMat()` waits for the thread's device work and
-returns the device's own bytes.
+returns the device's own bytes. On an integrated GPU a kernel that reads lines the CPU still caches
+runs up to three times as slow, read after read. Uploads therefore write this memory past the CPU
+caches. What the CPU writes through a Mat view is flushed from its caches before the device's third
+read, because a flush costs about two such reads, so data read once or twice is cheaper left alone.
 
 Writing a backend
 -----------------
@@ -153,21 +157,65 @@ A built-in backend registers itself in `registry.cpp`; tests register theirs wit
 * CUDA (`src/accel/backend_cuda.cpp`), built in when OpenCV is built with CUDA. Discrete GPUs use
   device memory from a stream-ordered pool of the backend's own, which keeps freed memory for reuse
   while the pool holds less than a quarter of the device's memory; integrated GPUs from Xavier on
-  use pinned host memory mapped into the GPU, which the CPU uses in place. It implements `flip`
-  and `transpose`, in place too. Its kernels and runtime calls (`src/accel/gpu/`) are written
-  once for the CUDA and HIP runtimes.
+  use pinned host memory mapped into the GPU, which the CPU uses in place. Pinning and mapping a
+  block costs milliseconds, so freed blocks are kept for reuse, up to
+  `OPENCV_ACCEL_SHARED_BUFFERPOOL_LIMIT` bytes per device (1 GiB by default). It implements `flip`
+  and `transpose`, in place too, and for imgproc `GaussianBlur` (bit-exact with the CPU for 8U
+  and 16U) and `warpAffine` with nearest and linear interpolation. Its devices, memory and streams
+  (`src/accel/gpu/`) are written once for the CUDA and HIP runtimes, and so are its kernels and
+  operations, which live in the non-CPU HAL, `non_cpu_hal/gpu/`, one folder per module laid out like
+  the CPU HAL in `hal/ipp/`. `<module>/include/gpu_hal_<module>.hpp` declares only how the backend
+  creates the module's operations. `<module>/src/<family>.impl.hpp` holds one family (`flip`,
+  `transpose`, `smooth`, `warp`): it declares its own kernels, as the CPU's `*.simd.hpp` files do,
+  and holds them and the operations that launch them, as a mixin the module combines.
+  `<module>/src/precomp.hpp` has what the families share, the list of families and that combination,
+  and `non_cpu_hal/gpu/precomp.hpp` the launch geometry and the list of modules. Core compiles it
+  twice: from `src/cuda/accel_kernels.cu` and `src/hip/accel_kernels.hip` with
+  `CV_ACCEL_GPU_KERNELS` for the kernels, and from its GPU backend for the operations.
 * HIP (`src/accel/backend_hip.cpp`), built in when OpenCV is configured with `WITH_HIP=ON`, which
   needs CMake 3.21 or newer. `opencv_core` then links `libamdhip64`, so ROCm must be installed
-  wherever that build runs. It has the operations of the CUDA backend, from the same sources. By
+  wherever that build runs. It has the operations of the CUDA backend, from the same sources.
+  Integrated GPUs use pinned host memory as on CUDA, allocated coarse-grained: on fine-grained
+  memory every GPU access looks into the CPU caches, up to ten times slower, while the CPU and the
+  GPU need to agree only when a stream is synchronized, which is when the CPU may use the data. By
   default the kernels are built for the generic target of each GPU family (`gfx11-generic` and
   the like); `CMAKE_HIP_ARCHITECTURES=native` builds them only for the GPUs of the build machine.
   On a GPU the build has no code for, operations run on the CPU.
+
+### Tuning the GPU kernels
+
+GaussianBlur's two passes (`blurRows`, `blurCols`) and warpAffine (`warpAffine`) are launched as a tuning
+says, per backend. A thread computes a patch of `px` x `py` output pixels; along the direction a filter
+runs, it reads each input once for the whole patch.
+
+| Parameter | Set | Values | Default | What it changes |
+|---|---|---|---|---|
+| `px`, `py` | at compile time (template arguments) | 1x1, 2x1, 4x1, 1x2, 1x4, 2x2 | 1x1 | the registers of a thread and its unrolled loops |
+| `block` | at run time | WxH, up to 1024 threads | 32x8 | threads per block |
+| `loopy` | at run time | 1 and up | 1 | patches a thread covers down the image: the grid is that many times shorter |
+
+Every patch shape is an instance of its own for each depth and channel count. The build compiles the
+shapes of `CV_ACCEL_GPU_PATCHES` (`non_cpu_hal/gpu/precomp.hpp`), and a tuning picks one of them; the six
+above take the kernels from about 3 to 19 seconds of compilation per GPU architecture. The kernels read
+the launch shape at run time, so any value works without a rebuild. The arithmetic, which keeps 8U and
+16U bit-exact, and the number of taps, which the caller chooses, are not tunable.
+
+`OPENCV_ACCEL_CUDA_TUNING` and `OPENCV_ACCEL_HIP_TUNING` give a backend's tuning as `kernel[@type]:key=value,...`
+entries separated by `;`. An entry for a type overrides its kernel's:
+
+```
+OPENCV_ACCEL_HIP_TUNING="blurRows:block=64x4,px=4;blurCols:py=4;blurCols@32FC1:py=2,loopy=2;warpAffine:block=16x16"
+```
+
+Tests and tuning runs call `cv::accel::setTuning("hip", spec)` (`opencv2/core/private/accel_backend.hpp`),
+and an empty spec goes back to the variable's. A bad spec is an error, where it is set or at the first
+call that reads the variable. Another backend can take knobs of its own through `Backend::setTuning()`.
 
 Adding an operation
 -------------------
 
 1. Add a virtual method, returning false by default, to the module's interface (`CoreOps` for
-   core).
+   core, `ImgprocOps` for imgproc).
 2. Add the hook to the function, before `CV_OCL_RUN`:
 
 ```cpp
@@ -178,7 +226,7 @@ static bool accel_flip(InputArray _src, OutputArray _dst, int flipCode)
 
     const UMat src = _src.getUMat();
     accel::Device device = accel::getDevice(src);
-    if (device.empty() || !accelOutputUsable(_dst, device, src.size(), src.type()))
+    if (device.empty() || !accel::outputUsable(_dst, device, src.size(), src.type()))
         return false;
 
     UMat& dst = _dst.getUMatRef();
@@ -195,7 +243,20 @@ if (accel_flip(_src, _dst, flip_mode))
     return;
 ```
 
-3. Implement it in the backends that can.
+   For a 2-D image, `cv::accel::run()` does all of this, so the hook is one statement that runs only
+   for a UMat input. The operation then takes the function's own arguments, as a CPU HAL function
+   does:
+
+```cpp
+CV_ACCEL_RUN(_src.isUMat() && borderType != BORDER_TRANSPARENT,
+             accel::run(&accel::ImgprocOps::warpAffine, "imgproc", _src, _dst, dsize.empty() ? _src.size() : dsize,
+                        _src.type(), _M0, flags, borderType, borderValue))
+```
+
+3. Implement it in the backends that can. For the GPU backends, everything goes in the family's
+   `non_cpu_hal/gpu/<module>/src/<family>.impl.hpp`: the kernel's declaration, the kernel, and the
+   operation in the family's mixin. A new family file is listed at the end of the module's
+   `src/precomp.hpp` and its mixin added to the module's operations there.
 
 Not in this version
 -------------------
@@ -214,4 +275,6 @@ transfers between devices. Its streams run work on a thread of their own, after 
 delay, so a missing wait shows up as wrong data, and work on freed memory or on another device's
 memory is counted. The `Core_Accel_GPU` tests run once for each GPU backend of the build (CUDA,
 HIP), on its first device when one is present, and `perf_accel.cpp` measures flip and transpose
-on the first CUDA or HIP device.
+on the first CUDA or HIP device. The `Imgproc_Accel` tests compare GaussianBlur and warpAffine
+with the CPU on every device of the build, and imgproc's `perf_accel.cpp` measures them on the
+first one.

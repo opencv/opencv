@@ -11,9 +11,15 @@
 // an offset is an address too.
 
 #include "opencv2/core/private/accel_backend.hpp"
+#include "opencv2/core/utils/configuration.private.hpp"
 #include "opencv2/core/utils/logger.hpp"
-#include "gpu_kernels.hpp"
+#include "gpu_runtime.hpp"
+#include "gpu/core/include/gpu_hal_core.hpp"         // non_cpu_hal/: the operations of each module
+#include "gpu/imgproc/include/gpu_hal_imgproc.hpp"
 
+#include <algorithm>
+#include <list>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string.h>
@@ -176,69 +182,35 @@ GpuStream& gpuStreamOf(Stream& s)
     return *gs;
 }
 
-/* Whether the kernels can run on @p src and @p dst: 2-D, an element size they move, no Mat view
-   alive (UMat::handle() needs that), and either separate buffers or the same view (in place).
-   Other views of one buffer may overlap, which the kernels do not handle. */
-bool runnable(const UMat& src, const UMat& dst)
+//! sets the launches of the tunable kernels (non_cpu_hal/gpu/precomp.hpp)
+void setKernelTuning(const String& spec);
+
+/** @brief Bytes of freed shared memory a device keeps for reuse: OPENCV_ACCEL_SHARED_BUFFERPOOL_LIMIT,
+1 GiB by default, 0 to free every block at once. */
+size_t sharedPoolLimit()
 {
-    return src.dims == 2 && kernels::supportedElementSize((int)src.elemSize()) &&
-           src.u->refcount == 0 && dst.u->refcount == 0 &&
-           (src.u != dst.u || (src.offset == dst.offset && src.step[0] == dst.step[0]));
+    static const size_t limit = utils::getConfigurationParameterSizeT("OPENCV_ACCEL_SHARED_BUFFERPOOL_LIMIT",
+                                                                      (size_t)1 << 30);
+    return limit;
 }
 
-class GpuCoreOps CV_FINAL : public CoreOps
+/** @brief @p size rounded up as the OpenCL buffer pools round it (4 KiB, 64 KiB or 1 MiB steps),
+so that close sizes share blocks. */
+size_t sharedCapacity(size_t size)
 {
-public:
-    bool flip(const UMat& src, UMat& dst, int flipCode, Stream& stream) CV_OVERRIDE
-    {
-        if (!runnable(src, dst))
-            return false;
-        GpuStream& s = gpuStreamOf(stream);
-        DeviceGuard g(s.device_);
-        const unsigned char* sp = (const unsigned char*)src.handle(ACCESS_READ) + src.offset;
-        unsigned char* dp = (unsigned char*)dst.handle(ACCESS_WRITE) + dst.offset;
-        const int esz = (int)src.elemSize();
-        const CV_GPU(Error_t) r = src.u == dst.u
-              ? kernels::flipInplace(dp, dst.step[0], src.rows, src.cols, esz, flipCode, s.s_)
-              : kernels::flip(sp, src.step[0], dp, dst.step[0], src.rows, src.cols, esz, flipCode, s.s_);
-        if (noKernelImage(r))
-        {
-            (void)CV_GPU(GetLastError)();
-            return false;   // no code for this GPU in the build: nothing was queued, the CPU runs it
-        }
-        check(r, "flip");
-        stream.retain({ src, dst });
-        return true;
-    }
-
-    bool transpose(const UMat& src, UMat& dst, Stream& stream) CV_OVERRIDE
-    {
-        if (!runnable(src, dst) || (src.u == dst.u && src.rows != src.cols))
-            return false;
-        GpuStream& s = gpuStreamOf(stream);
-        DeviceGuard g(s.device_);
-        const unsigned char* sp = (const unsigned char*)src.handle(ACCESS_READ) + src.offset;
-        unsigned char* dp = (unsigned char*)dst.handle(ACCESS_WRITE) + dst.offset;
-        const int esz = (int)src.elemSize();
-        const CV_GPU(Error_t) r = src.u == dst.u
-              ? kernels::transposeInplace(dp, dst.step[0], src.rows, esz, s.s_)
-              : kernels::transpose(sp, src.step[0], dp, dst.step[0], src.rows, src.cols, esz, s.s_);
-        if (noKernelImage(r))
-        {
-            (void)CV_GPU(GetLastError)();
-            return false;
-        }
-        check(r, "transpose");
-        stream.retain({ src, dst });
-        return true;
-    }
-};
+    const size_t granularity = size < ((size_t)1 << 20) ? 4096 : size < ((size_t)16 << 20) ? (64 << 10) : (1 << 20);
+    return (size + granularity - 1) & ~(granularity - 1);
+}
 
 //! one device; a backend's constructor says whether the CPU addresses its memory (shared)
 struct GpuDevice
 {
     cvGpuDeviceProp prop;
     bool shared = false;                // memory is host memory mapped into the GPU
+    std::mutex sharedMutex;             // guards the three below
+    std::map<void*, size_t> sharedInUse;                // the capacity of each shared block handed out
+    std::list<std::pair<void*, size_t> > sharedKept;    // freed shared blocks, most recent first
+    size_t sharedKeptBytes = 0;
 #ifdef CV_ACCEL_GPU_HAVE_POOLS
     bool poolsSupported = false;
     std::once_flag poolOnce;
@@ -248,7 +220,8 @@ struct GpuDevice
 };
 
 /* Devices, streams, copies, memory and the core operations. Device memory comes from a
-   stream-ordered pool where the device has pools; shared devices get mapped host memory. */
+   stream-ordered pool where the device has pools; shared devices get mapped host memory, whose
+   freed blocks are kept for reuse. */
 class GpuBackend : public Backend
 {
 public:
@@ -281,7 +254,7 @@ public:
         void* p = 0;
         CV_GPU(Error_t) r;
         if (d.shared)
-            r = CV_GPU_HOST_ALLOC(&p, size, CV_GPU_HOST_ALLOC_MAPPED | CV_GPU_HOST_ALLOC_PORTABLE);  // one address for CPU and GPU
+            r = allocateShared(d, size, &p);
 #ifdef CV_ACCEL_GPU_HAVE_POOLS
         else if (usesPool(device))
             r = allocateFromPool(d, size, &p);
@@ -306,7 +279,7 @@ public:
             DeviceGuard g(device);
             CV_GPU(Error_t) r;
             if (d.shared)
-                r = CV_GPU_HOST_FREE(handle);
+                r = releaseShared(d, handle);
 #ifdef CV_ACCEL_GPU_HAVE_POOLS
             else if (usesPool(device))
             {
@@ -362,7 +335,14 @@ public:
 
     Ops* ops(const char* module) CV_OVERRIDE
     {
-        return strcmp(module, "core") == 0 ? &core_ : 0;
+        if (strcmp(module, "core") == 0)
+            return core_.get();
+        return strcmp(module, "imgproc") == 0 ? imgproc_.get() : 0;
+    }
+
+    void setTuning(const String& spec) CV_OVERRIDE
+    {
+        setKernelTuning(spec);
     }
 
 protected:
@@ -384,6 +364,90 @@ protected:
     std::vector<std::unique_ptr<GpuDevice> > devs_;
 
 private:
+    /** @brief Shared memory for @p size bytes: a kept block that fits, else newly pinned host memory.
+
+    Pinning and mapping a block costs milliseconds, so freed blocks are kept (releaseShared) and
+    reused by the OpenCL buffer pools' rule: the smallest one wasting less than an eighth. */
+    CV_GPU(Error_t) allocateShared(GpuDevice& d, size_t size, void** p)
+    {
+        {
+            std::lock_guard<std::mutex> lock(d.sharedMutex);
+            auto best = d.sharedKept.end();
+            for (auto i = d.sharedKept.begin(); i != d.sharedKept.end(); ++i)
+                if (i->second >= size && i->second - size < std::max((size_t)4096, size / 8) &&
+                    (best == d.sharedKept.end() || i->second < best->second))
+                    best = i;
+            if (best != d.sharedKept.end())
+            {
+                *p = best->first;
+                d.sharedKeptBytes -= best->second;
+                d.sharedInUse[*p] = best->second;
+                d.sharedKept.erase(best);
+                return CV_GPU(Success);
+            }
+        }
+        const size_t capacity = sharedCapacity(size);
+        CV_GPU(Error_t) r = CV_GPU_HOST_ALLOC(p, capacity, CV_GPU_HOST_ALLOC_SHARED);  // one address for CPU and GPU
+        if (r == CV_GPU_ERROR_OUT_OF_MEMORY)
+        {
+            (void)CV_GPU(GetLastError)();
+            (void)trimShared(d, 0);     // the kept blocks go back to the driver, then once more
+            r = CV_GPU_HOST_ALLOC(p, capacity, CV_GPU_HOST_ALLOC_SHARED);
+        }
+        if (r == CV_GPU(Success))
+        {
+            std::lock_guard<std::mutex> lock(d.sharedMutex);
+            d.sharedInUse[*p] = capacity;
+        }
+        return r;
+    }
+
+    /** @brief Keeps the freed shared block @p handle for reuse, then trims the kept blocks to
+    sharedPoolLimit(). A block larger than the limit is freed at once. */
+    CV_GPU(Error_t) releaseShared(GpuDevice& d, void* handle)
+    {
+        {
+            std::lock_guard<std::mutex> lock(d.sharedMutex);
+            auto i = d.sharedInUse.find(handle);
+            if (i != d.sharedInUse.end())
+            {
+                if (i->second <= sharedPoolLimit())
+                {
+                    d.sharedKept.push_front(*i);
+                    d.sharedKeptBytes += i->second;
+                    handle = 0;
+                }
+                d.sharedInUse.erase(i);
+            }
+        }
+        const CV_GPU(Error_t) r = handle ? CV_GPU_HOST_FREE(handle) : CV_GPU(Success);
+        const CV_GPU(Error_t) t = trimShared(d, sharedPoolLimit());
+        return r != CV_GPU(Success) ? r : t;
+    }
+
+    /** @brief Frees the least recently kept shared blocks until at most @p limit bytes are kept;
+    returns the last error of the frees. */
+    CV_GPU(Error_t) trimShared(GpuDevice& d, size_t limit)
+    {
+        std::vector<void*> blocks;
+        {
+            std::lock_guard<std::mutex> lock(d.sharedMutex);
+            for (; d.sharedKeptBytes > limit; d.sharedKept.pop_back())
+            {
+                blocks.push_back(d.sharedKept.back().first);
+                d.sharedKeptBytes -= d.sharedKept.back().second;
+            }
+        }
+        CV_GPU(Error_t) r = CV_GPU(Success);
+        for (size_t i = 0; i < blocks.size(); i++)
+        {
+            const CV_GPU(Error_t) e = CV_GPU_HOST_FREE(blocks[i]);
+            if (e != CV_GPU(Success))
+                r = e;
+        }
+        return r;
+    }
+
 #ifdef CV_ACCEL_GPU_HAVE_POOLS
     //! device memory of @p device comes from the backend's pool; creates the pool on first use
     bool usesPool(int device)
@@ -439,11 +503,14 @@ private:
     }
 #endif
 
-    GpuCoreOps core_;
+    Ptr<CoreOps> core_ = createCoreOps();
+    Ptr<ImgprocOps> imgproc_ = createImgprocOps();
 };
 
 } // namespace
 
 }}} // namespace cv::accel::CV_GPU_NS
+
+#include "gpu/precomp.hpp"   // non_cpu_hal/: the operation half of each family
 
 #endif // OPENCV_CORE_SRC_ACCEL_GPU_BACKEND_IMPL_HPP

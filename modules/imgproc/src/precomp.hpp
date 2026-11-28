@@ -55,6 +55,7 @@
 #include "opencv2/core/utils/logger.hpp"
 #include "opencv2/imgproc/hal/hal.hpp"
 #include "hal_replacement.hpp"
+#include "opencv2/core/private/accel_backend.hpp"
 
 #include <math.h>
 #include <string.h>

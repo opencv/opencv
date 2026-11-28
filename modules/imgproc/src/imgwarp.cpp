@@ -2622,6 +2622,10 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     if (borderType < 0 || borderType > BORDER_TRANSPARENT)
       CV_Error(Error::StsBadArg, "Unknown/unsupported border type");
 
+    CV_ACCEL_RUN(_src.isUMat() && borderType != BORDER_TRANSPARENT,
+                 accel::run(&accel::ImgprocOps::warpAffine, "imgproc", _src, _dst, dsize.empty() ? _src.size() : dsize,
+                            _src.type(), _M0, flags, borderType, borderValue))
+
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() &&
                _src.cols() <= SHRT_MAX && _src.rows() <= SHRT_MAX,
                ocl_warpTransform_cols4(_src, _dst, _M0, dsize, flags, borderType,

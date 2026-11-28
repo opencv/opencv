@@ -12,6 +12,7 @@
 #endif
 
 #include "opencv2/core/accel.hpp"
+#include <utility>
 
 /*
 Interface of the accelerator backends built into OpenCV (CUDA, ...). It is not installed: backends
@@ -108,6 +109,31 @@ public:
     virtual bool transpose(const UMat& src, UMat& dst, Stream& stream);
 };
 
+/** @brief Operations of the imgproc module, under the rules of CoreOps. */
+class CV_EXPORTS ImgprocOps : public Ops
+{
+public:
+    /** @brief cv::GaussianBlur, with the kernels it computes as CV_64F (getGaussianKernel()), its
+    kernel size resolved. A backend rounds them as the CPU does, to fixed point for CV_8U and CV_16U,
+    where the CPU's result is bit-exact. @p borderType may carry BORDER_ISOLATED. */
+    virtual bool gaussianBlur(const UMat& src, UMat& dst, const Mat& kernelX, const Mat& kernelY,
+                              int borderType, Stream& stream);
+    /** @brief cv::warpAffine with its own @p M and @p flags (interpolation, WARP_INVERSE_MAP). */
+    virtual bool warpAffine(const UMat& src, UMat& dst, InputArray M, int flags,
+                            int borderType, const Scalar& borderValue, Stream& stream);
+};
+
+/** @brief For the hooks of cv:: functions: whether the output @p dst of size @p size and type
+@p type may be created on @p device. A region or fixed-size array elsewhere stays where it is and
+the CPU writes it; one of the wrong size or type is left to the CPU code, which reports it. */
+inline bool outputUsable(OutputArray dst, const Device& device, Size size, int type)
+{
+    const UMat& u = dst.getUMatRef();
+    if ((dst.fixedSize() && u.size() != size) || (dst.fixedType() && u.type() != type))
+        return false;
+    return getDevice(u) == device || !(dst.fixedSize() || u.isSubmatrix());
+}
+
 /** @brief An accelerator runtime: its devices, their memory, streams and operations.
 
 OpenCV calls a backend from any thread, so its methods must be thread-safe. */
@@ -141,12 +167,53 @@ public:
 
     //! the operations of @p module ("core", ...), or NULL (the default) when the backend has none
     virtual Ops* ops(const char* module);
+
+    /** @brief Tunes how the operations run with @p spec, in a syntax of the backend's, or goes back to the
+    backend's own settings when @p spec is empty. The default has nothing to tune and refuses other specs. */
+    virtual void setTuning(const String& spec);
 };
 
 /** @brief Adds a backend: its devices appear in Device::enumerate().
 The built-in CUDA and HIP backends register themselves. Backends stay registered for the life of the process. */
 CV_EXPORTS void registerBackend(const Ptr<Backend>& backend);
 
+/** @brief Backend::setTuning() of the backend named @p backend ("cuda", "hip"), for tests and tuning runs.
+Work already queued keeps the launches it had. */
+CV_EXPORTS void setTuning(const String& backend, const String& spec);
+
+namespace detail {
+template<typename F> struct OpsOf;
+template<typename O, typename... A> struct OpsOf<bool (O::*)(A...)> { typedef O type; };
+}
+
+/** @brief What a hook (CV_ACCEL_RUN) does: when @p src is a 2-D UMat on a device, creates the output
+@p dst there as @p size x @p type and calls @p op of the device's @p module operations with the input,
+the output, @p args and the stream of this thread. False, for the CPU to run the function, when the
+device has no such operation or it declines; the output then stays on the device. */
+template<typename F, typename... Args>
+bool run(F op, const char* module, InputArray src, OutputArray dst, Size size, int type, Args&&... args)
+{
+    typedef typename detail::OpsOf<F>::type ModuleOps;
+    if (!src.isUMat() || !dst.isUMat() || src.empty() || src.dims() > 2)
+        return false;
+    const UMat usrc = src.getUMat();
+    const Device device = getDevice(usrc);
+    if (device.empty() || !outputUsable(dst, device, size, type))
+        return false;
+    UMat& udst = dst.getUMatRef();
+    udst.createOn(device, size, type);
+    ModuleOps* ops = device.ops<ModuleOps>(module);
+    return ops && (ops->*op)(usrc, udst, std::forward<Args>(args)..., device.threadStream());
+}
+
 }} // namespace cv::accel
+
+/** @brief The hook of a cv:: function, as CV_OCL_RUN: returns from the function when @p condition
+holds and @p func, usually cv::accel::run(), ran it on a device. */
+#define CV_ACCEL_RUN(condition, func) \
+    { \
+        if ((condition) && (func)) \
+            return; \
+    }
 
 #endif // OPENCV_CORE_PRIVATE_ACCEL_BACKEND_HPP

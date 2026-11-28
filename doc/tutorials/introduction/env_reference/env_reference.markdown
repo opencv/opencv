@@ -75,6 +75,9 @@ import cv2 # variables set after this may not have effect
 | OPENCV_LIBVA_RUNTIME | file path | | libva for VA interoperability utils |
 | OPENCV_ENABLE_MEMALIGN | bool | true (except static analysis, memory sanitizer, fuzzying, _WIN32?) | enable aligned memory allocations |
 | OPENCV_BUFFER_AREA_ALWAYS_SAFE | bool | false | enable safe mode for multi-buffer allocations (each buffer separately) |
+| OPENCV_ACCEL_SHARED_BUFFERPOOL_LIMIT | num | 1 << 30 | bytes of freed memory a `cv::accel` device that shares host memory (integrated GPU) keeps for reuse, 0 to free at once |
+| OPENCV_ACCEL_CUDA_TUNING | string | | how the `cv::accel` CUDA kernels are launched, `kernel[@type]:key=value,...;...` (see the non-CPU HAL documentation) |
+| OPENCV_ACCEL_HIP_TUNING | string | | the same for the HIP kernels |
 | OPENCV_KMEANS_PARALLEL_GRANULARITY | num | 1000 | tune algorithm parallel work distribution parameter `parallel_for_(..., ..., ..., granularity)` |
 | OPENCV_DUMP_ERRORS | bool | true (Debug or Android), false (others) | print extra information on exception (log to Android) |
 | OPENCV_DUMP_CONFIG | bool | false | print build configuration to stderr (`getBuildInformation`) |

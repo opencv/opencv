@@ -21,9 +21,17 @@ Backend::~Backend() {}
 
 bool CoreOps::flip(const UMat&, UMat&, int, Stream&) { return false; }
 bool CoreOps::transpose(const UMat&, UMat&, Stream&) { return false; }
+bool ImgprocOps::gaussianBlur(const UMat&, UMat&, const Mat&, const Mat&, int, Stream&) { return false; }
+bool ImgprocOps::warpAffine(const UMat&, UMat&, InputArray, int, int, const Scalar&, Stream&) { return false; }
 
 void* Backend::hostAddress(int, void*) { return 0; }
 Ops* Backend::ops(const char*) { return 0; }
+
+void Backend::setTuning(const String& spec)
+{
+    if (!spec.empty())
+        CV_Error_(Error::StsNotImplemented, ("accel: the backend '%s' has nothing to tune", name().c_str()));
+}
 
 struct Stream::Impl
 {
@@ -133,6 +141,17 @@ public:
         return devices_;
     }
 
+    //! the backend named @p name, or NULL
+    Ptr<Backend> find(const String& name)
+    {
+        loadBuiltins();
+        cv::AutoLock lock(mutex_);
+        for (size_t i = 0; i < backends_.size(); i++)
+            if (backends_[i]->name() == name)
+                return backends_[i];
+        return Ptr<Backend>();
+    }
+
 private:
     Registry() {}
 
@@ -188,6 +207,14 @@ void registerBackend(const Ptr<Backend>& backend)
     Registry& r = Registry::get();
     r.loadBuiltins();   // built-in backends come first in Device::enumerate()
     r.add(backend);
+}
+
+void setTuning(const String& backend, const String& spec)
+{
+    const Ptr<Backend> b = Registry::get().find(backend);
+    if (!b)
+        CV_Error_(Error::StsObjectNotFound, ("accel: no backend named '%s'", backend.c_str()));
+    b->setTuning(spec);
 }
 
 std::vector<Device> Device::enumerate()
