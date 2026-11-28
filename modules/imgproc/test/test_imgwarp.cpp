@@ -1669,6 +1669,102 @@ TEST_P(Imgproc_GetRectSubPix_Border, regression_30301)
 INSTANTIATE_TEST_CASE_P(/**/, Imgproc_GetRectSubPix_Border, testing::Values(
     testing::make_tuple(CV_8U, CV_8U), testing::make_tuple(CV_8U, CV_32F), testing::make_tuple(CV_32F, CV_32F)));
 
+static void cubicCoeffsRef(double x, double* c)
+{
+    const double A = -0.75;
+    c[0] = ((A*(x + 1) - 5*A)*(x + 1) + 8*A)*(x + 1) - 4*A;
+    c[1] = ((A + 2)*x - (A + 3))*x*x + 1;
+    c[2] = ((A + 2)*(1 - x) - (A + 3))*(1 - x)*(1 - x) + 1;
+    c[3] = 1 - c[0] - c[1] - c[2];
+}
+
+// Every channel of the source holds independent random values, so swapping or mixing
+// channels in the vectorized pixel fetch makes the result differ from the reference.
+typedef testing::TestWithParam<testing::tuple<int, int> > Imgproc_Remap_Cubic8U;
+
+TEST_P(Imgproc_Remap_Cubic8U, accuracy)
+{
+    const int cn = get<0>(GetParam());
+    const int borderType = get<1>(GetParam());
+    const Scalar borderValue(11, 22, 33, 44);
+    const Size srcSize(37, 29), dstSize(53, 41);
+    RNG& rng = theRNG();
+
+    // a submatrix, so that the source step is larger than its row
+    Mat srcBuf(srcSize.height + 4, srcSize.width + 6, CV_8UC(cn));
+    rng.fill(srcBuf, RNG::UNIFORM, 0, 256);
+    Mat src = srcBuf(Rect(3, 2, srcSize.width, srcSize.height));
+
+    // Most rows meet the SIMD inlier condition (ix0 < width - 3, iy0 < height - 5) for every pixel,
+    // so whole batches take the optimized path. Some rows stay inside the source but go below that
+    // limit, which sends their batches to the generic path. In the other modes, some rows also cross
+    // the border or lie entirely outside; with BORDER_TRANSPARENT the result there depends on the
+    // SIMD batch a pixel falls into, so that mode skips them.
+    const bool transparent = borderType == BORDER_TRANSPARENT;
+    Mat mapx(dstSize, CV_32F), mapy(dstSize, CV_32F);
+    rng.fill(mapx, RNG::UNIFORM, 1.f, srcSize.width - 2.01f);
+    rng.fill(mapy, RNG::UNIFORM, 1.f, srcSize.height - 4.01f);
+    for (int y = 2; y < dstSize.height; y += 6)
+        rng.fill(mapy.row(y), RNG::UNIFORM, srcSize.height - 4.f, srcSize.height - 2.01f);
+    if (!transparent)
+    {
+        for (int y = 1; y < dstSize.height; y += 5)
+        {
+            rng.fill(mapx.row(y), RNG::UNIFORM, -3.f, srcSize.width + 2.f);
+            rng.fill(mapy.row(y), RNG::UNIFORM, -3.f, srcSize.height + 2.f);
+        }
+        for (int y = 3; y < dstSize.height; y += 7)
+            mapy.row(y).setTo(Scalar(-100));
+    }
+
+    Mat dst0(dstSize, CV_8UC(cn));
+    rng.fill(dst0, RNG::UNIFORM, 0, 256);
+    Mat dst = dst0.clone();
+    remap(src, dst, mapx, mapy, INTER_CUBIC, borderType, borderValue);
+
+    Mat ref = dst0.clone();
+    for (int y = 0; y < dstSize.height; y++)
+    {
+        for (int x = 0; x < dstSize.width; x++)
+        {
+            const float sx = mapx.at<float>(y, x), sy = mapy.at<float>(y, x);
+            const int ix = cvFloor(sx) - 1, iy = cvFloor(sy) - 1;
+            const bool allOutside = ix + 3 < 0 || ix >= srcSize.width || iy + 3 < 0 || iy >= srcSize.height;
+            if (transparent && allOutside)
+                continue;
+            double wx[4], wy[4];
+            cubicCoeffsRef(sx - cvFloor(sx), wx);
+            cubicCoeffsRef(sy - cvFloor(sy), wy);
+            for (int c = 0; c < cn; c++)
+            {
+                double sum = 0;
+                for (int i = 0; i < 4; i++)
+                {
+                    for (int j = 0; j < 4; j++)
+                    {
+                        int yy = iy + i, xx = ix + j;
+                        double v;
+                        if ((unsigned)yy < (unsigned)srcSize.height && (unsigned)xx < (unsigned)srcSize.width)
+                            v = src.ptr<uchar>(yy)[xx*cn + c];
+                        else if (borderType == BORDER_REPLICATE)
+                            v = src.ptr<uchar>(std::clamp(yy, 0, srcSize.height - 1))[std::clamp(xx, 0, srcSize.width - 1)*cn + c];
+                        else
+                            v = borderValue[c];
+                        sum += wy[i]*wx[j]*v;
+                    }
+                }
+                ref.ptr<uchar>(y)[x*cn + c] = saturate_cast<uchar>(sum);
+            }
+        }
+    }
+
+    EXPECT_LE(cvtest::norm(dst, ref, NORM_INF), 2);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_Remap_Cubic8U, testing::Combine(
+    testing::Values(1, 3, 4),
+    testing::Values((int)BORDER_CONSTANT, (int)BORDER_REPLICATE, (int)BORDER_TRANSPARENT)));
+
 
 }} // namespace
 /* End of file. */

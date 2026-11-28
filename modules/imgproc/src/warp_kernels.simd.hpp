@@ -8090,6 +8090,66 @@ CV_ALWAYS_INLINE v_float32 v_fma(const v_int32& a, const v_float32& b, const v_f
 
 #endif
 
+// x86: fetch the taps of each lane with 32-bit loads (4 bytes each) instead of going through
+// a scalar buffer, which stalls on store-to-load forwarding.
+// AVX-512 builds also take the AVX2 branch: this file sets CV__SIMD_FORCE_WIDTH 256.
+#if !CV_SIMD_FP16 && CV_SSE2 && (CV_SIMD_WIDTH == 16 || (CV_SIMD_WIDTH == 32 && CV_AVX2))
+
+// for each lane j, loads the 4 bytes at srcrow + ofs[j]
+static CV_ALWAYS_INLINE v_uint32 bicubicGather32(const uint8_t* srcrow, const int32_t* ofs)
+{
+#if CV_SIMD_WIDTH == 32
+    return v_reinterpret_as_u32(vx_lut_quads(srcrow, ofs));
+#else
+    // 128-bit v_lut_quads(const uchar*, const int*) is built from single bytes and is ~1.25x slower
+    int v[4];
+    for (int j = 0; j < 4; j++)
+        memcpy(&v[j], srcrow + ofs[j], sizeof(v[j]));
+    return v_uint32(_mm_setr_epi32(v[0], v[1], v[2], v[3]));
+#endif
+}
+
+// byte K of each 32-bit lane, as 32-bit integers
+template<int K>
+static CV_ALWAYS_INLINE v_int32 bicubicByte(const v_uint32& v)
+{
+    if constexpr (K == 3)
+        return v_reinterpret_as_s32(v_shr<24>(v));
+    else
+        return v_reinterpret_as_s32(v_and(v_shr<8*K>(v), vx_setall_u32(0xFF)));
+}
+
+#undef FETCH_INLIERS_8UC1
+#define FETCH_INLIERS_8UC1(row) { \
+    v_uint32 _d0 = bicubicGather32((const uint8_t*)src + row*srcstep, tl_ofs); \
+    R0 = bicubicByte<0>(_d0); R1 = bicubicByte<1>(_d0); R2 = bicubicByte<2>(_d0); R3 = bicubicByte<3>(_d0); }
+
+// the 4 taps of a C3 row are 12 bytes: _d0 = r0 g0 b0 r1, _d1 = g1 b1 r2 g2, _d2 = b2 r3 g3 b3
+#undef FETCH_INLIERS_8UC3
+#define FETCH_INLIERS_8UC3(row) { \
+    const uint8_t* _srcrow = (const uint8_t*)src + row*srcstep; \
+    v_uint32 _d0 = bicubicGather32(_srcrow, tl_ofs); \
+    v_uint32 _d1 = bicubicGather32(_srcrow + 4, tl_ofs); \
+    v_uint32 _d2 = bicubicGather32(_srcrow + 8, tl_ofs); \
+    R0 = bicubicByte<0>(_d0); G0 = bicubicByte<1>(_d0); B0 = bicubicByte<2>(_d0); R1 = bicubicByte<3>(_d0); \
+    G1 = bicubicByte<0>(_d1); B1 = bicubicByte<1>(_d1); R2 = bicubicByte<2>(_d1); G2 = bicubicByte<3>(_d1); \
+    B2 = bicubicByte<0>(_d2); R3 = bicubicByte<1>(_d2); G3 = bicubicByte<2>(_d2); B3 = bicubicByte<3>(_d2); }
+
+// the 4 taps of a C4 row are 16 bytes: _dk = rk gk bk ak
+#undef FETCH_INLIERS_8UC4
+#define FETCH_INLIERS_8UC4(row) { \
+    const uint8_t* _srcrow = (const uint8_t*)src + row*srcstep; \
+    v_uint32 _d0 = bicubicGather32(_srcrow, tl_ofs); \
+    v_uint32 _d1 = bicubicGather32(_srcrow + 4, tl_ofs); \
+    v_uint32 _d2 = bicubicGather32(_srcrow + 8, tl_ofs); \
+    v_uint32 _d3 = bicubicGather32(_srcrow + 12, tl_ofs); \
+    R0 = bicubicByte<0>(_d0); G0 = bicubicByte<1>(_d0); B0 = bicubicByte<2>(_d0); A0 = bicubicByte<3>(_d0); \
+    R1 = bicubicByte<0>(_d1); G1 = bicubicByte<1>(_d1); B1 = bicubicByte<2>(_d1); A1 = bicubicByte<3>(_d1); \
+    R2 = bicubicByte<0>(_d2); G2 = bicubicByte<1>(_d2); B2 = bicubicByte<2>(_d2); A2 = bicubicByte<3>(_d2); \
+    R3 = bicubicByte<0>(_d3); G3 = bicubicByte<1>(_d3); B3 = bicubicByte<2>(_d3); A3 = bicubicByte<3>(_d3); }
+
+#endif // x86
+
 #undef BICUBIC_C1_PROCESS_ROW
 #define BICUBIC_C1_PROCESS_ROW(row, fetch_inliers) \
     fetch_inliers(row); \
@@ -8383,7 +8443,12 @@ bicubicVec(const float* srcx, const float* srcy, int len,
             }
         }
 
-        memcpy(dst, outbuf, dlen*NCHANNELS*sizeof(dst[0]));
+        // BORDER_TRANSPARENT takes this path for every full batch, so use a constant
+        // size there to let the compiler replace the library call with a few moves
+        if (dlen == BATCH)
+            memcpy(dst, outbuf, BATCH*NCHANNELS*sizeof(dst[0]));
+        else
+            memcpy(dst, outbuf, dlen*NCHANNELS*sizeof(dst[0]));
     }
 }
 #endif
