@@ -6,6 +6,11 @@
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 #include "convert.hpp"
+#include "channel_permutation.simd.hpp"
+#include "channel_permutation.simd_declarations.hpp"
+
+#include <bitset>
+#include <functional>
 
 /****************************************************************************************\
 *                       Generalized split/merge: mixing channels                         *
@@ -91,6 +96,64 @@ static MixChannelsFunc getMixchFunc(int depth)
     return mixchTab[depth];
 }
 
+static bool tryPermuteChannels(const Mat& src, const Mat& dst, const int* fromTo, size_t npairs,
+                               NAryMatIterator& it)
+{
+    const int channels = src.channels();
+    if (npairs != static_cast<size_t>(channels) || src.type() != dst.type() || src.empty() || dst.empty())
+        return false;
+
+    const size_t elemSize = src.elemSize1();
+    const size_t pixels = it.size * it.nplanes;
+    const bool bytes = channels >= 5 && channels <= 16 && elemSize == 1 && it.size >= 16 && pixels >= 1024;
+    const bool wide32 = channels >= 32 && elemSize == 4 && pixels >= 65536;
+    const bool small = channels >= 2 && channels <= 4 && elemSize <= 4;
+    if (!(small || bytes || wide32))
+        return false;
+
+    // Preserve the existing write order for overlapping matrices.
+    const size_t planeBytes = it.size * src.elemSize();
+    const size_t totalBytes = it.nplanes * planeBytes;
+    const uchar* srcStart = src.isContinuous() ? src.data : src.datastart;
+    const uchar* srcEnd = src.isContinuous() ? src.data + totalBytes : src.dataend;
+    const uchar* dstStart = dst.isContinuous() ? dst.data : dst.datastart;
+    const uchar* dstEnd = dst.isContinuous() ? dst.data + totalBytes : dst.dataend;
+    std::less<const uchar*> less;
+    if (less(srcStart, dstEnd) && less(dstStart, srcEnd))
+        return false;
+
+    int order[CV_CN_MAX];
+    std::fill_n(order, channels, -1);
+    std::bitset<CV_CN_MAX> used;
+    bool identity = true;
+    for (size_t pair = 0; pair < npairs; ++pair)
+    {
+        const int from = fromTo[2 * pair];
+        const int to = fromTo[2 * pair + 1];
+        if (from < 0 || order[to] >= 0 || used[from])
+            return false;
+        order[to] = from;
+        used[from] = true;
+        identity &= from == to;
+    }
+
+    if (identity)
+    {
+        for (size_t plane = 0; plane < it.nplanes; ++plane, ++it)
+            std::memcpy(it.ptrs[1], it.ptrs[0], planeBytes);
+        return true;
+    }
+    if (bytes)
+    {
+        CV_CPU_DISPATCH(permuteByteChannels, (it, order, channels), CV_CPU_DISPATCH_MODES_ALL);
+    }
+    if (wide32)
+    {
+        CV_CPU_DISPATCH(permuteWideChannels, (it, order, channels), CV_CPU_DISPATCH_MODES_ALL);
+    }
+    CV_CPU_DISPATCH(permuteSmallChannels, (it, order, channels, elemSize), CV_CPU_DISPATCH_MODES_ALL);
+}
+
 } // cv::
 
 
@@ -155,6 +218,9 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
     int total = (int)it.size, blocksize = std::min(total, (int)((BLOCK_SIZE + esz1-1)/esz1));
     MixChannelsFunc func = getMixchFunc(depth);
     CV_Assert(func);
+
+    if (nsrcs == 1 && ndsts == 1 && tryPermuteChannels(src[0], dst[0], fromTo, npairs, it))
+        return;
 
     for( i = 0; i < it.nplanes; i++, ++it )
     {
