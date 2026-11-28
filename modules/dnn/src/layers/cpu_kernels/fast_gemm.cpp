@@ -473,6 +473,7 @@ void fastGemmThin(int M, int N, int K, float alpha,
                   const float* A, int lda0, int lda1,
                   const float* packed_B, float beta,
                   float* C, int ldc, bool multi_thread) {
+    CV_CheckLE(M, static_cast<int>(FAST_GEMM_THIN_MAX_M), "fastGemmThin requires M <= FAST_GEMM_THIN_MAX_M");
 #if FAST_GEMM_THIN_NEON
     opt_NEON::fastGemmThinKernel(M, N, K, alpha, A, lda0, lda1, packed_B, 0, true, beta, C, ldc, multi_thread);
 #else
