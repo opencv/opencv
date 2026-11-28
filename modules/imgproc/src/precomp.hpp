@@ -112,6 +112,8 @@ namespace cv {
 CV_EXPORTS
 cv::Mutex& getInitializationMutex();  // defined in core module
 
+void fftShift(InputOutputArray _out);
+
 }  // namespace cv
 
 #endif /*__OPENCV_PRECOMP_H__*/

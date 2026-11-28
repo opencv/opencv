@@ -48,24 +48,6 @@ cv::Mat calculateCrossPowerSpectrum(const cv::Mat& dft1, const cv::Mat& dft2)
     return cps;
 }
 
-void fftshift(cv::Mat& out)
-{
-    int cx = out.cols / 2;
-    int cy = out.rows / 2;
-    cv::Mat q0(out, cv::Rect(0, 0, cx, cy));
-    cv::Mat q1(out, cv::Rect(cx, 0, cx, cy));
-    cv::Mat q2(out, cv::Rect(0, cy, cx, cy));
-    cv::Mat q3(out, cv::Rect(cx, cy, cx, cy));
-
-    cv::Mat tmp;
-    q0.copyTo(tmp);
-    q3.copyTo(q0);
-    tmp.copyTo(q3);
-    q1.copyTo(tmp);
-    q2.copyTo(q1);
-    tmp.copyTo(q2);
-}
-
 bool isOutOfBounds(const cv::Point2i& peak, const cv::Mat& mat, int size)
 {
     return peak.x - size / 2 < 0 || peak.y - size / 2 < 0 || peak.x + size / 2 >= mat.cols ||
@@ -141,7 +123,7 @@ cv::Point2d
     // compute the phase correlation landscape L3
     Mat L3 = calculateCrossPowerSpectrum(image1, image2);
     dft(L3, L3, DFT_INVERSE | DFT_SCALE | DFT_REAL_OUTPUT);
-    fftshift(L3);
+    fftShift(L3);
     Point2d L3mid(L3.cols / 2, L3.rows / 2);
 
     // calculate the maximum correlation location

@@ -83,6 +83,37 @@ TEST(Imgproc_PhaseCorrelationIterative, 64x64_accuracy_shift_16)
     TestPhaseCorrelationIterative(Size(64, 64), 16);
 }
 
+TEST(Imgproc_PhaseCorrelationIterative, odd_sizes_accuracy_shift_1)
+{
+    TestPhaseCorrelationIterative(Size(65, 65), 1);
+    TestPhaseCorrelationIterative(Size(65, 64), 1);
+    TestPhaseCorrelationIterative(Size(64, 65), 1);
+}
+
+TEST(Imgproc_PhaseCorrelationIterative, odd_dimensions_discrete_shift)
+{
+    for (int rows : {64, 65})
+    {
+        for (int cols : {64, 65})
+        {
+            if (rows % 2 == 0 && cols % 2 == 0)
+                continue;
+
+            Mat src1 = Mat::zeros(rows, cols, CV_64F);
+            Mat src2 = Mat::zeros(rows, cols, CV_64F);
+
+            src1.at<double>(32, 32) = 1.0;
+            src2.at<double>(31, 31) = 1.0;
+
+            Point2d expected(-1.0, -1.0);
+            Point2d actual = phaseCorrelateIterative(src1, src2, 7, 10);
+
+            EXPECT_NEAR(actual.x, expected.x, 0.1);
+            EXPECT_NEAR(actual.y, expected.y, 0.1);
+        }
+    }
+}
+
 TEST(Imgproc_PhaseCorrelationIterative, 64x64_float32_accuracy)
 {
     // regression: smooth float32 inputs can produce frequency bins with exactly zero

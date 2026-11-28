@@ -159,7 +159,7 @@ static void magSpectrums( InputArray _src, OutputArray _dst)
     }
 }
 
-static void fftShift(InputOutputArray _out)
+void fftShift(InputOutputArray _out)
 {
     Mat out = _out.getMat();
 
