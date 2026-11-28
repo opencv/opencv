@@ -1142,4 +1142,27 @@ TEST(Net, ShapeUtils_total_no_int32_overflow)
     EXPECT_EQ(t, 2839019520llu);
 }
 
+// Results must not change after the re-plan (160 MB -> 80 MB), also with alternating batch sizes.
+TEST(Net, BufferReplanKeepsResults)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/buffer_replan.onnx"));
+    ASSERT_FALSE(net.empty());
+    Mat inp = blobFromNPY(findDataFile("dnn/onnx/data/input_buffer_replan.npy"));
+    Mat ref = blobFromNPY(findDataFile("dnn/onnx/data/output_buffer_replan.npy"));
+    // Two copies of the input: the model reduces over all axes, so the output is the same.
+    MatShape shape2 = inp.shape();
+    shape2[0] = 2;
+    Mat inp2(shape2, CV_32F);
+    for (int b = 0; b < 2; b++)
+        std::memcpy(inp2.ptr<float>(b), inp.ptr<float>(), inp.total() * sizeof(float));
+    const int batches[] = { 1, 1, 2, 1, 2, 1 };
+    for (int i = 0; i < 6; i++)
+    {
+        net.setInput(batches[i] == 1 ? inp : inp2);
+        Mat out = net.forward();
+        normAssert(ref, out, cv::format("inference %d, batch %d", i, batches[i]).c_str(), 1e-5, 1e-4);
+    }
+}
+
 }} // namespace

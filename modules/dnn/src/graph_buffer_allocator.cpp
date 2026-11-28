@@ -4,6 +4,7 @@
 
 #include "precomp.hpp"
 #include "net_impl.hpp"
+#include <opencv2/core/utils/logger.hpp>
 
 #include <unordered_set>
 
@@ -71,6 +72,10 @@ using std::string;
  During the second run of inference with the same resolution input the buffer will not be reallocated.
 
  The reallocation is done using Buffer.fit() function.
+
+ This plan ignores sizes, so it can need much more memory than is alive at once. Once the sizes are
+ known, replanBuffersBySize() repeats the assignment with them (best fit) for the largest size each
+ temporary has had, and switches when that saves at least a quarter of the memory and 64 MB.
  */
 
 struct BufferAllocator
@@ -81,8 +86,23 @@ struct BufferAllocator
     vector<int> buf_usecounts;
     vector<int> bufidxs;
     int nbufs = 0;
+    // Size-aware mode: bytes per argument and capacity per buffer.
+    const vector<size_t>* argSizes = nullptr;
+    vector<size_t> bufsizes;
 
     BufferAllocator(Net::Impl* netimpl_) : netimpl(netimpl_) {}
+
+    size_t argSize(Arg a) const
+    {
+        return argSizes && a.idx >= 0 && (size_t)a.idx < argSizes->size() ? (*argSizes)[a.idx] : 0;
+    }
+
+    size_t plannedBytes() const
+    {
+        size_t s = 0;
+        for (size_t b : bufsizes) s += b;
+        return s;
+    }
 
     /*
      Here are 3 workhorse methods that abstract the use and bookkeeping of buffers:
@@ -103,17 +123,36 @@ struct BufferAllocator
      Use counter for the 'from_arg' buffer is incremented, correpondingly.
      */
 
-    int getFreeBuffer()
+    // need == 0: most recently released buffer; else best fit, or the largest free one.
+    int getFreeBuffer(size_t need = 0)
     {
-        if (freebufs.empty()) {
-            freebufs.push_back(nbufs);
-            buf_usecounts.push_back(0);
-            //printf("added buf %d\n", nbufs);
-            nbufs++;
+        int pick = -1;
+        if (!freebufs.empty()) {
+            if (need == 0) {
+                pick = (int)freebufs.size() - 1;
+            } else {
+                int fit = -1, largest = -1;
+                for (int k = (int)freebufs.size() - 1; k >= 0; k--) {
+                    const size_t s = bufsizes[freebufs[k]];
+                    if (s >= need && (fit < 0 || s < bufsizes[freebufs[fit]]))
+                        fit = k;
+                    if (largest < 0 || s > bufsizes[freebufs[largest]])
+                        largest = k;
+                }
+                pick = fit >= 0 ? fit : largest;
+            }
         }
-        int outidx = freebufs.back();
-        freebufs.pop_back();
+        int outidx;
+        if (pick < 0) {
+            outidx = nbufs++;
+            buf_usecounts.push_back(0);
+            bufsizes.push_back(0);
+        } else {
+            outidx = freebufs[pick];
+            freebufs.erase(freebufs.begin() + pick);
+        }
         buf_usecounts[outidx] = 1;
+        bufsizes[outidx] = std::max(bufsizes[outidx], need);
         return outidx;
     }
 
@@ -133,6 +172,7 @@ struct BufferAllocator
         CV_Assert(fromBuf >= 0);
         bufidxs[toArg.idx] = fromBuf;
         buf_usecounts[fromBuf]++;
+        bufsizes[fromBuf] = std::max(bufsizes[fromBuf], argSize(toArg));
         if (toBuf >= 0)
             releaseBuffer(toBuf);
     }
@@ -193,13 +233,19 @@ struct BufferAllocator
         return strm;
     }
 
-    void assign()
+    // apply == false: only compute the plan.
+    void assign(bool apply)
     {
         netimpl->useCounts(usecounts);
         size_t nargs = usecounts.size();
         bufidxs.assign(nargs, -1);
         nbufs = 0;
+        freebufs.clear();
+        buf_usecounts.clear();
+        bufsizes.clear();
         assign(netimpl->mainGraph);
+        if (!apply)
+            return;
         netimpl->bufidxs = bufidxs;
         netimpl->buffers.resize(nbufs);
         for (int i = 0; i < nbufs; i++)
@@ -222,7 +268,7 @@ struct BufferAllocator
                     !netimpl->isConstArg(inarg) &&
                     bufidxs.at(inarg.idx) < 0)
                 {
-                    bufidxs.at(inarg.idx) = getFreeBuffer();
+                    bufidxs.at(inarg.idx) = getFreeBuffer(argSize(inarg));
                 }
             }
         }
@@ -288,7 +334,7 @@ struct BufferAllocator
                     for (auto out: outputs) {
                         if (netimpl->argKind(out) == DNN_ARG_TEMP &&
                             bufidxs.at(out.idx) < 0) {
-                            bufidxs.at(out.idx) = getFreeBuffer();
+                            bufidxs.at(out.idx) = getFreeBuffer(argSize(out));
                         }
                     }
                 }
@@ -377,7 +423,7 @@ struct BufferAllocator
                     if (!netimpl->isConstArg(trip_count) && bufidxs[trip_count.idx] >= 0)
                         shareBuffer(trip_count, inputs[0]);
                     else
-                        bufidxs.at(inputs[0].idx) = getFreeBuffer();
+                        bufidxs.at(inputs[0].idx) = getFreeBuffer(argSize(inputs[0]));
                 }
 
                 for (int i = -1; i < n_state_vars; i++) {
@@ -390,7 +436,7 @@ struct BufferAllocator
                         if (!netimpl->isConstArg(v_inp) && v_inp.idx > 0 && bufidxs[v_inp.idx] >= 0)
                             shareBuffer(v_inp, inparg);
                         else
-                            bufidxs[inparg.idx] = getFreeBuffer();
+                            bufidxs[inparg.idx] = getFreeBuffer(argSize(inparg));
                     }
                     if (!netimpl->isConstArg(v_out)) {
                         if (!netimpl->isConstArg(outarg) && usecounts[outarg.idx] == 1)
@@ -425,7 +471,48 @@ struct BufferAllocator
 void Net::Impl::assignBuffers()
 {
     BufferAllocator buf_allocator(this);
-    buf_allocator.assign();
+    buf_allocator.assign(true);
+    tempSizeMax.clear();
+}
+
+bool Net::Impl::replanBuffersBySize()
+{
+    size_t current = 0;
+    for (const Mat& b : buffers)
+        current += b.u ? b.u->size : 0;
+    if (current == 0)
+        return false;
+
+    // Largest size per temporary; symbolic shapes (e.g. an If branch that did not run) are unknown.
+    std::vector<size_t> sizes = tempSizeMax;
+    sizes.resize(args.size(), 0);
+    bool grew = false;
+    for (size_t i = 0; i < args.size(); i++) {
+        const ArgData& a = args[i];
+        if (a.kind != DNN_ARG_TEMP || a.type < 0 || a.shape.dims < 0 || a.shape.hasSymbols())
+            continue;
+        const size_t s = a.shape.total() * CV_ELEM_SIZE(a.type);
+        if (s > sizes[i]) {
+            sizes[i] = s;
+            grew = true;
+        }
+    }
+    if (!grew)
+        return false;
+    tempSizeMax = sizes;
+
+    BufferAllocator planner(this);
+    planner.argSizes = &sizes;
+    planner.assign(false);
+    const size_t planned = planner.plannedBytes();
+    // Re-planning drops the current buffers: only worth it for a real saving.
+    if (planned + std::max(current / 4, (size_t)64 << 20) > current)
+        return false;
+    CV_LOG_INFO(NULL, cv::format("DNN: size-aware buffer plan: %.1f MB -> %.1f MB in %d buffers",
+                                 current / 1048576.0, planned / 1048576.0, planner.nbufs));
+    bufidxs = planner.bufidxs;
+    buffers.assign(planner.nbufs, Mat());
+    return true;
 }
 
 CV__DNN_INLINE_NS_END
