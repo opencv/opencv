@@ -163,31 +163,32 @@ TEST(Photo_NPR_Stylization, regression)
 
 }
 
-// The filters work on 3-channel images. More channels used to overflow a heap buffer,
-// and an image with a zero width or height crashed.
-TEST(Photo_NPR, more_than_three_channels_throw)
+// The filters work on 3-channel images. More channels used to overflow a heap buffer.
+typedef testing::TestWithParam<int> Photo_NPR_MoreThanThreeChannels;
+
+TEST_P(Photo_NPR_MoreThanThreeChannels, throws)
 {
-    for (int cn = 4; cn <= 8; cn += 2)
-    {
-        Mat src = Mat::zeros(24, 24, CV_8UC(cn)), dst1, dst2;
-        EXPECT_THROW(edgePreservingFilter(src, dst1, RECURS_FILTER), cv::Exception) << "channels " << cn;
-        EXPECT_THROW(edgePreservingFilter(src, dst1, NORMCONV_FILTER), cv::Exception) << "channels " << cn;
-        EXPECT_THROW(pencilSketch(src, dst1, dst2), cv::Exception) << "channels " << cn;
-        EXPECT_THROW(stylization(src, dst1), cv::Exception) << "channels " << cn;
-    }
+    Mat src = Mat::zeros(24, 24, CV_8UC(GetParam())), dst1, dst2;
+    EXPECT_THROW(edgePreservingFilter(src, dst1, RECURS_FILTER), cv::Exception);
+    EXPECT_THROW(edgePreservingFilter(src, dst1, NORMCONV_FILTER), cv::Exception);
+    EXPECT_THROW(pencilSketch(src, dst1, dst2), cv::Exception);
+    EXPECT_THROW(stylization(src, dst1), cv::Exception);
 }
 
-TEST(Photo_NPR, empty_input_throws)
+INSTANTIATE_TEST_CASE_P(/**/, Photo_NPR_MoreThanThreeChannels, testing::Values(4, 6, 8));
+
+// An image with a zero width or height crashed.
+typedef testing::TestWithParam<Size> Photo_NPR_EmptyInput;
+
+TEST_P(Photo_NPR_EmptyInput, throws)
 {
-    const Size sizes[] = {Size(0, 0), Size(0, 5), Size(5, 0)};
-    for (size_t i = 0; i < sizeof(sizes) / sizeof(sizes[0]); i++)
-    {
-        Mat src(sizes[i], CV_8UC3), dst1, dst2;
-        EXPECT_THROW(edgePreservingFilter(src, dst1), cv::Exception) << "size " << sizes[i].width << "x" << sizes[i].height;
-        EXPECT_THROW(pencilSketch(src, dst1, dst2), cv::Exception) << "size " << sizes[i].width << "x" << sizes[i].height;
-        EXPECT_THROW(stylization(src, dst1), cv::Exception) << "size " << sizes[i].width << "x" << sizes[i].height;
-    }
+    Mat src(GetParam(), CV_8UC3), dst1, dst2;
+    EXPECT_THROW(edgePreservingFilter(src, dst1), cv::Exception);
+    EXPECT_THROW(pencilSketch(src, dst1, dst2), cv::Exception);
+    EXPECT_THROW(stylization(src, dst1), cv::Exception);
 }
+
+INSTANTIATE_TEST_CASE_P(/**/, Photo_NPR_EmptyInput, testing::Values(Size(0, 0), Size(0, 5), Size(5, 0)));
 
 TEST(Photo_NPR, three_channel_input_still_works)
 {
@@ -214,20 +215,16 @@ TEST(Photo_NPR, edge_preserving_filter_gray_input_still_works)
 
 // The normalized convolution filter is written for exactly 3 channels and reads past the end of
 // a row for narrow 1 and 2 channel images, so it needs 3 channels. The recursive filter does not.
-TEST(Photo_NPR, normconv_filter_requires_three_channels)
+typedef testing::TestWithParam<tuple<int, Size> > Photo_NPR_NormConvChannels;
+
+TEST_P(Photo_NPR_NormConvChannels, requires_three_channels)
 {
-    const Size sizes[] = {Size(24, 24), Size(1, 24), Size(2, 24), Size(24, 1)};
-    for (int cn = 1; cn <= 2; cn++)
-    {
-        for (size_t i = 0; i < sizeof(sizes) / sizeof(sizes[0]); i++)
-        {
-            Mat src = Mat::zeros(sizes[i], CV_8UC(cn)), dst;
-            EXPECT_THROW(edgePreservingFilter(src, dst, NORMCONV_FILTER), cv::Exception)
-                << "channels " << cn << " size " << sizes[i].width << "x" << sizes[i].height;
-            EXPECT_NO_THROW(edgePreservingFilter(src, dst, RECURS_FILTER))
-                << "channels " << cn << " size " << sizes[i].width << "x" << sizes[i].height;
-        }
-    }
+    Mat src = Mat::zeros(get<1>(GetParam()), CV_8UC(get<0>(GetParam()))), dst;
+    EXPECT_THROW(edgePreservingFilter(src, dst, NORMCONV_FILTER), cv::Exception);
+    EXPECT_NO_THROW(edgePreservingFilter(src, dst, RECURS_FILTER));
 }
+
+INSTANTIATE_TEST_CASE_P(/**/, Photo_NPR_NormConvChannels,
+    testing::Combine(testing::Values(1, 2), testing::Values(Size(24, 24), Size(1, 24), Size(2, 24), Size(24, 1))));
 
 }} // namespace

@@ -54,8 +54,10 @@ void cv::edgePreservingFilter(InputArray _src, OutputArray dst, int flags, float
     CV_INSTRUMENT_REGION();
 
     Mat I = _src.getMat();
-    CV_Assert(!I.empty() && I.channels() <= 3);
-    CV_Assert(flags != NORMCONV_FILTER || I.channels() == 3);
+    CV_Assert(!I.empty());
+    CV_CheckLE(I.channels(), 3, "The input image must have at most 3 channels");
+    if (flags == NORMCONV_FILTER)
+        CV_CheckChannelsEQ(I.channels(), 3, "The normalized convolution filter needs a 3 channel image");
 
     Domain_Filter obj;
 
@@ -109,7 +111,8 @@ void cv::pencilSketch(InputArray _src, OutputArray _dst1, OutputArray _dst2, flo
     CV_INSTRUMENT_REGION();
 
     Mat I = _src.getMat();
-    CV_Assert(!I.empty() && I.channels() == 3);
+    CV_Assert(!I.empty());
+    CV_CheckChannelsEQ(I.channels(), 3, "The input image must have 3 channels");
     _dst1.create(I.size(), CV_8UC1);
     Mat dst1 = _dst1.getMat();
 
@@ -136,7 +139,8 @@ void cv::stylization(InputArray _src, OutputArray _dst, float sigma_s, float sig
     CV_INSTRUMENT_REGION();
 
     Mat I = _src.getMat();
-    CV_Assert(!I.empty() && I.channels() == 3);
+    CV_Assert(!I.empty());
+    CV_CheckChannelsEQ(I.channels(), 3, "The input image must have 3 channels");
     _dst.create(I.size(), CV_8UC3);
     Mat dst = _dst.getMat();
 
