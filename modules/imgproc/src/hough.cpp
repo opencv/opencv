@@ -354,7 +354,7 @@ HoughLinesSDiv( InputArray image, OutputArray lines, int type,
     float isrho = 1 / srho;
     float istheta = 1 / stheta;
 
-    int rn = cvFloor( std::sqrt( (double)w * w + (double)h * h ) * irho );
+    int rn = std::max( cvFloor( std::sqrt( (double)w * w + (double)h * h ) * irho ), 1 );
     int tn = cvFloor( 2 * CV_PI * itheta );
 
     lst.push_back(hough_index(threshold, -1.f, 0.f));
@@ -563,7 +563,7 @@ HoughLinesProbabilistic( Mat& image,
         IppPointPolar delta = { rho, theta };
         IppiHoughProbSpec* pSpec;
         int bufferSize, specSize;
-        int ipp_linesMax = std::min(linesMax, numangle*numrho);
+        int ipp_linesMax = std::min(linesMax, numangle*std::max(numrho, 1));
         int linesCount = 0;
         lines.resize(ipp_linesMax);
         IppStatus ok = ippiHoughProbLineGetSize_8u_C1R(srcSize, delta, &specSize, &bufferSize);
@@ -585,7 +585,8 @@ HoughLinesProbabilistic( Mat& image,
     }
 #endif
 
-    Mat accum = Mat::zeros( numangle, numrho, CV_32SC1 );
+    // one extra bin on each side, as in HoughLinesStandard(), because the rounding can put a bin just outside of [0, numrho)
+    Mat accum = Mat::zeros( numangle, numrho + 2, CV_32SC1 );
     Mat mask( height, width, CV_8UC1 );
     AutoBuffer<float> trigtab(numangle*2);
 
@@ -640,11 +641,11 @@ HoughLinesProbabilistic( Mat& image,
             continue;
 
         // update accumulator, find the most probable line
-        for( int n = 0; n < numangle; n++, adata += numrho )
+        for( int n = 0; n < numangle; n++, adata += numrho + 2 )
         {
             int r = cvRound( j * ttab[n*2] + i * ttab[n*2+1] );
             r += (numrho - 1) / 2;
-            int val = ++adata[r];
+            int val = ++adata[r + 1];
             if( max_val < val )
             {
                 max_val = val;
@@ -761,11 +762,11 @@ HoughLinesProbabilistic( Mat& image,
                     if( good_line )
                     {
                         adata = accum.ptr<int>();
-                        for( int n = 0; n < numangle; n++, adata += numrho )
+                        for( int n = 0; n < numangle; n++, adata += numrho + 2 )
                         {
                             int r = cvRound( j1 * ttab[n*2] + i1 * ttab[n*2+1] );
                             r += (numrho - 1) / 2;
-                            adata[r]--;
+                            adata[r + 1]--;
                         }
                     }
                     *mdata = 0;
@@ -1000,6 +1001,9 @@ void HoughLinesP(InputArray _image, OutputArray _lines,
                  double minLineLength, double maxGap )
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Check(rho, rho > 0 && !cvIsInf(rho), "rho must be positive and finite");
+    CV_Check(theta, theta > 0 && !cvIsInf(theta), "theta must be positive and finite");
 
     CV_OCL_RUN(_image.isUMat() && _lines.isUMat(),
                ocl_HoughLinesP(_image, _lines, rho, theta, threshold, minLineLength, maxGap));
