@@ -21,7 +21,7 @@ Preface
 -------
 
 Android is a Linux-based, open source mobile operating system developed by Open Handset Alliance led
-by Google. See the [Android home site](http://www.android.com/about/) for general details.
+by Google. See the [Android platform overview](https://developer.android.com/about) for general details.
 
 Development for Android significantly differs from development for other platforms. So before
 starting programming for Android we recommend you make sure that you are familiar with the following

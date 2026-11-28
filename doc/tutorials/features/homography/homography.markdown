@@ -625,7 +625,7 @@ Additional references {#tutorial_homography_Additional_references}
 *   \anchor pose_ar 5. [Pose from homography estimation](https://visp-doc.inria.fr/doxygen/camera_localization/tutorial-pose-dlt-planar-opencv.html)
 *   \anchor polar_decomposition 6. [Polar Decomposition (in Continuum Mechanics)](http://www.continuummechanics.org/polardecomposition.html)
 *   \anchor polar_decomposition_svd 7. [Chapter 3 - 3.1.2 From matrices to rotations - Theorem 3.1 (Least-squares estimation of a rotation from a matrix K)](https://www-sop.inria.fr/asclepios/cours/MVA/Rotations.pdf)
-*   \anchor polar_decomposition_svd_2 8. [A Personal Interview with the Singular Value Decomposition](https://web.stanford.edu/~gavish/documents/SVD_ans_you.pdf), Matan Gavish
+*   \anchor polar_decomposition_svd_2 8. [A Personal Interview with the Singular Value Decomposition](https://web.archive.org/web/20220609184012/https://web.stanford.edu/~gavish/documents/SVD_ans_you.pdf), Matan Gavish
 *   \anchor Kabsch_algorithm 9. [Kabsch algorithm, Computation of the optimal rotation matrix](https://en.wikipedia.org/wiki/Kabsch_algorithm#Computation_of_the_optimal_rotation_matrix)
 *   \anchor homography_course 10. [Homography](http://people.scs.carleton.ca/~c_shu/Courses/comp4900d/notes/homography.pdf), Dr. Gerhard Roth
 *   \anchor answer_blender 11. [3x4 camera matrix from blender camera](https://blender.stackexchange.com/a/38210)
