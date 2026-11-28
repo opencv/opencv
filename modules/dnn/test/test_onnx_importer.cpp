@@ -10,7 +10,11 @@
 #include "npy_blob.hpp"
 #include "../src/mapped_file.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include <opencv2/core/utils/filesystem.hpp>
 #include <numeric>
+#ifndef _WIN32
+#include <unistd.h>  // symlink()
+#endif
 namespace opencv_test { namespace {
 
 void yoloPostProcessing(
@@ -4253,5 +4257,126 @@ TEST(Test_ONNX_importer, read_bool_tensor_int32_graph)
     EXPECT_EQ(out.ptr<bool>()[0], false);
     EXPECT_EQ(out.ptr<bool>()[1], true);
     EXPECT_EQ(out.ptr<bool>()[2], false);
+}
+
+// Just enough protobuf encoding to describe a one-initializer ONNX model inline.
+static std::string pbVarint(uint64_t v)
+{
+    std::string out;
+    for (; v >= 0x80; v >>= 7)
+        out += (char)((v & 0x7f) | 0x80);
+    return out + (char)v;
+}
+
+static std::string pbInt(int field, uint64_t v)
+{
+    return pbVarint((uint64_t)field << 3) + pbVarint(v);
+}
+
+static std::string pbBytes(int field, const std::string& data)
+{
+    return pbVarint(((uint64_t)field << 3) | 2) + pbVarint(data.size()) + data;
+}
+
+// uint8[n] tensor "W" whose payload is the external file at 'location'.
+static std::string externalTensorProto(const std::string& location, size_t n)
+{
+    return pbInt(1, n) + pbInt(2, 2 /*UINT8*/) + pbBytes(8, "W") +
+           pbBytes(13, pbBytes(1, "location") + pbBytes(2, location)) +
+           pbInt(14, 1 /*EXTERNAL*/);
+}
+
+// Model that returns its external initializer: out = Identity(W).
+static std::string externalDataModel(const std::string& location, size_t n)
+{
+    const std::string node = pbBytes(1, "W") + pbBytes(2, "out") + pbBytes(4, "Identity");
+    const std::string type = pbBytes(1, pbInt(1, 2) + pbBytes(2, pbBytes(1, pbInt(1, n))));
+    const std::string graph = pbBytes(1, node) + pbBytes(2, "g") +
+                              pbBytes(5, externalTensorProto(location, n)) +
+                              pbBytes(12, pbBytes(1, "out") + pbBytes(2, type));
+    return pbInt(1, 8) + pbBytes(8, pbInt(2, 17)) + pbBytes(7, graph);
+}
+
+static void writeTestFile(const std::string& path, const std::string& data)
+{
+    std::ofstream f(path.c_str(), std::ios::binary);
+    f.write(data.data(), (std::streamsize)data.size());
+    ASSERT_TRUE(f.good()) << path;
+}
+
+// An external tensor's "location" is relative to the model directory. It was joined onto
+// that directory as given, so "../x" or a symlinked component read files outside it, and an
+// in-memory model or a single tensor file read against the process directory, which Identity
+// then returned from forward().
+TEST(Test_ONNX_importer, external_data_outside_model_dir)
+{
+    if (ortEngineForced())
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+
+    const std::string root = cv::tempfile("onnx_external_data");
+    const std::string modelDir = utils::fs::join(root, "model");
+    ASSERT_TRUE(utils::fs::createDirectories(utils::fs::join(modelDir, "data")));
+    const std::string secret = "not part of the model";
+    const std::string secretPath = utils::fs::join(root, "secret.bin");
+    writeTestFile(secretPath, secret);
+    writeTestFile(utils::fs::join(modelDir, "data/w.bin"), "weights");
+
+    // A location below the model directory still loads.
+    const std::string okPath = utils::fs::join(modelDir, "ok.onnx");
+    writeTestFile(okPath, externalDataModel("data/w.bin", 7));
+    Net net = readNetFromONNX(okPath);
+    ASSERT_FALSE(net.empty());
+    Mat out = net.forward();
+    EXPECT_EQ("weights", std::string(out.ptr<char>(), out.total()));
+
+    // A single tensor file resolves its location against its own directory, not the process one.
+    const std::string okTensorPath = utils::fs::join(modelDir, "ok.pb");
+    writeTestFile(okTensorPath, externalTensorProto("data/w.bin", 7));
+    const Mat w = readTensorFromONNX(okTensorPath);
+    EXPECT_EQ("weights", std::string(w.ptr<char>(), w.total()));
+
+    const std::string escapePath = utils::fs::join(modelDir, "escape.onnx");
+    const std::string escapeTensorPath = utils::fs::join(modelDir, "escape.pb");
+    const std::string escapes[] = { "../secret.bin", "data/../../secret.bin", secretPath };
+    for (const std::string& location : escapes)
+    {
+        SCOPED_TRACE(location);
+        writeTestFile(escapePath, externalDataModel(location, secret.size()));
+        for (bool mapExternalData : { true, false })
+            EXPECT_THROW(readNetFromONNX(escapePath, ENGINE_AUTO, mapExternalData), cv::Exception);
+        writeTestFile(escapeTensorPath, externalTensorProto(location, secret.size()));
+        EXPECT_THROW(readTensorFromONNX(escapeTensorPath), cv::Exception);
+    }
+
+    // An in-memory model has no directory to be relative to, so it carries no external data:
+    // a plain relative location would otherwise be read from the process directory.
+    const std::string relatives[] = { "secret.bin", "data/w.bin", secretPath };
+    for (const std::string& location : relatives)
+    {
+        SCOPED_TRACE(location);
+        const std::string buffer = externalDataModel(location, secret.size());
+        EXPECT_THROW(readNetFromONNX(buffer.data(), buffer.size()), cv::Exception);
+    }
+
+#ifndef _WIN32
+    // A symlink leaves the model directory with no ".." in the location at all: once as the
+    // final component of the path, once as a parent of it.
+    const std::string finalLink = utils::fs::join(modelDir, "w.bin");
+    const std::string parentLink = utils::fs::join(modelDir, "up");
+    ASSERT_EQ(0, symlink("../secret.bin", finalLink.c_str()));
+    ASSERT_EQ(0, symlink("..", parentLink.c_str()));
+    for (const std::string& location : { "w.bin", "up/secret.bin" })
+    {
+        SCOPED_TRACE(location);
+        writeTestFile(escapePath, externalDataModel(location, secret.size()));
+        for (bool mapExternalData : { true, false })
+            EXPECT_THROW(readNetFromONNX(escapePath, ENGINE_AUTO, mapExternalData), cv::Exception);
+    }
+    // remove_all() would follow 'up' back out of the model directory.
+    EXPECT_EQ(0, remove(parentLink.c_str()));
+    EXPECT_EQ(0, remove(finalLink.c_str()));
+#endif
+
+    utils::fs::remove_all(root);
 }
 }} // namespace

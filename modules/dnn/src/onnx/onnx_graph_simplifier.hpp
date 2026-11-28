@@ -56,6 +56,11 @@ struct ExternalDataCache
 Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToInt8=true,
                      const std::string base_path = "", ExternalDataCache* cache = nullptr);
 
+// The directory an external initializer's "location" resolves against, for a model or a single
+// tensor read from 'model_path'. An in-memory model has no such directory, so it has no base
+// path either and external data is rejected for it.
+std::string getExternalDataBasePath(const std::string& model_path);
+
 // Maps an ONNX declared data_type to its OpenCV type (e.g. FLOAT16 becomes CV_16F),
 // or returns -1 when the data_type has no OpenCV equivalent.
 int dataType2cv(int dt);

@@ -1893,6 +1893,86 @@ static std::string getExternalDataValue(const opencv_onnx::TensorProto& tensor_p
     return std::string();
 }
 
+// "location" is relative to the directory that holds the model. A rooted path, a drive prefix
+// or a ".." component would name a file outside it, so only a plain relative path is accepted.
+static bool isRelativeLocation(const std::string& location)
+{
+    if (location[0] == '/' || location[0] == '\\')
+        return false;
+#ifdef _WIN32
+    if (location.size() >= 2 && location[1] == ':')
+        return false;
+#endif
+    size_t start = 0;
+    while (start <= location.size())
+    {
+        size_t end = location.find_first_of("/\\", start);
+        if (end == std::string::npos)
+            end = location.size();
+        if (end - start == 2 && location.compare(start, 2, "..") == 0)
+            return false;
+        start = end + 1;
+    }
+    return true;
+}
+
+// True when 'path' names 'dir' itself or an entry below it. Whole components are compared, so
+// "/w/models2/x" is not taken for a child of "/w/models".
+static bool isPathInsideDir(const std::string& dir, const std::string& path)
+{
+    size_t len = dir.size();
+    while (len > 1 && (dir[len - 1] == '/' || dir[len - 1] == '\\'))
+        len--;
+    if (len == 0 || path.size() <= len || path.compare(0, len, dir, 0, len) != 0)
+        return false;
+    // A filesystem root already ends in a separator; anything else needs one next.
+    return path[len] == '/' || path[len] == '\\' || dir[len - 1] == '/' || dir[len - 1] == '\\';
+}
+
+// The file an external tensor's "location" names, or an exception when that file would sit
+// outside the model's own directory. The returned path is canonical, so the name the copy path
+// and the mmap path each open has every symlink already resolved and cannot be redirected out
+// of the model directory by a symlinked component, final or intermediate.
+static std::string resolveExternalDataPath(const std::string& base_path,
+                                           const std::string& location,
+                                           const std::string& tensor_name)
+{
+    if (base_path.empty())
+        CV_Error(Error::StsBadArg,
+                 format("DNN/ONNX: external data location '%s' of tensor '%s' cannot be resolved "
+                        "without the directory of the model that declares it",
+                        location.c_str(), tensor_name.c_str()));
+    if (!isRelativeLocation(location))
+        CV_Error(Error::StsBadArg,
+                 format("DNN/ONNX: external data location '%s' of tensor '%s' must be a relative "
+                        "path inside the model directory", location.c_str(), tensor_name.c_str()));
+
+    std::string full_path = utils::fs::join(base_path, location);
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
+    // canonical() hands back what it cannot resolve, so only an existing file says anything
+    // about containment; a missing one still fails at the open, with the message it had before.
+    if (utils::fs::exists(full_path))
+    {
+        const std::string real_path = utils::fs::canonical(full_path);
+        if (!isPathInsideDir(utils::fs::canonical(base_path), real_path))
+            CV_Error(Error::StsBadArg,
+                     format("DNN/ONNX: external data location '%s' of tensor '%s' resolves to '%s', "
+                            "outside the model directory", location.c_str(), tensor_name.c_str(),
+                            real_path.c_str()));
+        full_path = real_path;
+    }
+#endif
+    return full_path;
+}
+
+// The directory an external "location" resolves against: the one that holds the model file.
+// A bare filename sits in the current directory, which is then that directory.
+std::string getExternalDataBasePath(const std::string& model_path)
+{
+    const std::string parent = utils::fs::getParent(model_path);
+    return parent.empty() ? std::string(".") : parent;
+}
+
 // Resolves an external tensor's file path, byte offset and declared length. `length` is
 // size_t(-1) when unspecified, i.e. the payload runs to the end of the file; 0 is a real length.
 static bool resolveExternalData(const opencv_onnx::TensorProto& tensor_proto,
@@ -1902,7 +1982,7 @@ static bool resolveExternalData(const opencv_onnx::TensorProto& tensor_proto,
     std::string location_path = getExternalDataValue(tensor_proto, "location");
     if (location_path.empty())
         return false;
-    full_path = base_path.empty() ? location_path : utils::fs::join(base_path, location_path);
+    full_path = resolveExternalDataPath(base_path, location_path, tensor_proto.name());
     offset = 0;
     std::string offset_str = getExternalDataValue(tensor_proto, "offset");
     if (!offset_str.empty())
