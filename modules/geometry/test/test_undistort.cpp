@@ -1143,4 +1143,65 @@ TEST(Calib3d_initInverseRectificationMap, regression_20165)
     EXPECT_LE(cvtest::norm(dst, mapxy, NORM_INF), 2e-1);
 }
 
+TEST(Imgproc_Undistort, wide_angle_proj_map_distcoeffs_order)
+{
+    // Regression test for issue #30744: initWideAngleProjMap must unpack
+    // distCoeffs in the standard (k1, k2, p1, p2, k3, ...) order.
+    Mat K = Mat::eye(3, 3, CV_64F);
+    K.at<double>(0, 0) = 500.0;
+    K.at<double>(1, 1) = 500.0;
+
+    // Case 1: p1 = 0.1 at index 2
+    {
+        Mat dist = Mat::zeros(5, 1, CV_64F);
+        dist.at<double>(2) = 0.1;
+
+        Mat map1, map2;
+        initWideAngleProjMap(K, dist, Size(640, 480), 640, CV_32FC1,
+                             map1, map2, PROJ_SPHERICAL_EQRECT, 0.0);
+
+        EXPECT_NEAR(map1.at<float>(350, 450), 227.979f, 1e-2f);
+        EXPECT_NEAR(map2.at<float>(350, 450), 228.751f, 1e-2f);
+    }
+
+    // Case 2: verify full 5-coefficient (k1, k2, p1, p2, k3) forward model
+    {
+        const double k1 = 0.05, k2 = -0.02, p1 = 0.1, p2 = -0.08, k3 = 0.2;
+        Mat dist = Mat::zeros(5, 1, CV_64F);
+        dist.at<double>(0) = k1;
+        dist.at<double>(1) = k2;
+        dist.at<double>(2) = p1;
+        dist.at<double>(3) = p2;
+        dist.at<double>(4) = k3;
+
+        Mat map1, map2;
+        float scale = initWideAngleProjMap(K, dist, Size(640, 480), 640, CV_32FC1,
+                                           map1, map2, PROJ_SPHERICAL_EQRECT, 0.0);
+
+        int y = map1.rows / 2 + 40;
+        int x = map1.cols / 2 + 60;
+        float u = map1.at<float>(y, x);
+        float v = map2.at<float>(y, x);
+        ASSERT_GE(u, 0.f);
+        ASSERT_GE(v, 0.f);
+
+        // Inverse equirectangular projection for alpha = 0:
+        // sin(px) = x / sqrt(x^2 + y^2 + 1), sin(py) = y / sqrt(x^2 + y^2 + 1)
+        double px = (x - (map1.cols - 1) * 0.5) / scale;
+        double py = (y - (map1.rows - 1) * 0.5) / scale;
+        double sx = std::sin(px), sy = std::sin(py);
+        double sz = std::sqrt(1.0 - sx * sx - sy * sy);
+        double qx = sx / sz;
+        double qy = sy / sz;
+
+        double x2 = qx * qx, y2 = qy * qy, r2 = x2 + y2, _2xy = 2.0 * qx * qy;
+        double kr = 1.0 + ((k3 * r2 + k2) * r2 + k1) * r2;
+        double xd = qx * kr + p1 * _2xy + p2 * (r2 + 2.0 * x2);
+        double yd = qy * kr + p1 * (r2 + 2.0 * y2) + p2 * _2xy;
+
+        EXPECT_NEAR(u, static_cast<float>(500.0 * xd), 1e-3f);
+        EXPECT_NEAR(v, static_cast<float>(500.0 * yd), 1e-3f);
+    }
+}
+
 }} // namespace

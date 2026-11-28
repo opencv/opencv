@@ -433,7 +433,7 @@ float initWideAngleProjMap(InputArray _cameraMatrix0, InputArray _distCoeffs0,
     dcenter.y = (dsize.height - 1)*0.5f;
 
     Mat mapxy(dsize, CV_32FC2);
-    double k1 = k[0], k2 = k[1], k3 = k[2], p1 = k[3], p2 = k[4], k4 = k[5], k5 = k[6], k6 = k[7], s1 = k[8], s2 = k[9], s3 = k[10], s4 = k[11];
+    double k1 = k[0], k2 = k[1], p1 = k[2], p2 = k[3], k3 = k[4], k4 = k[5], k5 = k[6], k6 = k[7], s1 = k[8], s2 = k[9], s3 = k[10], s4 = k[11];
     double fx = cameraMatrix.at<double>(0,0), fy = cameraMatrix.at<double>(1,1), cx = scenter.x, cy = scenter.y;
     Matx33d matTilt;
     computeTiltProjectionMatrix(k[12], k[13], &matTilt);
