@@ -2210,5 +2210,31 @@ TEST(Imgproc_getPerspectiveTransform, issue_26916)
     EXPECT_MAT_NEAR(obtained_homogeneous_dst_points, expected_homogeneous_dst_points, 1e-10);
 }
 
+TEST(Imgproc_warpPolar, uninitialized_dst_outliers)
+{
+    const Size sz(127, 127);
+    const Point2f center(63.f, 63.f);
+    const double maxRadius = 127.0 / 2.0 + 10.0;
+
+    Mat src(sz, CV_64FC1);
+    theRNG().fill(src, RNG::UNIFORM, 0.0, 1.0);
+
+    Mat dst_forward;
+    warpPolar(src, dst_forward, sz, center, maxRadius, INTER_LINEAR);
+    ASSERT_EQ(sz, dst_forward.size());
+    ASSERT_EQ(CV_64FC1, dst_forward.type());
+    EXPECT_TRUE(cv::checkRange(dst_forward, true, NULL, 0.0, 1.0 + 1e-12));
+
+    Mat dst_inv_empty;
+    warpPolar(dst_forward, dst_inv_empty, sz, center, maxRadius, INTER_LINEAR | WARP_INVERSE_MAP);
+    ASSERT_EQ(sz, dst_inv_empty.size());
+    EXPECT_TRUE(cv::checkRange(dst_inv_empty, true, NULL, 0.0, 1.0 + 1e-12));
+    EXPECT_EQ(0.0, dst_inv_empty.at<double>(0, 0));
+
+    Mat dst_inv_prefilled(sz, CV_64FC1, Scalar::all(42.0));
+    warpPolar(dst_forward, dst_inv_prefilled, sz, center, maxRadius, INTER_LINEAR | WARP_INVERSE_MAP);
+    EXPECT_EQ(42.0, dst_inv_prefilled.at<double>(0, 0));
+}
+
 }} // namespace
 /* End of file. */
