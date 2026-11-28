@@ -1023,11 +1023,22 @@ bool ImplContour::detect(InputArray in, OutputArray points) const
     if (!checkQRInputImage(in, inarr))
         return false;
 
-    QRDetect qrdet;
-    qrdet.init(inarr, epsX, epsY);
-    if (!qrdet.localization()) { return false; }
-    if (!qrdet.computeTransformationPoints()) { return false; }
-    vector<Point2f> pnts2f = qrdet.getTransformationPoints();
+    auto detectQRCode = [&](const Mat& image, vector<Point2f>& detected_points) {
+        QRDetect qrdet;
+        qrdet.init(image, epsX, epsY);
+        if (!qrdet.localization()) { return false; }
+        if (!qrdet.computeTransformationPoints()) { return false; }
+        detected_points = qrdet.getTransformationPoints();
+        return true;
+    };
+
+    vector<Point2f> pnts2f;
+    if (!detectQRCode(inarr, pnts2f)) {
+        Mat inverted;
+        bitwise_not(inarr, inverted);
+        if (!detectQRCode(inverted, pnts2f))
+            return false;
+    }
     updatePointsResult(points, pnts2f);
     return true;
 }
@@ -2957,6 +2968,14 @@ std::string ImplContour::decode(InputArray in, InputArray points, OutputArray st
     qrdec.init(inarr, src_points);
     bool ok = qrdec.straightDecodingProcess();
 
+    if (!ok) {
+        Mat inverted;
+        bitwise_not(inarr, inverted);
+        qrdec = QRDecode(useAlignmentMarkers);
+        qrdec.init(inverted, src_points);
+        ok = qrdec.straightDecodingProcess();
+    }
+
     std::string decoded_info = qrdec.getDecodeInformation();
     if (!ok && straight_qrcode.needed())
     {
@@ -4670,6 +4689,17 @@ struct PimplQRAruco : public ImplContour {
     bool detect(InputArray img, OutputArray points) const override {
         vector<Point2f> corners, result;
         bool flag = detectMulti(img, corners);
+        if (!flag) {
+            Mat gray;
+            if (!checkQRInputImage(img, gray))
+                return false;
+            Mat inverted;
+            bitwise_not(gray, inverted);
+            corners.clear();
+            flag = detectMulti(inverted, corners);
+            if (!flag)
+                return false;
+        }
         CV_Assert((int)corners.size() % 4 == 0);
 
         Point2f imageCenter(((float)img.cols())/2.f, ((float)img.rows())/2.f);
