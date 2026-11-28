@@ -74,3 +74,20 @@ void cv::contourTreeToResults(CTree& tree,
         }
     }
 }
+
+Mat cv::buildZeroBorderedImage(InputArray _src, bool doThreshold, double foregroundValue)
+{
+    Mat src = _src.getMat();
+    Mat padded(src.rows + 2, src.cols + 2, src.type());
+    padded.row(0).setTo(Scalar::all(0));
+    padded.row(padded.rows - 1).setTo(Scalar::all(0));
+    padded.col(0).setTo(Scalar::all(0));
+    padded.col(padded.cols - 1).setTo(Scalar::all(0));
+
+    Mat interior = padded(Rect(1, 1, src.cols, src.rows));
+    if (doThreshold)
+        threshold(src, interior, 0, foregroundValue, THRESH_BINARY);
+    else
+        src.copyTo(interior);
+    return padded;
+}

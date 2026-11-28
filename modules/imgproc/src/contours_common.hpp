@@ -305,6 +305,12 @@ void approximateChainTC89(const ContourCodesStorage& chain, const Point& origin,
 
 void findTRUContours(InputArray _src, OutputArrayOfArrays _contours, int minSize=0, bool binarize=false, int method=CHAIN_APPROX_NONE);
 
+// Builds a copy of src with a 1-pixel zero border, writing either a thresholded
+// or a plain copy of src into the interior in one pass. Used by both the main
+// scanner and the TRUCO fast path so they do not each keep their own copy of
+// this buffer setup.
+Mat buildZeroBorderedImage(InputArray src, bool doThreshold, double foregroundValue);
+
 }  // namespace cv
 
 #endif  // OPENCV_CONTOURS_COMMON_HPP

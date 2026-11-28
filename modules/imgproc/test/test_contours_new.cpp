@@ -500,4 +500,70 @@ TEST(Imgproc_FindContours, link_runs)
     }
 }
 
+// The internal preprocessing binarizes directly into a freshly allocated, zero-bordered
+// buffer instead of copying the image and then thresholding it as a separate pass (see
+// contours_new.cpp and contours_truco.cpp). This checks that a 0/1 image, a 0/255 image
+// and a non-contiguous ROI view all produce byte-identical contours and hierarchy, across
+// every retrieval mode and method this fixture is instantiated with -- including RETR_LIST,
+// which (when no hierarchy is requested) dispatches to the separate TRUCO fast path.
+TEST_P(Imgproc_FindContours_Modes2, binarization_equivalence)
+{
+    const int mode = get<0>(GetParam());
+    const int method = get<1>(GetParam());
+
+    const Size sz {300, 300};
+    Mat img0255 = Mat::zeros(sz, CV_8UC1);
+
+    RNG& rng = TS::ptr()->get_rng();
+    for (int i = 0; i < 20; i++)
+    {
+        Point center(rng.uniform(20, sz.width - 20), rng.uniform(20, sz.height - 20));
+        int radius = rng.uniform(5, 20);
+        circle(img0255, center, radius, Scalar(255), FILLED);
+    }
+
+    Mat img01;
+    cv::threshold(img0255, img01, 0, 1, THRESH_BINARY);
+
+    // Reference: documented contract is that any non-zero pixel is treated as 1, so a
+    // 0/255 and a 0/1 image must produce the same result, with and without hierarchy output.
+    vector<vector<Point>> cRef, cGray01, cNoHier255, cNoHier01;
+    vector<Vec4i> hRef, hGray01;
+    findContours(img0255, cRef, hRef, mode, method);
+    findContours(img01, cGray01, hGray01, mode, method);
+    findContours(img0255, cNoHier255, mode, method);
+    findContours(img01, cNoHier01, mode, method);
+
+    ASSERT_EQ(cRef.size(), cGray01.size());
+    for (size_t i = 0; i < cRef.size(); i++)
+        EXPECT_EQ(cRef[i], cGray01[i]);
+    EXPECT_EQ(hRef, hGray01);
+
+    ASSERT_EQ(cNoHier255.size(), cNoHier01.size());
+    for (size_t i = 0; i < cNoHier255.size(); i++)
+        EXPECT_EQ(cNoHier255[i], cNoHier01[i]);
+
+    // ROI check. Area outside the ROI is non zero so a leak past the ROI edge
+    // would actually change the result instead of matching a zero border by luck.
+    // Also runs the no hierarchy call here since RETR_LIST hits the separate
+    // TRUCO path for that case.
+    Mat big0255(sz.height + 40, sz.width + 40, CV_8UC1, Scalar::all(90));
+    img0255.copyTo(big0255(Rect(20, 20, sz.width, sz.height)));
+    Mat roi0255 = big0255(Rect(20, 20, sz.width, sz.height));
+
+    vector<vector<Point>> cRoi, cNoHierRoi;
+    vector<Vec4i> hRoi;
+    findContours(roi0255, cRoi, hRoi, mode, method);
+    findContours(roi0255, cNoHierRoi, mode, method);
+
+    ASSERT_EQ(cRef.size(), cRoi.size());
+    for (size_t i = 0; i < cRef.size(); i++)
+        EXPECT_EQ(cRef[i], cRoi[i]);
+    EXPECT_EQ(hRef, hRoi);
+
+    ASSERT_EQ(cNoHier255.size(), cNoHierRoi.size());
+    for (size_t i = 0; i < cNoHier255.size(); i++)
+        EXPECT_EQ(cNoHier255[i], cNoHierRoi[i]);
+}
+
 }}  // namespace opencv_test

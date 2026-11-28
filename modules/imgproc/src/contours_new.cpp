@@ -651,8 +651,8 @@ void cv::findContours(InputArray _image,
     // Fast path: RETR_LIST without hierarchy → findTRUContours (parallel contour extraction)
     if (mode == RETR_LIST && !_hierarchy.needed() && _image.type() == CV_8UC1)
     {
-        // findTRUContours requires FOREGROUND=255; binarize=true thresholds the padded
-        // image in-place, avoiding an extra allocation (findContours accepts any non-zero value)
+        // findTRUContours requires FOREGROUND=255; binarize=true binarizes directly into the
+        // padded buffer it allocates internally (findContours accepts any non-zero value).
         findTRUContours(_image, _contours, 0, true,method);
         if (offset != Point())
         {
@@ -698,14 +698,14 @@ void cv::findContours(InputArray _image,
     if (_hierarchy.needed())
         _hierarchy.clear();
 
-    // preprocess
+    // preprocess: build a padded copy of the image with a 1-pixel zero border, binarizing
+    // directly into the interior instead of first copying the whole image (copyMakeBorder)
+    // and then thresholding it (a second full-image pass).
     Mat image;
     if (_image.empty())
         image = Mat::zeros(2, 2, _image.type());
     else
-        copyMakeBorder(_image, image, 1, 1, 1, 1, BORDER_CONSTANT | BORDER_ISOLATED, Scalar(0));
-    if (image.type() != CV_32SC1)
-        threshold(image, image, 0, 1, THRESH_BINARY);
+        image = buildZeroBorderedImage(_image, _image.type() != CV_32SC1, 1);
 
     // find contours
     ContourPointsStorage::storage_t pointsStorage;
