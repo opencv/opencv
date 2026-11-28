@@ -5452,6 +5452,188 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Hardmax, Values(
     make_tuple(CV_Bool, 0.0)
 ));
 
+TEST(Layer_Test_PadMode, ConvSAME_LOWER_vs_SAME_UPPER)
+{
+    int sz[] = {1, 1, 4, 4};
+    Mat input(4, sz, CV_32F);
+    for (int r = 0; r < 4; ++r)
+        for (int c = 0; c < 4; ++c)
+            input.ptr<float>(0, 0, r)[c] = (float)(r * 4 + c + 1);
+
+    Mat weights(4, std::vector<int>{1, 1, 3, 3}.data(), CV_32F, Scalar(1.0f));
+
+    auto runConv = [&](const std::string& padMode) -> Mat {
+        LayerParams lp;
+        lp.name = "conv";
+        lp.type = "Convolution";
+        lp.set("kernel_w", 3);
+        lp.set("kernel_h", 3);
+        lp.set("stride_w", 2);
+        lp.set("stride_h", 2);
+        lp.set("num_output", 1);
+        lp.set("bias_term", false);
+        lp.set("pad_mode", padMode);
+        lp.blobs.push_back(weights);
+
+        Net net;
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setInput(input);
+        return net.forward();
+    };
+
+    Mat outLower = runConv("SAME_LOWER");
+    Mat outUpper = runConv("SAME_UPPER");
+
+    ASSERT_EQ(outLower.size[2], 2);
+    ASSERT_EQ(outLower.size[3], 2);
+    ASSERT_EQ(outUpper.size[2], 2);
+    ASSERT_EQ(outUpper.size[3], 2);
+
+    // SAME_LOWER pads 1 on top and 1 on left: window covers rows [0, 1], cols [0, 1] (1+2+5+6 = 14)
+    EXPECT_FLOAT_EQ(outLower.ptr<float>(0, 0, 0)[0], 14.0f);
+
+    // SAME_UPPER pads 1 on bottom and 1 on right: window covers rows [0, 2], cols [0, 2] (6+18+30 = 54)
+    EXPECT_FLOAT_EQ(outUpper.ptr<float>(0, 0, 0)[0], 54.0f);
+}
+
+TEST(Layer_Test_PadMode, PoolingSAME_LOWER_vs_SAME_UPPER)
+{
+    int sz[] = {1, 1, 4, 4};
+    Mat input(4, sz, CV_32F);
+    for (int r = 0; r < 4; ++r)
+        for (int c = 0; c < 4; ++c)
+            input.ptr<float>(0, 0, r)[c] = (float)(r * 4 + c + 1);
+
+    auto runPool = [&](const std::string& padMode) -> Mat {
+        LayerParams lp;
+        lp.name = "pool";
+        lp.type = "Pooling";
+        lp.set("pool", "max");
+        lp.set("kernel_w", 3);
+        lp.set("kernel_h", 3);
+        lp.set("stride_w", 2);
+        lp.set("stride_h", 2);
+        lp.set("pad_mode", padMode);
+
+        Net net;
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setInput(input);
+        return net.forward();
+    };
+
+    Mat outLower = runPool("SAME_LOWER");
+    Mat outUpper = runPool("SAME_UPPER");
+
+    ASSERT_EQ(outLower.size[2], 2);
+    ASSERT_EQ(outLower.size[3], 2);
+    ASSERT_EQ(outUpper.size[2], 2);
+    ASSERT_EQ(outUpper.size[3], 2);
+
+    // SAME_LOWER top-left max is in[1,1] = 6
+    EXPECT_FLOAT_EQ(outLower.ptr<float>(0, 0, 0)[0], 6.0f);
+
+    // SAME_UPPER top-left max is in[2,2] = 11
+    EXPECT_FLOAT_EQ(outUpper.ptr<float>(0, 0, 0)[0], 11.0f);
+}
+
+TEST(Layer_Test_PadMode, ConvSAME_LegacySymmetric)
+{
+    int sz[] = {1, 1, 4, 4};
+    Mat input(4, sz, CV_32F);
+    for (int r = 0; r < 4; ++r)
+        for (int c = 0; c < 4; ++c)
+            input.ptr<float>(0, 0, r)[c] = (float)(r * 4 + c + 1);
+
+    Mat weights(4, std::vector<int>{1, 1, 3, 3}.data(), CV_32F, Scalar(1.0f));
+
+    LayerParams lp;
+    lp.name = "conv";
+    lp.type = "Convolution";
+    lp.set("kernel_w", 3);
+    lp.set("kernel_h", 3);
+    lp.set("stride_w", 2);
+    lp.set("stride_h", 2);
+    lp.set("num_output", 1);
+    lp.set("bias_term", false);
+    lp.set("pad_mode", "SAME");
+    lp.blobs.push_back(weights);
+
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInput(input);
+    Mat out = net.forward();
+
+    ASSERT_EQ(out.size[2], 2);
+    ASSERT_EQ(out.size[3], 2);
+}
+
+TEST(Layer_Test_PadMode, ConvAutoPadSAME_LOWER)
+{
+    int sz[] = {1, 1, 4, 4};
+    Mat input(4, sz, CV_32F);
+    for (int r = 0; r < 4; ++r)
+        for (int c = 0; c < 4; ++c)
+            input.ptr<float>(0, 0, r)[c] = (float)(r * 4 + c + 1);
+
+    Mat weights(4, std::vector<int>{1, 1, 3, 3}.data(), CV_32F, Scalar(1.0f));
+
+    LayerParams lp;
+    lp.name = "conv";
+    lp.type = "Convolution";
+    lp.set("kernel_w", 3);
+    lp.set("kernel_h", 3);
+    lp.set("stride_w", 2);
+    lp.set("stride_h", 2);
+    lp.set("num_output", 1);
+    lp.set("bias_term", false);
+    lp.set("auto_pad", "SAME_LOWER");
+    lp.blobs.push_back(weights);
+
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInput(input);
+    Mat out = net.forward();
+
+    ASSERT_EQ(out.size[2], 2);
+    ASSERT_EQ(out.size[3], 2);
+    EXPECT_FLOAT_EQ(out.ptr<float>(0, 0, 0)[0], 14.0f);
+}
+
+TEST(Layer_Test_PadMode, ConvAutoPadNOTSET_ExplicitPadding)
+{
+    int sz[] = {1, 1, 4, 4};
+    Mat input(4, sz, CV_32F);
+    for (int r = 0; r < 4; ++r)
+        for (int c = 0; c < 4; ++c)
+            input.ptr<float>(0, 0, r)[c] = (float)(r * 4 + c + 1);
+
+    Mat weights(4, std::vector<int>{1, 1, 3, 3}.data(), CV_32F, Scalar(1.0f));
+
+    LayerParams lp;
+    lp.name = "conv";
+    lp.type = "Convolution";
+    lp.set("kernel_w", 3);
+    lp.set("kernel_h", 3);
+    lp.set("stride_w", 2);
+    lp.set("stride_h", 2);
+    lp.set("pad_w", 1);
+    lp.set("pad_h", 1);
+    lp.set("num_output", 1);
+    lp.set("bias_term", false);
+    lp.set("auto_pad", "NOTSET");
+    lp.blobs.push_back(weights);
+
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInput(input);
+    Mat out = net.forward();
+
+    ASSERT_EQ(out.size[2], 2);
+    ASSERT_EQ(out.size[3], 2);
+    // Explicit padding pads 1 on each side: window at (0,0) covers r:[0,1], c:[0,1] => 1+2+5+6 = 14
+    EXPECT_FLOAT_EQ(out.ptr<float>(0, 0, 0)[0], 14.0f);
+}
+
 typedef testing::TestWithParam<MatDepth> Layer_Test_OneHot_ValuesDepth;
 TEST_P(Layer_Test_OneHot_ValuesDepth, Accuracy)
 {
