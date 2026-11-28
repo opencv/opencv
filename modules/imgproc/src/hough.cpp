@@ -2357,7 +2357,8 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
 
     CV_Assert(!_image.empty() && _image.type() == CV_8UC1 && (_image.isMat() || _image.isUMat()));
 
-    if( dp <= 0 || minDist <= 0 || param1 <= 0)
+    // written as !(x > 0), so that NaN is rejected as well
+    if( !(dp > 0) || !(minDist > 0) || !(param1 > 0) )
         CV_Error( Error::StsOutOfRange, "dp, min_dist and canny_threshold must be all positive numbers" );
 
     switch( method )
@@ -2367,7 +2368,7 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
         int cannyThresh = cvRound(param1), accThresh = cvRound(param2), kernelSize = cvRound(param3);
         minRadius = std::max(0, minRadius);
 
-        if( param2 <= 0 )
+        if( !(param2 > 0) )
             CV_Error( Error::StsOutOfRange, "acc_threshold must be a positive number" );
 
         if(maxCircles < 0)
@@ -2394,7 +2395,7 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
         break;
     case HOUGH_GRADIENT_ALT:
         {
-            if( param2 >= 1 )
+            if( !(param2 < 1) )
                 CV_Error( Error::StsOutOfRange, "when using HOUGH_GRADIENT_ALT method, param2 parameter must be smaller than 1.0" );
 
             std::vector<EstimatedCircle> circles;
