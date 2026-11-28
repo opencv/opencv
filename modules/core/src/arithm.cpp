@@ -553,8 +553,6 @@ static bool arithm_op_ocl(InputArray _src1, InputArray _src2, OutputArray _dst,
     {
         wtype = coerceTypes(depth1, depth2, false);
         wtype = coerceTypes(wtype, dtype, false);
-        if (dtype < CV_32F && (depth1 < CV_32F || depth2 < CV_32F))
-            wtype = CV_32S;
     }
     else
     {
