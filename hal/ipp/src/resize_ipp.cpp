@@ -1,91 +1,23 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
+// Copyright (C) 2026, Intel Corporation, all rights reserved.
 
 #include "ipp_hal_imgproc.hpp"
 
 #ifdef HAVE_IPP_IW
 
-#include <opencv2/core.hpp>
-#include "precomp_ipp.hpp"
+#include "resize_ipp.hpp"
 
-#include "iw++/iw.hpp"
-
-#include <atomic>
 #include <cfloat>
-#include <type_traits>
 
 #define IPP_RESIZE_PARALLEL 1
 
-// One body for both IPP resize backends (IwiResize/IwiWarpAffine); if constexpr picks the per-tile border arg so codegen matches the original two classes.
-template <typename IwiOp>
-class ipp_resizeParallelT: public cv::ParallelLoopBody
+int ipp_resize_prepare(int src_type, int src_width, int src_height, int dst_width, int dst_height,
+                       double inv_scale_x, double inv_scale_y, int interpolation, IppiInterpolationType& inter, bool& affine)
 {
-public:
-    ipp_resizeParallelT(::ipp::IwiImage &src, ::ipp::IwiImage &dst, std::atomic_bool &ok):
-        m_src(src), m_dst(dst), m_ok(ok) {}
-
-    void Init(IppiInterpolationType inter)
-    {
-        iwiOp.InitAlloc(m_src.m_size, m_dst.m_size, m_src.m_dataType, m_src.m_channels, inter, ::ipp::IwiResizeParams(0, 0, 0.75, 4), ippBorderRepl);
-
-        m_ok = true;
-    }
-
-    void Init(IppiInterpolationType inter, double scaleX, double scaleY)
-    {
-        double shift = (inter == ippNearest) ? -1e-10 : -0.5;
-        double coeffs[2][3] = {
-            {scaleX, 0,      shift+0.5*scaleX},
-            {0,      scaleY, shift+0.5*scaleY}
-        };
-
-        iwiOp.InitAlloc(m_src.m_size, m_dst.m_size, m_src.m_dataType, m_src.m_channels, coeffs, iwTransForward, inter, ::ipp::IwiWarpAffineParams(0, 0, 0.75), ippBorderRepl);
-
-        m_ok = true;
-    }
-
-    virtual void operator() (const cv::Range& range) const CV_OVERRIDE
-    {
-        if(!m_ok)
-            return;
-
-        try
-        {
-            ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, m_dst.m_size.width, range.end - range.start);
-            if constexpr (std::is_same_v<IwiOp, ::ipp::IwiResize>)
-                CV_INSTRUMENT_FUN_IPP(iwiOp, m_src, m_dst, ippBorderRepl, tile);
-            else
-                CV_INSTRUMENT_FUN_IPP(iwiOp, m_src, m_dst, tile);
-        }
-        catch(const ::ipp::IwException &)
-        {
-            m_ok = false;
-            return;
-        }
-    }
-private:
-    ::ipp::IwiImage &m_src;
-    ::ipp::IwiImage &m_dst;
-
-    mutable IwiOp iwiOp;
-
-    std::atomic_bool &m_ok;
-    ipp_resizeParallelT& operator= (const ipp_resizeParallelT&);
-};
-
-typedef ipp_resizeParallelT< ::ipp::IwiResize>     ipp_resizeParallel;
-typedef ipp_resizeParallelT< ::ipp::IwiWarpAffine> ipp_resizeAffineParallel;
-
-int ipp_hal_resize(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
-                   uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
-                   double inv_scale_x, double inv_scale_y, int interpolation)
-{
-    CV_HAL_CHECK_USE_IPP();
-
     int depth = CV_MAT_DEPTH(src_type), channels = CV_MAT_CN(src_type);
 
-    IppDataType           ippDataType = ippiGetDataType(depth);
     IppiInterpolationType ippInter    = ippiGetInterpolation(interpolation);
     int                   interpIdx   = interpolation & cv::InterpolationFlags::INTER_MAX;
     if((int)ippInter < 0 || interpIdx > 4 || channels > 4)
@@ -120,7 +52,7 @@ int ipp_hal_resize(int src_type, const uchar *src_data, size_t src_step, int src
 
 #if IPP_VERSION_X100 < 201801 && !defined(IPP_CALLS_ENFORCED)
     // Degradations on int^2 linear downscale
-    if (ippDataType != ipp64f && ippInter == ippLinear && inv_scale_x < 1 && inv_scale_y < 1) // if downscale
+    if (depth != CV_64F && ippInter == ippLinear && inv_scale_x < 1 && inv_scale_y < 1) // if downscale
     {
         int scale_x = (int)(1 / inv_scale_x);
         int scale_y = (int)(1 / inv_scale_y);
@@ -132,7 +64,7 @@ int ipp_hal_resize(int src_type, const uchar *src_data, size_t src_step, int src
     }
 #endif
 
-    bool  affine = false;
+    affine = false;
     const double IPP_RESIZE_EPS = (depth == CV_64F) ? 0 : 1e-10;
     double ex = fabs((double)dst_width / src_width  - inv_scale_x) / inv_scale_x;
     double ey = fabs((double)dst_height / src_height - inv_scale_y) / inv_scale_y;
@@ -144,6 +76,25 @@ int ipp_hal_resize(int src_type, const uchar *src_data, size_t src_step, int src
     // Affine doesn't support Lanczos and Super interpolations
     if(affine && (ippInter == ippLanczos || ippInter == ippSuper))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    inter = ippInter;
+    return CV_HAL_ERROR_OK;
+}
+
+int ipp_hal_resize(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
+                   uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
+                   double inv_scale_x, double inv_scale_y, int interpolation)
+{
+    CV_HAL_CHECK_USE_IPP();
+
+    IppiInterpolationType ippInter;
+    bool affine;
+    if (ipp_resize_prepare(src_type, src_width, src_height, dst_width, dst_height,
+                           inv_scale_x, inv_scale_y, interpolation, ippInter, affine) != CV_HAL_ERROR_OK)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    IppDataType ippDataType = ippiGetDataType(CV_MAT_DEPTH(src_type));
+    int         channels    = CV_MAT_CN(src_type);
 
     try
     {

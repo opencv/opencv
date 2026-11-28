@@ -184,6 +184,43 @@ TEST(blobFromImageWithParams_4ch, NHWC_scalar_scale)
     }
 }
 
+TEST(blobFromImageWithParams_4ch, NHWC_swapRB)
+{
+    Mat img(10, 10, CV_8UC4, Scalar(10, 20, 30, 40));
+
+    Image2BlobParams param;
+    param.datalayout = DNN_LAYOUT_NHWC;
+    param.swapRB = true;
+    param.mean = Scalar(1, 2, 3, 4);  // blob channel order (after the swap)
+    param.scalefactor = Scalar(0.1, 0.2, 0.3, 0.4);
+    const float target[4] = { (30 - 1) * 0.1f, (20 - 2) * 0.2f, (10 - 3) * 0.3f, (40 - 4) * 0.4f };
+
+    // Restores the IPP state even if an ASSERT below returns early
+    struct RestoreIPP
+    {
+        const bool useIPP = cv::ipp::useIPP();
+        ~RestoreIPP() { cv::ipp::setUseIPP(useIPP); }
+    } restoreIPP;
+
+    for (bool ipp : { false, true })
+    {
+        SCOPED_TRACE(ipp ? "IPP" : "no IPP");
+        cv::ipp::setUseIPP(ipp);
+        Mat blob;
+        EXPECT_NO_THROW(blob = dnn::blobFromImageWithParams(img, param));
+        ASSERT_EQ(CV_32F, blob.type());
+        ASSERT_EQ(4, blob.dims);
+        ASSERT_EQ(1, blob.size[0]);
+        ASSERT_EQ(10, blob.size[1]);
+        ASSERT_EQ(10, blob.size[2]);
+        ASSERT_EQ(4, blob.size[3]);
+        const float* blobPtr = blob.ptr<float>();
+        for (int i = 0; i < 10 * 10; i++)
+            for (int c = 0; c < 4; c++)
+                EXPECT_NEAR(blobPtr[i * 4 + c], target[c], 1e-5) << "pixel " << i << " channel " << c;
+    }
+}
+
 TEST(blobFromImageWithParams_CustomPadding, letter_box)
 {
     Mat img(40, 20, CV_8UC4, Scalar(0, 1, 2, 3));
