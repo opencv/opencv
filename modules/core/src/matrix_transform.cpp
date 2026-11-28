@@ -541,6 +541,14 @@ void transpose( InputArray _src, OutputArray _dst )
         return;
     }
 
+    // A 1D Mat is its own transpose (numpy: transpose of a 1-D array stays 1-D).
+    if( src.dims == 1 )
+    {
+        _dst.create(src.dims, src.size.p, src.type());
+        src.copyTo(_dst);
+        return;
+    }
+
     _dst.create(src.cols, src.rows, src.type());
     Mat dst = _dst.getMat();
 

@@ -841,6 +841,10 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
         dim = 1;
     }
 
+    // A 1D source reduces to a 1D result (one element), not a 1x1 2D Mat.
+    if (src.dims == 1)
+        _dst.create(src.dims, std::vector<int>{1}.data(), dtype);
+    else
     _dst.create(dim == 0 ? 1 : src.rows, dim == 0 ? src.cols : 1, dtype);
     Mat dst = _dst.getMat(), temp = dst;
 
