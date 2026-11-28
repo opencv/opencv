@@ -270,6 +270,95 @@ INSTANTIATE_TEST_CASE_P(ROI, Imgproc_PhaseCorrelatorTest_Inputs,
     testing::Combine(testing::Values(CV_32F, CV_64F), testing::Values(32),
                      testing::Values(1)));
 
+typedef testing::TestWithParam<int> Imgproc_PhaseCorrelatorTest_Refinement;
+
+// Sample a continuous periodic polynomial at translated coordinates so the
+// input generator is independent of the DFT used by phaseCorrelate.
+static Mat phaseCorrelationPattern(int type, int firstX, int lastX, Point2d shift)
+{
+    const int size = 64;
+    Mat horizontal(1, size, CV_64F), vertical(size, 1, CV_64F);
+    for (int i = 0; i < size; ++i)
+    {
+        double x = 0, y = 1;
+        for (int k = firstX; k <= lastX; ++k)
+            x += std::cos(2 * CV_PI * k * (i - shift.x) / size);
+        for (int k = 1; k < size / 2; ++k)
+            y += std::cos(2 * CV_PI * k * (i - shift.y) / size);
+        horizontal.at<double>(i) = x;
+        vertical.at<double>(i) = y;
+    }
+    Mat image = vertical * horizontal;
+    image.convertTo(image, type);
+    return image;
+}
+
+TEST_P(Imgproc_PhaseCorrelatorTest_Refinement, signed_centroid_stays_local)
+{
+    const Point2d expected(0.49, 0.31);
+    const Mat src = phaseCorrelationPattern(GetParam(), 11, 15, Point2d());
+    const Mat dst = phaseCorrelationPattern(GetParam(), 11, 15, expected);
+    const Point2d shift = phaseCorrelate(src, dst);
+    // The sampled maximum is at zero displacement. Allow an integer fallback.
+    EXPECT_LT(cv::norm(shift - expected), 0.75);
+}
+
+TEST_P(Imgproc_PhaseCorrelatorTest_Refinement, weak_integer_shift)
+{
+    const int type = GetParam();
+    const int size = 64;
+    const Point2d expected(3, -2);
+    Mat src(size, size, type);
+    Mat left = src.colRange(0, size / 2);
+    Mat right = src.colRange(size / 2, size);
+    const double amplitude = type == CV_32F ? 1e-9 : 1e-11;
+    RNG rng(9158);
+    rng.fill(left, RNG::UNIFORM, -1., 1.);
+    // Antisymmetry makes the DC and x-Nyquist terms exactly zero.
+    left.convertTo(right, type, -1);
+    Mat shifted;
+    warpAffine(src, shifted, Matx23d(1, 0, expected.x, 0, 1, expected.y),
+               src.size(), INTER_NEAREST, BORDER_WRAP);
+
+    // The second gain exposes epsilon bias even inside the fallback radius.
+    for (double gain : {amplitude, 32 * amplitude})
+    {
+        SCOPED_TRACE(gain);
+        Mat first, second;
+        src.convertTo(first, type, gain);
+        shifted.convertTo(second, type, gain);
+        double response = 0;
+        const Point2d shift = phaseCorrelate(first, second, noArray(), &response);
+        EXPECT_LT(cv::norm(shift - expected), 1e-3);
+        EXPECT_GT(response, 0);
+    }
+}
+
+TEST_P(Imgproc_PhaseCorrelatorTest_Refinement, ordinary_fractional_shift)
+{
+    const Point2d expected(5.35, -3.25);
+    const Mat src = phaseCorrelationPattern(GetParam(), 0, 31, Point2d());
+    const Mat dst = phaseCorrelationPattern(GetParam(), 0, 31, expected);
+    double response = 0;
+    const Point2d shift = phaseCorrelate(src, dst, noArray(), &response);
+    EXPECT_LT(cv::norm(shift - expected), 0.4);
+    EXPECT_GT(cv::norm(shift - Point2d(5, -3)), 0.05);
+    EXPECT_GT(response, 0.5);
+}
+
+TEST_P(Imgproc_PhaseCorrelatorTest_Refinement, zero_signal_response)
+{
+    const Mat zero = Mat::zeros(64, 64, GetParam());
+    double response = 1;
+    const Point2d shift = phaseCorrelate(zero, zero, noArray(), &response);
+    EXPECT_EQ(0, response);
+    // The translation is indeterminate. Preserve the existing finite result.
+    EXPECT_EQ(Point2d(32, 32), shift);
+}
+
+INSTANTIATE_TEST_CASE_P(Depth, Imgproc_PhaseCorrelatorTest_Refinement,
+                        testing::Values(CV_32F, CV_64F));
+
 TEST(Imgproc_PhaseCorrelatorTest, float32_overflow) {
     // load
     Mat im = imread(cvtest::TS::ptr()->get_data_path() + "shared/baboon.png", IMREAD_GRAYSCALE);
