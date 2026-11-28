@@ -795,6 +795,9 @@ void Chains::calcOneSidedChains()
 
         findSingleE(i, j1, (i + 1) %n, (j1 - 1 + n) %n);
         findSingleE(i, j2, (i + 1) %n, (j2 - 1 + n) %n);
+        // The one sided chains between two adjacent sides are never reached by the recursion
+        // below, but they are the pair a triangle is built from, so calculate them separately.
+        findSingleE(i, (i - 1 + n) %n, (i + 1) %n, (i - 2 + n) %n);
         singleSideImpl(i, j1, j2);
     }
 }
@@ -817,7 +820,10 @@ void Chains::calcMiddleChains(int h)
 
                 one.side = -1;
                 one.extra_area = itrs.extra_area;
-                one.exists = false;
+                // A chain of length 0 is just the vertex in which the two sides meet, so it
+                // exists exactly when that intersection is a valid point of the polygon. It is
+                // the chain used for k = 3, where both remaining sides are flush with the ngon.
+                one.exists = itrs.intersection.position;
                 one.flush = false;
                 one.done = true;
             }
@@ -922,8 +928,11 @@ std::vector<Side> Chains::findKSides(int k, int i, int j)
     else
         sides.push_back({single_sides[i][j].side, false});
 
-    std::vector<Side> flush_chain = reconstructHSidedChain(k - 3, j, i);
-    sides.insert(sides.end(), flush_chain.begin(), flush_chain.end());
+    if (k > 3)
+    {
+        std::vector<Side> flush_chain = reconstructHSidedChain(k - 3, j, i);
+        sides.insert(sides.end(), flush_chain.begin(), flush_chain.end());
+    }
     std::sort(sides.begin(), sides.end(),
               [](const Side& lhs, const Side& rhs) { return lhs.side < rhs.side; });
 
@@ -993,6 +1002,9 @@ static double findMinAreaPolygon(const std::vector<cv::Point2f> &ngon,
     Kgon kgon{};
 
     const Minimum min = chains.minimumArea(n, k);
+    if (min.i < 0 || min.j < 0)
+        CV_Error(cv::Error::StsError,
+                 "minEnclosingConvexPolygon: no valid enclosing polygon found");
 
     kgon.i = min.i;
     kgon.j = min.j;
