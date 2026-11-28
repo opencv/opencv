@@ -2149,6 +2149,8 @@ when the flag #WARP_INVERSE_MAP is set. Otherwise, the transformation is first i
 with #invertAffineTransform and then put in the formula above instead of M. The function cannot
 operate in-place.
 
+Each channel is interpolated independently, including images with more than four channels.
+
 @param src input image.
 @param dst output image that has the size dsize and the same type as src .
 @param M \f$2\times 3\f$ transformation matrix.
@@ -2159,7 +2161,7 @@ flag #WARP_INVERSE_MAP that means that M is the inverse transformation (
 @param borderMode pixel extrapolation method (see #BorderTypes); when
 borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination image corresponding to
 the "outliers" in the source image are not modified by the function.
-@param borderValue value used in case of a constant border; by default, it is 0.
+@param borderValue value used in case of a constant border; by default, it is 0. With more than four channels, channel k uses borderValue[k % 4].
 @param hint Implementation modification flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
 for linear calculation for faster speed. See #AlgorithmHint.
 
@@ -2186,6 +2188,8 @@ The function warpPerspective transforms the source image using the specified mat
 when the flag #WARP_INVERSE_MAP is set. Otherwise, the transformation is first inverted with invert
 and then put in the formula above instead of M. The function cannot operate in-place.
 
+Each channel is interpolated independently, including images with more than four channels.
+
 @param src input image.
 @param dst output image that has the size dsize and the same type as src .
 @param M \f$3\times 3\f$ transformation matrix.
@@ -2196,7 +2200,7 @@ optional flag #WARP_INVERSE_MAP, that sets M as the inverse transformation (
 @param borderMode pixel extrapolation method (see #BorderTypes); when
 borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination image corresponding to
 the "outliers" in the source image are not modified by the function.
-@param borderValue value used in case of a constant border; by default, it equals 0.
+@param borderValue value used in case of a constant border; by default, it equals 0. With more than four channels, channel k uses borderValue[k % 4].
 @param hint Implementation modification flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
 for linear calculation for faster speed. See #AlgorithmHint.
 
@@ -2231,6 +2235,8 @@ cvFloor(y)) and \f$map_2\f$ contains indices in a table of interpolation coeffic
 
 This function cannot operate in-place.
 
+Each channel is interpolated independently, including images with more than four channels.
+
 @param src Source image.
 @param dst Destination image. It has the same size as map1 and the same type as src .
 @param map1 The first map of either (x,y) points or just x values having the type CV_16SC2 ,
@@ -2245,7 +2251,7 @@ The extra flag WARP_RELATIVE_MAP can be ORed to the interpolation method
 @param borderMode Pixel extrapolation method (see #BorderTypes). When
 borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination image that
 corresponds to the "outliers" in the source image are not modified by the function.
-@param borderValue Value used in case of a constant border. By default, it is 0.
+@param borderValue Value used in case of a constant border. By default, it is 0. With more than four channels, channel k uses borderValue[k % 4].
 @param hint Implementation modification flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
 for linear calculation for faster speed. See #AlgorithmHint.
 @note

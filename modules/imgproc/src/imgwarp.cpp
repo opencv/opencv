@@ -79,7 +79,6 @@ ImgWarpFunc getImgWarpFunc(int type, int interpolation)
 static bool genericWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Mat& mapy, Mat& dst,
                         int interpolation, int borderType_, const Scalar& borderValue, bool relativeMap_)
 {
-    constexpr int MAX_CHANNELS = 4;
     int srctype = src.type();
 
     ImgWarpFunc func = getImgWarpFunc(srctype, interpolation);
@@ -88,7 +87,6 @@ static bool genericWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Ma
     }
 
     CV_Assert(src.type() == dst.type());
-    CV_Assert(src.channels() <= MAX_CHANNELS);
     Matx33f Mdata(1.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f);
 
     if (!M_.empty()) {
@@ -116,8 +114,10 @@ static bool genericWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Ma
         }
     }
 
-    int64_t borderValBuf_[MAX_CHANNELS];
-    scalarToRawData(borderValue, borderValBuf_, src.type());
+    const int channels = src.channels();
+    AutoBuffer<int64_t, 4> borderValBuf_(channels);
+    scalarToRawData(borderValue, borderValBuf_.data(),
+                    CV_MAKETYPE(src.depth(), std::min(channels, 4)), channels);
 
     parallel_for_(Range(0, dst.rows), [&](const Range& range) {
         constexpr float FIXPT_SCALE = 1.f/32;
@@ -143,7 +143,7 @@ static bool genericWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Ma
         CV_Assert(warping || interleavedmap || planarmap || fixedmap);
 
         Matx33f M = Mdata;
-        const uint8_t* borderValBuf = (const uint8_t*)borderValBuf_;
+        const uint8_t* borderValBuf = (const uint8_t*)borderValBuf_.data();
         float M_xx = M(0, 0), M_yx = M(1, 0), M_zx = M(2, 0);
         float xbuf[BLOCK_SIZE], ybuf[BLOCK_SIZE];
         const float* xbufptr = xbuf;
@@ -207,7 +207,7 @@ static bool genericWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Ma
                 }
 
                 func(xbufptr, ybufptr, blocksize, srcdata, srcstep, srcsize,
-                     dstptr + x*bpp, fparams, borderType, borderValBuf);
+                     dstptr + x*bpp, fparams, borderType, borderValBuf, channels);
             }
         }
     });
@@ -1782,10 +1782,8 @@ void cv::remap( InputArray _src, OutputArray _dst,
             ifunc = linear_tab[relativeOptionIndex][depth];
         else if( interpolation == INTER_CUBIC )
             CV_Error(Error::StsBadArg, "Unsupported source type for INTER_CUBIC");
-        else if( interpolation == INTER_LANCZOS4 ){
+        else if( interpolation == INTER_LANCZOS4 )
             ifunc = lanczos4_tab[relativeOptionIndex][depth];
-            CV_Assert( _src.channels() <= 4 );
-        }
         else
             CV_Error( cv::Error::StsBadArg, "Unknown interpolation method" );
         CV_Assert( ifunc != 0 );
@@ -2615,8 +2613,6 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     CV_CheckLE(_src.dims(), 2, "Only 2D images are supported, N-D input (e.g. a batch of images) must be processed image by image");
 
     int interpolation = flags & INTER_MAX;
-    CV_Assert( _src.channels() <= 4 || (interpolation != INTER_LANCZOS4 &&
-                                        interpolation != INTER_CUBIC) );
 
     borderType &= ~BORDER_ISOLATED;
     if (borderType < 0 || borderType > BORDER_TRANSPARENT)
