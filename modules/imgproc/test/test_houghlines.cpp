@@ -470,6 +470,50 @@ TEST(HoughLinesP, regression_large_rho)
     }
 }
 
+// With a few rho bins the rounding can put a bin outside of [0, numrho), the accumulator needs a spare bin on each side.
+TEST(HoughLinesP, regression_few_rho_bins)
+{
+    Mat image(1000, 1, CV_8UC1, Scalar(255));
+
+    std::vector<Vec4i> lines;
+    EXPECT_NO_THROW(HoughLinesP(image, lines, 1341.22, 1, 1, 10, 5));
+    for (size_t j = 0; j < lines.size(); j++)
+    {
+        EXPECT_TRUE(lines[j][0] >= 0 && lines[j][0] < image.cols && lines[j][2] >= 0 && lines[j][2] < image.cols);
+        EXPECT_TRUE(lines[j][1] >= 0 && lines[j][1] < image.rows && lines[j][3] >= 0 && lines[j][3] < image.rows);
+    }
+}
+
+TEST(HoughLinesP, invalid_rho_or_theta)
+{
+    Mat image = Mat::zeros(64, 64, CV_8UC1);
+    line(image, Point(5, 5), Point(58, 58), Scalar(255), 1);
+
+    const double inf = std::numeric_limits<double>::infinity();
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    const double bad[] = {0, -1, nan, inf};
+    for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++)
+    {
+        std::vector<Vec4i> lines;
+        EXPECT_THROW(HoughLinesP(image, lines, bad[i], CV_PI / 180, 10, 10, 5), cv::Exception) << "rho " << bad[i];
+        EXPECT_THROW(HoughLinesP(image, lines, 1, bad[i], 10, 10, 5), cv::Exception) << "theta " << bad[i];
+    }
+}
+
+// The multi-scale variant sized its accumulator by floor(diagonal / rho), which is 0 for a rho above the diagonal.
+TEST(HoughLines, regression_large_rho_multi_scale)
+{
+    Mat image = Mat::zeros(64, 64, CV_8UC1);
+    line(image, Point(5, 5), Point(58, 58), Scalar(255), 1);
+
+    const double rhos[] = {1000, 1e5};
+    for (size_t i = 0; i < sizeof(rhos) / sizeof(rhos[0]); i++)
+    {
+        std::vector<Vec2f> lines;
+        EXPECT_NO_THROW(HoughLines(image, lines, rhos[i], CV_PI / 180, 1, 2, 2)) << "rho " << rhos[i];
+    }
+}
+
 INSTANTIATE_TEST_CASE_P( ImgProc, StandartHoughLinesTest, testing::Combine(testing::Values( "shared/pic5.png", "../stitching/a1.png" ),
                                                                            testing::Values( 1, 10 ),
                                                                            testing::Values( 0.05, 0.1 ),
