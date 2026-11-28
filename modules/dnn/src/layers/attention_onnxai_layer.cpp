@@ -464,8 +464,9 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
             for (int b = 0; b < batch_size; ++b) {
                 const int64_t v = sk.depth() == CV_32S ? (int64_t)sk.ptr<int32_t>()[b]
                                                        : sk.ptr<int64_t>()[b];
+                // Range-check before narrowing: INT_MAX + 1 would wrap past both int checks.
+                CV_CheckTrue(v >= 0 && v < total_seq_kv, "seqlens_k is outside the KV buffer");
                 validLen[b] = static_cast<int>(v) + 1;
-                CV_CheckLE(validLen[b], total_seq_kv, "seqlens_k exceeds the KV buffer length");
                 pastLen[b] = validLen[b] - seq_len_q;
                 CV_CheckGE(pastLen[b], 0, "seqlens_k is smaller than the query length");
                 if (!shared_kv_buffer)
