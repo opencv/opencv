@@ -47,6 +47,8 @@
 //M*/
 //
 #include "precomp.hpp"
+#include "opencv2/core/hal/intrin.hpp"
+#include <cstring>
 #include <vector>
 
 namespace cv{
@@ -70,7 +72,6 @@ namespace cv{
             CV_UNUSED(c);
             CV_UNUSED(l);
         }
-
         void finish(){
         }
 
@@ -141,6 +142,21 @@ namespace cv{
             Point2ui64& integral = integrals[l];
             integral.x += c;
             integral.y += r;
+        }
+
+        void addRun(int r, int begin, int end, int l){
+            if (begin == end)
+                return;
+            int *row = statsv.ptr<int>(l);
+            row[CC_STAT_LEFT] = MIN(row[CC_STAT_LEFT], begin);
+            row[CC_STAT_WIDTH] = MAX(row[CC_STAT_WIDTH], end - 1);
+            row[CC_STAT_TOP] = MIN(row[CC_STAT_TOP], r);
+            row[CC_STAT_HEIGHT] = MAX(row[CC_STAT_HEIGHT], r);
+            const int length = end - begin;
+            row[CC_STAT_AREA] += length;
+            Point2ui64& integral = integrals[l];
+            integral.x += (uint64(begin) + end - 1) * length / 2;
+            integral.y += uint64(r) * length;
         }
 
         void finish(){
@@ -296,6 +312,193 @@ namespace cv{
     {
         CV_DbgAssert((y & 1) == 0);
         return LT((y /*+ 1*/) / 2) * LT((w + 1) / 2) + 1;
+    }
+
+    struct SparseRun
+    {
+        int row, begin, end, label;
+    };
+
+    static inline int nextSparseRun(const uchar* row, int x, int width)
+    {
+        if (x < width && row[x] != 0)
+            return x;
+#if CV_SIMD || CV_SIMD_SCALABLE
+        const int lanes = VTraits<v_uint8>::vlanes();
+        const v_uint8 zero = vx_setzero_u8();
+        for (; x <= width - lanes; x += lanes)
+        {
+            const v_uint8 foreground = v_ne(vx_load(row + x), zero);
+            if (v_check_any(foreground))
+                return x + v_scan_forward(foreground);
+        }
+#else
+        const int bytes = static_cast<int>(sizeof(uint64));
+        for (; x <= width - bytes; x += bytes)
+        {
+            uint64 word;
+            std::memcpy(&word, row + x, sizeof(word));
+            if (word != 0)
+                break;
+        }
+#endif
+        for (; x < width && row[x] == 0; ++x)
+            ;
+        return x;
+    }
+
+    // Check both budgets before committing any work to the sparse labeler.
+    static int countSparseRuns(const Mat& img, size_t runLimit, size_t foregroundLimit)
+    {
+        const int width = img.cols;
+        const int rowsPerCheck = divUp(4096, static_cast<unsigned>(width));
+        int rowsUntilCheck = rowsPerCheck;
+        size_t runs = 0, foreground = 0;
+#if CV_SIMD || CV_SIMD_SCALABLE
+        const int lanes = VTraits<v_uint8>::vlanes();
+        const v_uint8 zero = vx_setzero_u8();
+        const v_uint8 one = vx_setall_u8(1);
+#endif
+        for (int y = 0; y < img.rows; ++y)
+        {
+            const uchar* row = img.ptr<uchar>(y);
+            runs += row[0] != 0;
+            foreground += row[0] != 0;
+            int x = 1;
+#if CV_SIMD || CV_SIMD_SCALABLE
+            for (; x <= width - lanes; x += lanes)
+            {
+                const v_uint8 present = v_ne(vx_load(row + x), zero);
+                if (!v_check_any(present))
+                    continue;
+                const v_uint8 starts = v_and(present, v_eq(vx_load(row + x - 1), zero));
+                runs += v_reduce_sum(v_and(starts, one));
+                foreground += v_reduce_sum(v_and(present, one));
+            }
+#endif
+            for (; x < width; ++x)
+            {
+                const bool present = row[x] != 0;
+                runs += present && row[x - 1] == 0;
+                foreground += present;
+            }
+            if (runs > runLimit || foreground > foregroundLimit)
+                return -1;
+            if (--rowsUntilCheck == 0)
+            {
+                // Reject sustained fragmentation even if the whole-image budget
+                // would allow a longer scan through this prefix.
+                const size_t scannedPixels = (static_cast<size_t>(y) + 1) * width;
+                if (runs > scannedPixels / 48)
+                    return -1;
+                rowsUntilCheck = rowsPerCheck;
+            }
+        }
+        return static_cast<int>(runs);
+    }
+
+    static inline int tryLabelBolelliSparse(const Mat&, Mat&, NoOp&)
+    {
+        return 0;
+    }
+
+    static int tryLabelBolelliSparse(const Mat& img, Mat& labels, CCStatsOp& sop)
+    {
+        const int height = img.rows, width = img.cols;
+        const size_t pixels = img.total();
+        if (width < 64 || pixels < 32768 || pixels > INT_MAX)
+            return 0;
+
+        const int runCount = countSparseRuns(img, std::min(pixels / 64, size_t(65536)), pixels / 5);
+        if (runCount < 0)
+            return 0;
+
+        std::vector<SparseRun> runs;
+        runs.reserve(runCount);
+        std::vector<int> parents(1, 0);
+        size_t previousBegin = 0;
+        for (int y = 0; runCount != 0 && y < height; ++y)
+        {
+            const size_t previousEnd = runs.size();
+            size_t neighbor = previousBegin;
+            const uchar* row = img.ptr<uchar>(y);
+            int end = 0;
+            while (true)
+            {
+                const int begin = nextSparseRun(row, end, width);
+                if (begin == width)
+                    break;
+                end = begin + 1;
+                while (end < width && row[end] != 0)
+                    ++end;
+                // Include diagonals by allowing adjacent endpoints of half-open runs.
+                while (neighbor < previousEnd && runs[neighbor].end < begin)
+                    ++neighbor;
+                int label = 0;
+                for (size_t i = neighbor; i < previousEnd && runs[i].begin <= end; ++i)
+                    label = label == 0 ? runs[i].label : set_union(parents.data(), label, runs[i].label);
+                if (label == 0)
+                {
+                    label = static_cast<int>(parents.size());
+                    parents.push_back(label);
+                }
+                runs.push_back({y, begin, end, label});
+            }
+            previousBegin = previousEnd;
+        }
+        CV_DbgAssert(runs.size() == static_cast<size_t>(runCount));
+
+        const int nLabels = flattenL(parents.data(), static_cast<int>(parents.size()));
+        std::vector<int> ordered(nLabels, 0);
+        int nextLabel = 1;
+        for (size_t first = 0; first < runs.size();)
+        {
+            const int y = runs[first].row;
+            size_t middle = first + 1;
+            while (middle < runs.size() && runs[middle].row == y)
+                ++middle;
+            size_t last = middle;
+            if (y % 2 == 0)
+                while (last < runs.size() && runs[last].row == y + 1)
+                    ++last;
+
+            // Spaghetti numbers components by their first occupied 2x2 block.
+            // Runs starting in the same block belong to the same component.
+            size_t top = first, bottom = middle;
+            while (top < middle || bottom < last)
+            {
+                const SparseRun& run = bottom == last ||
+                    (top < middle && runs[top].begin <= runs[bottom].begin) ? runs[top++] : runs[bottom++];
+                int& label = ordered[parents[run.label]];
+                if (label == 0)
+                    label = nextLabel++;
+            }
+            first = last;
+        }
+
+        sop.init(nLabels);
+        if (labels.isContinuous())
+            std::memset(labels.ptr(), 0, pixels * sizeof(int));
+        size_t i = 0;
+        for (int y = 0; y < height; ++y)
+        {
+            int* out = labels.ptr<int>(y);
+            if (!labels.isContinuous())
+                std::memset(out, 0, static_cast<size_t>(width) * sizeof(int));
+            int end = 0;
+            for (; i < runs.size() && runs[i].row == y; ++i)
+            {
+                const SparseRun& run = runs[i];
+                const int label = ordered[parents[run.label]];
+                std::fill(out + run.begin, out + run.end, label);
+                sop.addRun(y, end, run.begin, 0);
+                sop.addRun(y, run.begin, run.end, label);
+                end = run.end;
+            }
+            sop.addRun(y, end, width, 0);
+        }
+        sop.finish();
+        return nLabels;
     }
 
     //Parallel implementation of Spaghetti algorithm, described in "Spaghetti Labeling: Directed Acyclic Graphs
@@ -5720,7 +5923,14 @@ namespace cv{
                     //note that signed types don't really make sense here and not being able to use unsigned matters for scientific projects
                     //OpenCV: how should we proceed?  .at<T> typechecks in debug mode
                     if (!is_parallel)
+                    {
+                        if (iDepth == CV_8U) {
+                            const int nLabels = connectedcomponents::tryLabelBolelliSparse(I, L, sop);
+                            if (nLabels != 0)
+                                return nLabels;
+                        }
                         return (int)LabelingBolelli<int, uchar, StatsOp>()(I, L, connectivity, sop);
+                    }
                     else
                         return (int)LabelingBolelliParallel<int, uchar, StatsOp>()(I, L, connectivity, sop);
                 }

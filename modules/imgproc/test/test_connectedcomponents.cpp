@@ -876,6 +876,126 @@ TEST(Imgproc_ConnectedComponents, empty_input_29854)
     }
 }
 
+static void checkSparseRunsROI(const Mat1b& mask, int expectedCount, bool checkBlockOrder)
+{
+    // The 16-bit Spaghetti implementation provides the original block labeling.
+    ASSERT_LT(((mask.rows + 1) / 2) * ((mask.cols + 1) / 2), 65535);
+    Mat reference16, referenceLabels, referenceStats, referenceCentroids;
+    const int referenceCount = connectedComponentsWithStats(
+        mask, reference16, referenceStats, referenceCentroids, 8, CV_16U, CCL_SPAGHETTI);
+    reference16.convertTo(referenceLabels, CV_32S);
+    if (expectedCount > 0)
+        ASSERT_EQ(expectedCount, referenceCount);
+
+    if (checkBlockOrder)
+    {
+        // The lower pixel in the first occupied 2x2 block gets label 1.
+        EXPECT_EQ(1, referenceLabels.at<int>(1, 4));
+        EXPECT_EQ(2, referenceLabels.at<int>(0, 26));
+        EXPECT_EQ(3, referenceLabels.at<int>(8, 5));
+        EXPECT_EQ(3, referenceLabels.at<int>(8, 26));
+        EXPECT_EQ(4, referenceLabels.at<int>(8, 16));
+        EXPECT_EQ(5, referenceLabels.at<int>(16, 63));
+        EXPECT_EQ(5, referenceLabels.at<int>(17, 64));
+        EXPECT_EQ(6, referenceLabels.at<int>(20, mask.cols - 1));
+        EXPECT_EQ(7, referenceLabels.at<int>(mask.rows - 1, mask.cols - 1));
+        EXPECT_EQ(26, referenceStats.at<int>(3, CC_STAT_AREA));
+        EXPECT_EQ(mask.cols, referenceStats.at<int>(6, CC_STAT_WIDTH));
+    }
+
+    const Rect roi(3, 2, mask.cols, mask.rows);
+    Mat1i storage(mask.rows + 4, mask.cols + 9, -1);
+    Mat1i labels = storage(roi);
+    for (int algorithm : {CCL_DEFAULT, CCL_SPAGHETTI, CCL_BOLELLI})
+    {
+        for (bool withStats : {false, true})
+        {
+            SCOPED_TRACE(cv::format("algorithm=%d, withStats=%d", algorithm, withStats));
+            if (withStats)
+            {
+                Mat stats, centroids;
+                ASSERT_EQ(referenceCount, connectedComponentsWithStats(
+                    mask, labels, stats, centroids, 8, CV_32S, algorithm));
+                EXPECT_EQ(0, countNonZero(referenceStats != stats));
+                EXPECT_EQ(0, countNonZero(referenceCentroids != centroids));
+            }
+            else
+            {
+                ASSERT_EQ(referenceCount, connectedComponents(mask, labels, 8, CV_32S, algorithm));
+            }
+            EXPECT_EQ(0, countNonZero(referenceLabels != labels));
+            ASSERT_EQ(storage.ptr<int>(roi.y) + roi.x, labels.ptr<int>());
+            labels.setTo(-1);
+            EXPECT_EQ(0, countNonZero(storage != -1));
+        }
+    }
+}
+
+TEST(Imgproc_ConnectedComponents, sparse_runs_roi)
+{
+    struct ThreadScope
+    {
+        const int previous = getNumThreads();
+        ~ThreadScope() { setNumThreads(previous); }
+    } threadScope;
+
+    for (int threads : {1, 4})
+    {
+        setNumThreads(threads);
+        for (const Size size : {Size(512, 136), Size(513, 137)})
+        {
+            SCOPED_TRACE(cv::format("size=%dx%d, threads=%d", size.width, size.height, threads));
+            Mat1b storage(size.height + 4, size.width + 11, uchar(255));
+            Mat1b mask = storage(Rect(3, 2, size.width, size.height));
+            mask.setTo(0);
+            checkSparseRunsROI(mask, 1, false);
+
+            mask(0, 26) = 1;
+            mask(1, 4) = 128;
+            mask(Rect(5, 8, 5, 1)).setTo(7);
+            mask(Rect(26, 8, 5, 1)).setTo(255);
+            mask(8, 16) = 3;
+            for (int offset = 0; offset < 3; ++offset)
+            {
+                mask(9 + offset, 10 + offset) = 255;
+                mask(9 + offset, 25 - offset) = 255;
+            }
+            mask(Rect(13, 12, 10, 1)).setTo(11);
+            mask(16, 63) = 254;
+            mask(17, 64) = 255;
+            mask.row(20).setTo(1);
+            mask(size.height - 2, size.width - 2) = 128;
+            mask(size.height - 2, size.width - 1) = 255;
+            mask(size.height - 1, size.width - 1) = 1;
+            checkSparseRunsROI(mask, 8, true);
+
+            // Low foreground density with many isolated runs.
+            mask.setTo(0);
+            for (int y = 0; y < size.height; y += 2)
+                for (int x = 1; x < size.width; x += 16)
+                    mask(y, x) = 1;
+            checkSparseRunsROI(mask, countNonZero(mask) + 1, false);
+
+            // Check the exact run budget and overflow near the end of a strided image.
+            const int runLimit = static_cast<int>(mask.total() / 64);
+            const int runsPerRow = (size.width + 1) / 2;
+            mask.setTo(0);
+            for (int run = 0; run <= runLimit; ++run)
+            {
+                mask(size.height - 11 + 2 * (run / runsPerRow), 2 * (run % runsPerRow)) = 255;
+                if (run == runLimit - 1 || run == runLimit)
+                    checkSparseRunsROI(mask, run + 2, false);
+            }
+
+            // Dense input with a single 8-connected foreground component.
+            for (int y = 0; y < size.height; ++y)
+                for (int x = 0; x < size.width; ++x)
+                    mask(y, x) = ((x + y) % 2 == 0) ? 255 : 0;
+            checkSparseRunsROI(mask, 2, false);
+        }
+    }
+}
+
 
 }
 } // namespace
