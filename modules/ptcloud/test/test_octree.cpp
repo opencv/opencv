@@ -21,7 +21,9 @@ protected:
         pmin = Point3i(-scale, -scale, -scale);
         pmax = Point3i(scale, scale, scale);
 
-        RNG& rng_Point = theRNG(); // set random seed for fixing output 3D point.
+        // SetUp() runs before cvtest::testSetUp() reseeds theRNG()
+        theRNG().state = cvtest::param_seed;
+        RNG& rng_Point = theRNG();
 
         // Generate 3D PointCloud
         for(size_t i = 0; i < pointCloudSize; i++)
