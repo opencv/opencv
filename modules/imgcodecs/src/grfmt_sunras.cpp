@@ -166,6 +166,20 @@ bool  SunRasterDecoder::readData( Mat& img )
     if( !color && m_bpp <= 8 )
         CvtPaletteToGray( m_palette, gray_palette, 1 << m_bpp );
 
+    // Palette helpers emit BGR. Use a reordered copy for RGB output so
+    // grayscale conversion continues to use the original palette.
+    PaletteEntry rgb_palette[256];
+    PaletteEntry* color_palette = m_palette;
+    if( color && m_use_rgb && m_bpp <= 8 )
+    {
+        for( int i = 0; i < (1 << m_bpp); ++i )
+        {
+            rgb_palette[i] = m_palette[i];
+            std::swap(rgb_palette[i].b, rgb_palette[i].r);
+        }
+        color_palette = rgb_palette;
+    }
+
     try
     {
         m_strm.setPos( m_offset );
@@ -180,7 +194,7 @@ bool  SunRasterDecoder::readData( Mat& img )
                 {
                     m_strm.getBytes( src, src_pitch );
                     if( color )
-                        FillColorRow1( data, src, m_width, m_palette );
+                        FillColorRow1( data, src, m_width, color_palette );
                     else
                         FillGrayRow1( data, src, m_width, gray_palette );
                 }
@@ -229,7 +243,7 @@ bool  SunRasterDecoder::readData( Mat& img )
                     {
                         tsrc = src;
                         if( color )
-                            FillColorRow1( data, src, m_width, m_palette );
+                            FillColorRow1( data, src, m_width, color_palette );
                         else
                             FillGrayRow1( data, src, m_width, gray_palette );
                         data += step;
@@ -249,7 +263,7 @@ bad_decoding_1bpp:
                 {
                     m_strm.getBytes( src, src_pitch );
                     if( color )
-                        FillColorRow8( data, src, m_width, m_palette );
+                        FillColorRow8( data, src, m_width, color_palette );
                     else
                         FillGrayRow8( data, src, m_width, gray_palette );
                 }
@@ -283,7 +297,7 @@ bad_decoding_1bpp:
                     if( len1 > 0 )
                     {
                         if( color )
-                            FillColorRow8( data, src, len1, m_palette );
+                            FillColorRow8( data, src, len1, color_palette );
                         else
                             FillGrayRow8( data, src, len1, gray_palette );
                         data += len1*nch;
@@ -297,7 +311,7 @@ bad_decoding_1bpp:
                         if( color )
                             data = FillUniColor( data, line_end, validateToInt(step), width3,
                                                  y, m_height, len,
-                                                 m_palette[code] );
+                                                 color_palette[code] );
                         else
                             data = FillUniGray( data, line_end, validateToInt(step), width3,
                                                 y, m_height, len,
