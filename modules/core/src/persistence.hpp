@@ -87,6 +87,7 @@ namespace fs
 int strcasecmp(const char* str1, const char* str2);
 char* itoa( int _val, char* buffer, int /*radix*/ );
 char* itoa( int64_t _val, char* buffer, int /*radix*/, bool _signed );
+int64_t strToInt64( const char* str, char** endptr );
 char* floatToString( char* buf, size_t bufSize, float value, bool halfprecision, bool explicitZero );
 char* doubleToString( char* buf, size_t bufSize, double value, bool explicitZero );
 

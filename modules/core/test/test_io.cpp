@@ -2686,4 +2686,45 @@ TEST(Core_InputOutput, filestorage_32u_large_values)
     }
 }
 
+TEST(Core_InputOutput, filestorage_64u_large_values)
+{
+    const uint64_t values[] = { 0ull, 1ull, 9223372036854775807ull,
+                                9223372036854775808ull, 18446744073709551615ull };
+    const Mat src(1, 5, CV_64U, (void*)values);
+
+    for (const char* ext : { ".yml", ".xml", ".json" })
+    {
+        for (int base64 : { 0, (int)FileStorage::WRITE_BASE64 })
+        {
+            FileStorage writer(ext, FileStorage::WRITE | FileStorage::MEMORY | base64);
+            writer << "m" << src;
+            const std::string text = writer.releaseAndGetString();
+
+            FileStorage reader(text, FileStorage::READ | FileStorage::MEMORY);
+            Mat dst;
+            reader["m"] >> dst;
+
+            ASSERT_EQ(CV_64U, dst.type()) << ext << " base64=" << base64;
+            ASSERT_EQ(5, dst.cols) << ext << " base64=" << base64;
+            for (int i = 0; i < 5; i++)
+                EXPECT_EQ(values[i], dst.at<uint64_t>(0, i)) << ext << " base64=" << base64;
+        }
+    }
+}
+
+TEST(Core_InputOutput, filestorage_int_above_uint64_max_saturates)
+{
+    const char* texts[] = {
+        "%YAML:1.0\n---\nv: 99999999999999999999\nn: -99999999999999999999\n",
+        "<?xml version=\"1.0\"?>\n<opencv_storage>\n<v>99999999999999999999</v>\n<n>-99999999999999999999</n>\n</opencv_storage>\n",
+        "{\n    \"v\": 99999999999999999999,\n    \"n\": -99999999999999999999\n}\n"
+    };
+    for (const char* text : texts)
+    {
+        FileStorage fs(text, FileStorage::READ | FileStorage::MEMORY);
+        EXPECT_EQ(INT64_MAX, (int64_t)fs["v"]) << text;
+        EXPECT_EQ(INT64_MIN, (int64_t)fs["n"]) << text;
+    }
+}
+
 }} // namespace
