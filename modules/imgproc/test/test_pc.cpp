@@ -122,6 +122,36 @@ TEST(Imgproc_PhaseCorrelatorTest, accuracy_1d_odd_fft) {
     ASSERT_NEAR(phaseShift.x, (double)xShift, 1.);
 }
 
+// A column vector and its transpose must describe the same 1D shift.
+TEST(Imgproc_PhaseCorrelatorTest, column_vector_shift)
+{
+    const int lengths[] = {15, 16, 17}; // odd, even, and padded DFT sizes
+    const int types[] = {CV_32F, CV_64F};
+    const int shifts[] = {-3, 0, 3};
+    for (int type : types)
+    {
+        for (int length : lengths)
+        {
+            for (int expected : shifts)
+            {
+                Mat first = Mat::zeros(length, 1, type);
+                Mat second = Mat::zeros(length, 1, type);
+                first.row(6).setTo(1);
+                second.row(6 + expected).setTo(1);
+                double columnResponse = 0, rowResponse = 0;
+                const Point2d columnShift = phaseCorrelate(first, second, noArray(), &columnResponse);
+                const Point2d rowShift = phaseCorrelate(first.t(), second.t(), noArray(), &rowResponse);
+                EXPECT_NEAR(0.0, columnShift.x, 1e-5);
+                EXPECT_NEAR(static_cast<double>(expected), columnShift.y, 1e-5);
+                EXPECT_NEAR(rowShift.x, columnShift.y, 1e-5);
+                EXPECT_NEAR(rowShift.y, columnShift.x, 1e-5);
+                EXPECT_NEAR(1.0, columnResponse, 1e-5);
+                EXPECT_NEAR(rowResponse, columnResponse, 1e-5);
+            }
+        }
+    }
+}
+
 typedef testing::TestWithParam<int> Imgproc_PhaseCorrelatorTest_Types;
 
 TEST_P(Imgproc_PhaseCorrelatorTest_Types, roi_padding_isolated)

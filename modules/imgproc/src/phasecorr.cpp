@@ -377,18 +377,29 @@ static void fftShift(InputOutputArray _out)
 
     if(is_1d)
     {
-        int is_odd = (xMid > 0 && out.cols % 2 == 1) || (yMid > 0 && out.rows % 2 == 1);
-        xMid = xMid + yMid;
+        const bool column = out.cols == 1;
+        const int length = column ? out.rows : out.cols;
+        const int mid = length / 2;
+        const int firstLength = length - mid;
 
         for(size_t i = 0; i < planes.size(); i++)
         {
             Mat tmp;
-            Mat half0(planes[i], Rect(0, 0, xMid + is_odd, 1));
-            Mat half1(planes[i], Rect(xMid + is_odd, 0, xMid, 1));
-
-            half0.copyTo(tmp);
-            half1.copyTo(planes[i](Rect(0, 0, xMid, 1)));
-            tmp.copyTo(planes[i](Rect(xMid, 0, xMid + is_odd, 1)));
+            Mat first = column ? planes[i].rowRange(0, firstLength)
+                               : planes[i].colRange(0, firstLength);
+            Mat second = column ? planes[i].rowRange(firstLength, length)
+                                : planes[i].colRange(firstLength, length);
+            first.copyTo(tmp);
+            if (column)
+            {
+                second.copyTo(planes[i].rowRange(0, mid));
+                tmp.copyTo(planes[i].rowRange(mid, length));
+            }
+            else
+            {
+                second.copyTo(planes[i].colRange(0, mid));
+                tmp.copyTo(planes[i].colRange(mid, length));
+            }
         }
     }
     else
