@@ -68,6 +68,43 @@ static inline std::string getArrayTypeName(PyArrayObject* arr)
 
 //======================================================================================================================
 
+// --- arithmetic operand
+
+// Collect a Python number or tuple given for a source operand of cv::add() and friends as plain
+// doubles, so that it can be passed on as a genuine Scalar (see PyArithmOperand).
+bool pyopencv_to_arithm_scalar(PyObject* o, std::vector<double>& values, const ArgInfo& info)
+{
+    CV_Assert(info.arithm_op_src);
+    if (PyTuple_Check(o))
+    {
+        // see https://github.com/opencv/opencv/issues/24057
+        const int sz = (int)PyTuple_Size(o);
+        values.assign(std::max(4, sz), 0.0);   // Scalar has 4 elements.
+        for (int i = 0; i < sz; i++)
+        {
+            PyObject* oi = PyTuple_GetItem(o, i);
+            if (PyInt_Check(oi))
+                values[i] = (double)PyInt_AsLong(oi);
+            else if (PyFloat_Check(oi))
+                values[i] = PyFloat_AsDouble(oi);
+            else
+            {
+                failmsg("%s is not a numerical tuple", info.name);
+                values.clear();
+                return false;
+            }
+        }
+        return true;
+    }
+    // Normally cv.XXX(x) means cv.XXX( (x, 0., 0., 0.) );
+    // However  cv.add(mat,x) means cv::add(mat, (x,x,x,x) ).
+    const double v = PyInt_Check(o) ? (double)PyInt_AsLong(o) : PyFloat_AsDouble(o);
+    values.assign(4, v);
+    return true;
+}
+
+//======================================================================================================================
+
 // --- Mat
 
 // special case, when the converter needs full ArgInfo structure

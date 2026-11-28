@@ -913,7 +913,14 @@ class FuncInfo(object):
                 if any(tp in codegen.enums.keys() for tp in tp_candidates):
                     defval0 = "static_cast<%s>(%d)" % (a.tp, 0)
 
-                if tp in simple_argtype_mapping:
+                # A source operand of cv.add() and friends takes a Python number or tuple as a
+                # genuine Scalar rather than as a 4x1 CV_64F Mat, which cv::arithm_op() cannot tell
+                # apart from an array operand of that shape (issue #31045).
+                is_arithm_operand = a.arithm_op_src_arg and tp in ('Mat', 'UMat')
+                if is_arithm_operand:
+                    arg_type_info = ArgTypeInfo('PyArithmOperand<cv::%s>' % tp,
+                                                FormatStrings.object, defval0, True)
+                elif tp in simple_argtype_mapping:
                     arg_type_info = simple_argtype_mapping[tp]
                 else:
                     if tp in all_classes:
@@ -943,6 +950,7 @@ class FuncInfo(object):
                 # but it is possible to mimic further processing like it is normal arg
                 if a.enclosing_arg:
                     a = a.enclosing_arg
+                    is_arithm_operand = False
                     arg_type_info = ArgTypeInfo(a.tp, FormatStrings.object,
                                                 default_value=a.defval,
                                                 strict_conversion=True)
@@ -977,6 +985,8 @@ class FuncInfo(object):
 
                 if a.isrvalueref:
                     code_args += amp + 'std::move(' + a.name + ')'
+                elif is_arithm_operand:
+                    code_args += a.name + '.arg()'
                 else:
                     code_args += amp + a.name
 

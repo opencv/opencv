@@ -958,6 +958,42 @@ class Arguments(NewOpenCVTests):
                 self.assertLess(np.max(np.abs(dst - expected)), 2,
                   msg="Saturated Operation '{}' is failed for {}".format(ocv_op.__name__, val ) )
 
+    def test_arithm_op_scalar_keeps_array_shape(self):
+        # A Python number or tuple is a scalar operand, so the result has the shape of the array
+        # operand - including a 1x1 or 0D array, which used to come back as 4x1.
+        # https://github.com/opencv/opencv/issues/31045
+        for shape in ((1, 1), (2, 2), (3, 4)):
+            src = np.full(shape, 0.5, np.float32)
+            for ocv_op, expected in ((cv.add, 1.5), (cv.subtract, -0.5), (cv.multiply, 0.5),
+                                     (cv.absdiff, 0.5)):
+                for val in (1.0, 1, (1.0,), (1.0, 1.0)):
+                    dst = ocv_op(src, val)
+                    self.assertEqual(dst.shape, src.shape,
+                        msg="{} with scalar {!r} changed the shape of a {} array".format(
+                            ocv_op.__name__, val, shape))
+                    np.testing.assert_allclose(dst, np.full(shape, expected, np.float32))
+
+        # The same for a 0D array, and with the scalar as the first operand.
+        scalar_src = np.array(0.5, np.float32)
+        self.assertEqual(cv.add(scalar_src, 1.0).size, 1)
+        self.assertEqual(cv.add(np.full((1, 1), 0.5, np.float32), 1.0).shape, (1, 1))
+        self.assertEqual(cv.add(1.0, np.full((1, 1), 0.5, np.float32)).shape, (1, 1))
+
+        # A 1x1 multichannel array keeps its channels.
+        self.assertEqual(cv.add(np.full((1, 1, 3), 0.5, np.float32), 1.0).shape, (1, 1, 3))
+
+        # An 8-bit 1x1 array, as in the report.
+        self.assertEqual(cv.add(np.full((1, 1), 5, np.uint8), 1).shape, (1, 1))
+        np.testing.assert_equal(cv.add(np.full((1, 1), 5, np.uint8), 1), np.full((1, 1), 6, np.uint8))
+
+    def test_arithm_op_array_operand_still_broadcasts(self):
+        # A real 4x1 CV_64F array is data, not a scalar: it must keep broadcasting against a 1x1
+        # operand (issue #8999), which is what makes the scalar case above ambiguous in the first
+        # place when a number is passed as such an array.
+        column = np.ones((4, 1), np.float64)
+        self.assertEqual(cv.add(np.full((1, 1), 0.5, np.float64), column).shape, (4, 1))
+        self.assertEqual(cv.compare(column, np.ones((1, 1), np.float64), cv.CMP_EQ).shape, (4, 1))
+
 class CanUsePurePythonModuleFunction(NewOpenCVTests):
     def test_can_get_ocv_version(self):
         import sys

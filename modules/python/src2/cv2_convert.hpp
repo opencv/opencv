@@ -91,6 +91,50 @@ template<> PyObject* pyopencv_from(const bool& value);
 template<> bool pyopencv_to(PyObject* o, cv::Mat& m, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const cv::Mat& m);
 
+// --- arithmetic operand (an InputArray of cv::add/subtract/multiply/divide/absdiff, /AOS)
+
+// Collect a Python number or tuple given for such an argument as plain doubles.
+bool pyopencv_to_arithm_scalar(PyObject* o, std::vector<double>& values, const ArgInfo& info);
+
+// Is this object a Python number or tuple, i.e. a scalar rather than an array operand?
+inline bool isArithmScalarObject(PyObject* o) CV_NOEXCEPT
+{
+    return o && o != Py_None && (PyInt_Check(o) || PyFloat_Check(o) || PyTuple_Check(o));
+}
+
+/** A source operand of cv::add(), subtract(), multiply(), divide() or absdiff().
+ *
+ * A Python number or tuple given for one of those arguments has to reach the C++ function as a
+ * genuine Scalar, that is an _InputArray of MATX kind, the way a C++ caller passes it. Handing it
+ * over as a 4x1 CV_64F Mat instead makes it indistinguishable from an array operand of that exact
+ * shape, and cv::arithm_op() then has to guess which of the two it is: against a 1x1 or 0D array it
+ * takes both operands for arrays and broadcasts them, so cv.add(a_1x1, 1.0) returned a 4x1 result.
+ * See https://github.com/opencv/opencv/issues/31045
+ *
+ * The values and their count are the same as before; only the kind of the operand changes.
+ */
+template<typename TMat>
+struct PyArithmOperand
+{
+    // The operand to hand to the C++ function: a MATX scalar, or the array as converted.
+    cv::_InputArray arg() const
+    {
+        return scalar.empty() ? cv::_InputArray(mat)
+                              : cv::_InputArray(scalar.data(), static_cast<int>(scalar.size()));
+    }
+
+    TMat mat;
+    std::vector<double> scalar;   // non-empty exactly when a Python number or tuple was given
+};
+
+template<typename TMat>
+bool pyopencv_to(PyObject* o, PyArithmOperand<TMat>& operand, const ArgInfo& info)
+{
+    if (info.arithm_op_src && isArithmScalarObject(o))
+        return pyopencv_to_arithm_scalar(o, operand.scalar, info);
+    return pyopencv_to(o, operand.mat, info);
+}
+
 // --- Ptr
 template<typename T>
 struct PyOpenCV_Converter< cv::Ptr<T> >
