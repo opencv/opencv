@@ -243,4 +243,35 @@ TEST(Imgproc_PhaseCorrelatorTest, float32_overflow) {
     EXPECT_NEAR(std::abs(phaseShift.y), 0.0, 1.0);
 }
 
+TEST(Imgproc_PhaseCorrelatorTest, iterative_odd_dimensions)
+{
+    for (int rows : {64, 65})
+    {
+        for (int cols : {64, 65})
+        {
+            SCOPED_TRACE(cv::format("Size: %d x %d", rows, cols));
+
+            Mat src1 = Mat::zeros(rows, cols, CV_64F);
+
+            src1.at<double>(32, 32) = 1.0;
+
+            for (const Point& expected :
+                 {Point(-1, 0), Point(1, 0),
+                  Point(0, -1), Point(0, 1), Point(0, 0)})
+            {
+                Mat src2 = Mat::zeros(rows, cols, CV_64F);
+
+                src2.at<double>(32 + expected.y,
+                                32 + expected.x) = 1.0;
+
+                Point2d actual =
+                    phaseCorrelateIterative(src1, src2, 7, 10);
+
+                EXPECT_NEAR(expected.x, actual.x, 1e-5);
+                EXPECT_NEAR(expected.y, actual.y, 1e-5);
+            }
+        }
+    }
+}
+
 }} // namespace
