@@ -163,4 +163,68 @@ TEST(Photo_NPR_Stylization, regression)
 
 }
 
+// The filters work on 3-channel images. More channels used to overflow a heap buffer.
+typedef testing::TestWithParam<int> Photo_NPR_MoreThanThreeChannels;
+
+TEST_P(Photo_NPR_MoreThanThreeChannels, throws)
+{
+    Mat src = Mat::zeros(24, 24, CV_8UC(GetParam())), dst1, dst2;
+    EXPECT_THROW(edgePreservingFilter(src, dst1, RECURS_FILTER), cv::Exception);
+    EXPECT_THROW(edgePreservingFilter(src, dst1, NORMCONV_FILTER), cv::Exception);
+    EXPECT_THROW(pencilSketch(src, dst1, dst2), cv::Exception);
+    EXPECT_THROW(stylization(src, dst1), cv::Exception);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Photo_NPR_MoreThanThreeChannels, testing::Values(4, 6, 8));
+
+// An image with a zero width or height crashed.
+typedef testing::TestWithParam<Size> Photo_NPR_EmptyInput;
+
+TEST_P(Photo_NPR_EmptyInput, throws)
+{
+    Mat src(GetParam(), CV_8UC3), dst1, dst2;
+    EXPECT_THROW(edgePreservingFilter(src, dst1), cv::Exception);
+    EXPECT_THROW(pencilSketch(src, dst1, dst2), cv::Exception);
+    EXPECT_THROW(stylization(src, dst1), cv::Exception);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Photo_NPR_EmptyInput, testing::Values(Size(0, 0), Size(0, 5), Size(5, 0)));
+
+TEST(Photo_NPR, three_channel_input_still_works)
+{
+    Mat src(24, 24, CV_8UC3), dst1, dst2;
+    theRNG().fill(src, RNG::UNIFORM, 0, 256);
+
+    EXPECT_NO_THROW(edgePreservingFilter(src, dst1));
+    EXPECT_EQ(src.size(), dst1.size());
+    EXPECT_NO_THROW(pencilSketch(src, dst1, dst2));
+    EXPECT_EQ(src.size(), dst1.size());
+    EXPECT_EQ(src.size(), dst2.size());
+    EXPECT_NO_THROW(stylization(src, dst1));
+    EXPECT_EQ(src.size(), dst1.size());
+    EXPECT_EQ(CV_8UC3, dst1.type());
+}
+
+TEST(Photo_NPR, edge_preserving_filter_gray_input_still_works)
+{
+    Mat src(24, 24, CV_8UC1), dst;
+    theRNG().fill(src, RNG::UNIFORM, 0, 256);
+    EXPECT_NO_THROW(edgePreservingFilter(src, dst));
+    EXPECT_EQ(src.size(), dst.size());
+}
+
+// The normalized convolution filter is written for exactly 3 channels and reads past the end of
+// a row for narrow 1 and 2 channel images, so it needs 3 channels. The recursive filter does not.
+typedef testing::TestWithParam<tuple<int, Size> > Photo_NPR_NormConvChannels;
+
+TEST_P(Photo_NPR_NormConvChannels, requires_three_channels)
+{
+    Mat src = Mat::zeros(get<1>(GetParam()), CV_8UC(get<0>(GetParam()))), dst;
+    EXPECT_THROW(edgePreservingFilter(src, dst, NORMCONV_FILTER), cv::Exception);
+    EXPECT_NO_THROW(edgePreservingFilter(src, dst, RECURS_FILTER));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Photo_NPR_NormConvChannels,
+    testing::Combine(testing::Values(1, 2), testing::Values(Size(24, 24), Size(1, 24), Size(2, 24), Size(24, 1))));
+
 }} // namespace
