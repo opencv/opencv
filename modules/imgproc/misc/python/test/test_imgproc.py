@@ -64,3 +64,36 @@ class Imgproc_Tests(NewOpenCVTests):
         # a single HWC image is still accepted
         res = cv.remap(batch[0], map_x, map_y, cv.INTER_NEAREST)
         self.assertEqual(res.shape, (3, 5, 3))
+
+    def test_resize_params(self):
+        img = np.random.randint(0, 256, size=(37, 51, 3), dtype=np.uint8)
+
+        # The default parameters are classic resize, given a size or a scale.
+        params = cv.ResizeParams((24, 17))
+        self.assertEqual(params.coordMode, cv.ResizeCoord_PIXEL_CENTER)
+        np.testing.assert_array_equal(cv.resize(img, params), cv.resize(img, (24, 17)))
+        np.testing.assert_array_equal(cv.resize(img, cv.ResizeParams((0, 0), 0.5, 0.5)),
+                                      cv.resize(img, None, fx=0.5, fy=0.5))
+
+        # A 4-D array is a batch: every (n, c) plane is resized to dsize.
+        batch = np.random.rand(2, 3, 16, 16).astype(np.float32)
+        params = cv.ResizeParams((32, 8), interpolation=cv.INTER_NEAREST)
+        params.coordMode = cv.ResizeCoord_ASYMMETRIC
+        params.nearestMode = cv.ResizeNearest_FLOOR
+        out = cv.resize(batch, params)
+        self.assertEqual(out.shape, (2, 3, 8, 32))
+        # asymmetric + floor takes src[floor(dst * in / out)] on each axis
+        rows = np.arange(8) * 2
+        cols = np.arange(32) // 2
+        np.testing.assert_array_equal(out, batch[:, :, rows][:, :, :, cols])
+
+        # Each plane of a batch comes out exactly as it does on its own.
+        params = cv.ResizeParams((12, 9), interpolation=cv.INTER_CUBIC)
+        params.coordMode = cv.ResizeCoord_HALF_PIXEL
+        params.cubicCoeffA = -0.5
+        params.excludeOutside = True
+        out = cv.resize(batch, params)
+        self.assertEqual(out.shape, (2, 3, 9, 12))
+        for n in range(2):
+            for c in range(3):
+                np.testing.assert_array_equal(out[n, c], cv.resize(batch[n, c], params))
