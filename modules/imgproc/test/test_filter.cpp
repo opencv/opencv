@@ -1354,6 +1354,35 @@ INSTANTIATE_TEST_CASE_P(/**/, Imgproc_sepFilter2D_types,
     testing::Values(CV_16S, CV_32F, CV_64F),
 );
 
+// sepFilter2D must match filter2D with the same kernel as a 2D matrix.
+// Covers the cases a HAL may handle, including 8U->16U.
+typedef tuple<tuple<int, int>, int> SepFilter2D_vs_Filter2D_Params;
+typedef TestWithParam<SepFilter2D_vs_Filter2D_Params> Imgproc_sepFilter2D_vs_filter2D;
+TEST_P(Imgproc_sepFilter2D_vs_filter2D, accuracy)
+{
+    const int sdepth = get<0>(get<0>(GetParam()));
+    const int ddepth = get<1>(get<0>(GetParam()));
+    const int borderType = get<1>(GetParam());
+
+    Mat src(61, 127, sdepth);
+    randu(src, 0, 256);
+    Mat kernelX = getGaussianKernel(5, -1, CV_32F);
+    Mat kernelY = getGaussianKernel(3, -1, CV_32F);
+    const double delta = 3;
+
+    Mat result, gt;
+    sepFilter2D(src, result, ddepth, kernelX, kernelY, Point(-1, -1), delta, borderType);
+    cv::filter2D(src, gt, ddepth, kernelY * kernelX.t(), Point(-1, -1), delta, borderType);
+
+    const double eps = (ddepth == CV_32F) ? 1e-3 : 1;
+    EXPECT_LE(cv::norm(result, gt, NORM_INF), eps);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_sepFilter2D_vs_filter2D, testing::Combine(
+    testing::Values(make_tuple(CV_8U, CV_8U), make_tuple(CV_8U, CV_16U), make_tuple(CV_32F, CV_32F)),
+    testing::Values(BORDER_CONSTANT, BORDER_REPLICATE)
+));
+
 // Verify that the tiled parallel FilterEngine path produces bit-exact results
 // compared to the sequential (single-threaded) path for large images.
 
