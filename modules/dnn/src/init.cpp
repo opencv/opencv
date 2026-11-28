@@ -148,6 +148,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(DFT,            DFTLayer);
     CV_DNN_REGISTER_LAYER_CLASS(BitShift,       BitShiftLayer);
     CV_DNN_REGISTER_LAYER_CLASS(GridSample,     GridSampleLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(DeformConv,     DeformConvLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Reduce2,        Reduce2Layer);
     CV_DNN_REGISTER_LAYER_CLASS(NegativeLogLikelihoodLoss, NegativeLogLikelihoodLossLayer);
     CV_DNN_REGISTER_LAYER_CLASS(SoftmaxCrossEntropyLoss, SoftmaxCrossEntropyLossLayer);

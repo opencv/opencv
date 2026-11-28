@@ -14,8 +14,6 @@
 "test_ai_onnx_ml_tree_ensemble_single_tree",
 "test_attention_4d_diff_heads_mask4d_padded_kv", // needs the nonpad_kv_seqlen input (padded-KV variant) which is not supported yet
 "test_averagepool_2d_ceil_last_window_starts_on_pad",
-"test_basic_deform_conv_with_padding",
-"test_basic_deform_conv_without_padding",
 "test_batchnorm_epsilon_training_mode",  // ---- same as above ---
 "test_batchnorm_example_training_mode",  // ---- same as above ---
 "test_bernoulli",  // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "Bernoulli" in function 'getLayerInstance'
@@ -26,8 +24,6 @@
 "test_bernoulli_seed_expanded",  // ---- same as above ---
 "test_castlike_FLOAT_to_STRING",
 "test_castlike_STRING_to_FLOAT",  // Issues::Layer::Can't create layer "onnx_node_output_0!output" of type "CastLike" in function 'getLayerInstance'
-"test_deform_conv_with_mask_bias",
-"test_deform_conv_with_multiple_offset_groups",
 "test_dequantizelinear_float4e2m1",
 "test_dft_axis",
 "test_equal_string",

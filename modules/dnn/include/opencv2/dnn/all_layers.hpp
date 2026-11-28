@@ -746,6 +746,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<GridSampleLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS DeformConvLayer : public Layer
+    {
+    public:
+        static Ptr<DeformConvLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS OneHotLayer : public Layer
     {
     public:

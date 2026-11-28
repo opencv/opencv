@@ -282,6 +282,10 @@ CASE(test_basic_conv_without_padding)
 #endif
 CASE(test_basic_convinteger)
     SKIP;
+CASE(test_basic_deform_conv_with_padding)
+    SKIP;
+CASE(test_basic_deform_conv_without_padding)
+    SKIP;
 CASE(test_batchnorm_epsilon)
     SKIP;
 CASE(test_batchnorm_epsilon_training_mode)
@@ -868,6 +872,10 @@ CASE(test_cumsum_2d_int32)
     SKIP;
 CASE(test_cumsum_2d_negative_axis)
     // no filter
+CASE(test_deform_conv_with_mask_bias)
+    SKIP;
+CASE(test_deform_conv_with_multiple_offset_groups)
+    SKIP;
 CASE(test_depthtospace_crd_mode)
     // no filter
     if (target == DNN_TARGET_OPENCL)

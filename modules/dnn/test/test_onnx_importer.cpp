@@ -341,6 +341,22 @@ TEST_P(Test_ONNX_layers, MaxUnpool_pads)
     testONNXModels("maxunpool_pads", npy, 0, 0, false, false, 2);
 }
 
+// DeformConv cases the conformance tests don't cover: groups, offset groups, batch 2, strides,
+// dilations, asymmetric pads, and a mask without a bias.
+TEST_P(Test_ONNX_layers, DeformConv_groups_stride_dilation)
+{
+    if (backend != DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only CPU is supported");
+    testONNXModels("deform_conv_groups_stride_dilation", npy, 0, 0, false, false, 4);
+}
+
+TEST_P(Test_ONNX_layers, DeformConv_mask_no_bias)
+{
+    if (backend != DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only CPU is supported");
+    testONNXModels("deform_conv_mask_no_bias", npy, 0, 0, false, false, 4);
+}
+
 // Opset 20 removed DFT's axis attribute; with no axis input, the axis defaults to -2.
 TEST_P(Test_ONNX_layers, DFT_opset20_default_axis)
 {

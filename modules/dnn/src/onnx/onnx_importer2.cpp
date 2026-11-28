@@ -274,6 +274,7 @@ protected:
     void parseHammingWindow        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCenterCropPad        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseGridSample           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseDeformConv           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseNegativeLogLikelihoodLoss(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSoftmaxCrossEntropyLoss  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseAffineGrid           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2407,6 +2408,15 @@ void ONNXImporter2::parseGridSample(LayerParams& layerParams, const opencv_onnx:
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseDeformConv(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    int n_inputs = node_proto.input_size();
+    CV_CheckGE(n_inputs, 3, "DeformConv: X, W and offset are required");
+    CV_CheckLE(n_inputs, 5, "DeformConv: at most 5 inputs (X, W, offset, B, mask)");
+    layerParams.type = "DeformConv";
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseAffineGrid(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "AffineGrid";
@@ -3730,6 +3740,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["HannWindow"] = &ONNXImporter2::parseHannWindow;
     dispatch["HammingWindow"] = &ONNXImporter2::parseHammingWindow;
     dispatch["GridSample"] = &ONNXImporter2::parseGridSample;
+    dispatch["DeformConv"] = &ONNXImporter2::parseDeformConv;
     dispatch["AffineGrid"] = &ONNXImporter2::parseAffineGrid;
     dispatch["RoiAlign"] = &ONNXImporter2::parseRoiAlign;
     dispatch["Upsample"] = &ONNXImporter2::parseUpsample;
