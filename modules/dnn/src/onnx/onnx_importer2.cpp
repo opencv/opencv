@@ -1558,6 +1558,27 @@ void ONNXImporter2::parseConstant(LayerParams& layerParams, const opencv_onnx::N
 // BUG: https://github.com/opencv/opencv/issues/26308
 void ONNXImporter2::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
+    CV_CheckGE(node_proto_.input_size(), 3, "DNN/ONNX/LSTM: requires at least 3 inputs (X, W, R)");
+    CV_CheckGE(node_inputs.size(), (size_t)3, "DNN/ONNX/LSTM: requires at least 3 node inputs");
+
+    const ArgData& xdata = netimpl->args.at(node_inputs[0].idx);
+    if (!xdata.shape.empty())
+    {
+        CV_CheckEQ(xdata.shape.size(), (size_t)3, "DNN/ONNX/LSTM: input X must have rank 3");
+    }
+
+    const ArgData& wdata = netimpl->args.at(node_inputs[1].idx);
+    if (!wdata.shape.empty())
+    {
+        CV_CheckEQ(wdata.shape.size(), (size_t)3, "DNN/ONNX/LSTM: input W must have rank 3");
+    }
+
+    const ArgData& rdata = netimpl->args.at(node_inputs[2].idx);
+    if (!rdata.shape.empty())
+    {
+        CV_CheckEQ(rdata.shape.size(), (size_t)3, "DNN/ONNX/LSTM: input R must have rank 3");
+    }
+
     opencv_onnx::NodeProto lstm_proto = node_proto_;
     layerParams.type = "LSTM2";
 
