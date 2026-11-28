@@ -577,4 +577,45 @@ TEST(Objdetect_QRCode_Encode_Decode_Long_Text, regression_issue27183)
     EXPECT_EQ(input, decoded_msg);
 }
 
+// These tests are not in Objdetect_QRCode_Encode, because that test case uses TEST_P and the two macros cannot be mixed.
+// The version must be in [0, 40], and larger values used to crash or hang the encoder.
+TEST(Objdetect_QRCode_Encode_Params, invalid_version_throws)
+{
+    for (int version : {-1, 41, 100, 255})
+    {
+        QRCodeEncoder::Params params;
+        params.version = version;
+        EXPECT_THROW(QRCodeEncoder::create(params), cv::Exception) << "version " << version;
+    }
+}
+
+TEST(Objdetect_QRCode_Encode_Params, invalid_correction_level_throws)
+{
+    for (int level : {-1, 4, 100})
+    {
+        QRCodeEncoder::Params params;
+        params.correction_level = static_cast<QRCodeEncoder::CorrectionLevel>(level);
+        EXPECT_THROW(QRCodeEncoder::create(params), cv::Exception) << "correction level " << level;
+    }
+}
+
+TEST(Objdetect_QRCode_Encode_Params, valid_parameter_limits)
+{
+    const QRCodeEncoder::CorrectionLevel levels[] = {QRCodeEncoder::CORRECT_LEVEL_L, QRCodeEncoder::CORRECT_LEVEL_M,
+                                                     QRCodeEncoder::CORRECT_LEVEL_Q, QRCodeEncoder::CORRECT_LEVEL_H};
+    for (int version : {0, 1, 40})
+    {
+        for (size_t i = 0; i < sizeof(levels) / sizeof(levels[0]); i++)
+        {
+            QRCodeEncoder::Params params;
+            params.version = version;
+            params.correction_level = levels[i];
+            Ptr<QRCodeEncoder> encoder = QRCodeEncoder::create(params);
+            Mat qrcode;
+            EXPECT_NO_THROW(encoder->encode("HELLO", qrcode)) << "version " << version << " level " << i;
+            EXPECT_FALSE(qrcode.empty()) << "version " << version << " level " << i;
+        }
+    }
+}
+
 }} // namespace
