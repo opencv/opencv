@@ -3,9 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
-#include "../op_inf_engine.hpp"
-#include "../ie_ngraph.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include <atomic>
 
 namespace cv { namespace dnn {
 
@@ -32,8 +31,7 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+        return backendId == DNN_BACKEND_OPENCV;
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -114,30 +112,48 @@ public:
         size_t axis_step = static_cast<size_t>(step_data[axis] / sizeof(T));
 
         bool innermost_axis = axis == static_cast<int>(shape_data.size() - 1);
+        std::atomic<bool> globOutOfRangeIdx(false);
 
         auto fn = [&](const Range &r) {
-            for (int i = r.start; i < r.end; i++) {
+            bool outOfRangeIdx = globOutOfRangeIdx.load(std::memory_order_relaxed);
+            for (int i = r.start; i < r.end && !outOfRangeIdx; i++) {
                 auto *data = ptr_data + static_cast<size_t>(calculateOffset(i, shape_indices, axis, step_data) / sizeof(T));
                 auto *indices = ptr_indices + i * inner_most_dim;
                 auto *out = ptr_out + i * inner_most_dim;
 
                 if (innermost_axis) {
                     for (int j = 0; j < inner_most_dim; j++) {
-                        int index = (indices[j] + axis_dim) % axis_dim; // TODO: Check out-of-range index
+                        int64_t index = (int64_t)indices[j];
+                        index += index < 0 ? axis_dim : 0;
+                        if (index < 0 || index >= axis_dim) {
+                            outOfRangeIdx = true;
+                            break;
+                        }
                         out[j] = data[index];
                     }
                 } else {
                     for (int j = 0; j < inner_most_dim; j++) {
-                        int index = (indices[j] + axis_dim) % axis_dim; // TODO: Check out-of-range index
+                        int64_t index = (int64_t)indices[j];
+                        index += index < 0 ? axis_dim : 0;
+                        if (index < 0 || index >= axis_dim) {
+                            outOfRangeIdx = true;
+                            break;
+                        }
                         out[j] = data[index * axis_step + j];
                     }
                 }
             }
+            if (outOfRangeIdx)
+                globOutOfRangeIdx.store(true, std::memory_order_relaxed);
         };
 
         int outer_dims = total(shape_indices, 0, shape_indices.size() - 1);
         double nstripes = static_cast<size_t>(outer_dims * inner_most_dim * (1 / 1024.0));
         parallel_for_(Range(0, outer_dims), fn, nstripes);
+
+        if (globOutOfRangeIdx.load()) {
+            CV_Error(Error::StsOutOfRange, "GatherElements: some of indices are outside of range");
+        }
     }
 
     template<typename... Args>
@@ -178,31 +194,6 @@ public:
                 CV_Error(cv::Error::BadDepth, "DNN/GatherElements: Unsupported type.");
         };
     }
-
-#ifdef HAVE_DNN_NGRAPH
-    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
-                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
-    {
-        int64_t indicesBoundInt64 = nodes[0].dynamicCast<InfEngineNgraphNode>()->node.get_shape()[axis];
-        int32_t indicesBoundInt32 = indicesBoundInt64;
-        std::shared_ptr<ov::op::v0::Constant> indicesBound;
-        if (nodes[1].dynamicCast<InfEngineNgraphNode>()->node.get_element_type() == ov::element::i32)
-            indicesBound = std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{}, &indicesBoundInt32);
-        else if (nodes[1].dynamicCast<InfEngineNgraphNode>()->node.get_element_type() == ov::element::i64)
-            indicesBound = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{}, &indicesBoundInt64);
-        else
-            CV_Error(Error::StsNotImplemented, "");
-
-        auto indicesNonNegative = std::make_shared<ov::op::v1::Mod>(
-            std::make_shared<ov::op::v1::Add>(nodes[1].dynamicCast<InfEngineNgraphNode>()->node, indicesBound),
-            indicesBound);
-        auto gatherElements = std::make_shared<ov::op::v6::GatherElements>(
-            nodes[0].dynamicCast<InfEngineNgraphNode>()->node,
-            indicesNonNegative,
-            axis);
-        return Ptr<BackendNode>(new InfEngineNgraphNode(gatherElements));
-    }
-#endif  // HAVE_DNN_NGRAPH
 
 private:
     int axis;
