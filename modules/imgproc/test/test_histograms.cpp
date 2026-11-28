@@ -390,5 +390,35 @@ TEST_P(Imgproc_Hist_CompareSparseChiSquare, accuracy)
 INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_Hist_CompareSparseChiSquare,
                        testing::Combine(testing::Values(2, 3), testing::Bool()));
 
+// The numbers of tiles are used as divisors, so a tile grid with a zero in it used to end in a division by zero
+// and a crash. A negative size used to be rejected only by accident, when a matrix of negative size was created.
+TEST(Imgproc_CLAHE, regression_invalid_tile_grid)
+{
+    const Size grids[] = {Size(0, 0), Size(0, 8), Size(8, 0), Size(-1, -1), Size(-8, 8), Size(8, -8)};
+    const int types[] = {CV_8UC1, CV_16UC1};
+
+    for (size_t t = 0; t < sizeof(types) / sizeof(types[0]); t++)
+    {
+        Mat src(64, 64, types[t], Scalar(7)), dst;
+
+        for (size_t g = 0; g < sizeof(grids) / sizeof(grids[0]); g++)
+        {
+            SCOPED_TRACE(cv::format("type %d, grid %d x %d", types[t], grids[g].width, grids[g].height));
+
+            Ptr<CLAHE> created = cv::createCLAHE(2.0, grids[g]);
+            EXPECT_THROW(created->apply(src, dst), cv::Exception);
+
+            Ptr<CLAHE> changed = cv::createCLAHE(2.0, Size(8, 8));
+            changed->setTilesGridSize(grids[g]);
+            EXPECT_THROW(changed->apply(src, dst), cv::Exception);
+
+            // a valid grid works again
+            changed->setTilesGridSize(Size(8, 8));
+            EXPECT_NO_THROW(changed->apply(src, dst));
+            EXPECT_EQ(src.size(), dst.size());
+        }
+    }
+}
+
 }} // namespace
 /* End Of File */
