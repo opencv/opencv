@@ -847,10 +847,18 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     if( op == REDUCE_AVG )
     {
         op = REDUCE_SUM;
-        if( sdepth < CV_32S && ddepth < CV_32S )
+        // An average is summed before it is divided, so an integer destination is accumulated
+        // in a wider depth. The destinations are listed, not compared: CV_Bool, CV_64U, CV_64S
+        // and CV_32U sit above CV_32S in the enum. The 8-bit sources keep CV_32S; the wider ones
+        // have no CV_32S kernel, so they take CV_64F. This is not overflow-proof for the 8-bit
+        // sources: reduceR_/reduceC_ take the accumulator from Op::rtype and sum in int whatever
+        // the destination depth is.
+        if( ddepth == CV_8U || ddepth == CV_8S || ddepth == CV_16U ||
+            ddepth == CV_16S || ddepth == CV_32S )
         {
-            temp.create(dst.rows, dst.cols, CV_32SC(cn));
-            ddepth = CV_32S;
+            int adepth = (sdepth == CV_8U || sdepth == CV_8S) ? CV_32S : CV_64F;
+            temp.create(dst.rows, dst.cols, CV_MAKETYPE(adepth, cn));
+            ddepth = adepth;
         }
     }
 
