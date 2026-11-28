@@ -4412,6 +4412,19 @@ INSTANTIATE_TEST_CASE_P(/**/, Core_FiniteMask_bits,
     testing::Combine(testing::Values(CV_16F, CV_16BF), testing::Range(1, 5)));
 
 ///////////////////////////////////////////////////////////////////////////////////
+// https://github.com/opencv/opencv/issues/30951
+TEST(Core_CountNonZero, overflow_int_range_continuous)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_6GB, CV_TEST_TAG_LONG);
+    // ~2.3GB continuous mask, the exact case from the issue
+    cv::Mat mask(35000, 70000, CV_8UC1, cv::Scalar(1));
+    EXPECT_THROW(cv::countNonZero(mask), cv::Exception);
+
+    // INT_MAX non-zero elements is the largest representable result
+    cv::Mat part(1, INT_MAX, CV_8UC1, mask.data);
+    EXPECT_EQ(INT_MAX, cv::countNonZero(part));
+}
+
 typedef testing::TestWithParam<perf::MatDepth> NonZeroSupportedMatDepth;
 
 TEST_P(NonZeroSupportedMatDepth, findNonZero)
