@@ -373,6 +373,29 @@ PERF_TEST_P_(BinaryOpTest, multiply)
     SANITY_CHECK_NOTHING();
 }
 
+using RowMultiply = perf::TestBaseWithParam<std::tuple<Size, int, perf::MatDepth, bool>>;
+
+PERF_TEST_P_(RowMultiply, multiply)
+{
+    const Size size = get<0>(GetParam());
+    const int channels = get<1>(GetParam());
+    const int depth = get<2>(GetParam());
+    const bool expanded = get<3>(GetParam());
+    const int type = CV_MAKETYPE(depth, channels);
+    Mat src(size, type), gain(1, 1, type), dst(size, type);
+    theRNG().fill(src, RNG::UNIFORM, 0.0, 16.0);
+    theRNG().fill(gain, RNG::UNIFORM, 1.0, 4.0);
+    const Mat operand = expanded ? cv::repeat(gain, size.height, size.width) : gain;
+
+    declare.in(src, operand).out(dst);
+    TEST_CYCLE() cv::multiply(src, operand, dst);
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, RowMultiply,
+    testing::Combine(testing::Values(Size(320, 240), Size(1024, 768), Size(1920, 1080)),
+                     testing::Values(5, 9, 16), testing::Values(CV_8U, CV_16F), testing::Bool()));
+
 PERF_TEST_P_(BinaryOpTest, multiplyScale)
 {
     Size sz = get<0>(GetParam());
