@@ -43,6 +43,114 @@
 
 namespace opencv_test { namespace {
 
+class ScopedThreadsGuard
+{
+public:
+    ScopedThreadsGuard() : old_threads(getNumThreads()) {}
+    ~ScopedThreadsGuard() { setNumThreads(old_threads); }
+    void set(int n) { setNumThreads(n); }
+private:
+    int old_threads;
+};
+
+typedef testing::TestWithParam<tuple<Vec3i, int, int, bool, int> > Imgproc_SepFilter3D;
+
+TEST_P(Imgproc_SepFilter3D, independentKernels)
+{
+    const Vec3i volume = get<0>(GetParam());
+    const int depth = get<1>(GetParam());
+    const int cn = get<2>(GetParam());
+    const bool explicitChannels = get<3>(GetParam());
+    const int borderType = get<4>(GetParam());
+    const int shape[] = {volume[0], volume[1], volume[2], cn};
+    const int dims = explicitChannels ? 4 : 3;
+    const int channels = explicitChannels ? 1 : cn;
+    Mat input(dims, shape, CV_MAKETYPE(CV_8U, channels));
+    theRNG().fill(input, RNG::UNIFORM, 0, 24);
+
+    Mat src;
+    input.convertTo(src, depth);
+    const Mat1f kernelZ({1, 5}, {0.0625f, 0.125f, 0.25f, 0.5f, 0.0625f});
+    const Mat1f kernelY({3, 1}, {0.25f, 0.25f, 0.5f});
+    const Mat1f kernelX({1, 3}, {-0.5f, 1.f, 0.5f});
+
+    // Enough threads to split the planes of the tall volume into row stripes.
+    ScopedThreadsGuard threads;
+    threads.set(4);
+    Mat result;
+    sepFilter3D(src, result, kernelZ, kernelY, kernelX, borderType);
+    ASSERT_EQ(result.type(), src.type());
+    ASSERT_TRUE(result.size == src.size);
+
+    Mat actual;
+    result.convertTo(actual, CV_32F);
+    for (int z = 0; z < shape[0]; ++z)
+        for (int y = 0; y < shape[1]; ++y)
+            for (int x = 0; x < shape[2]; ++x)
+                for (int c = 0; c < cn; ++c)
+                {
+                    double expected = 0.;
+                    for (int kz = 0; kz < 5; ++kz)
+                        for (int ky = 0; ky < 3; ++ky)
+                            for (int kx = 0; kx < 3; ++kx)
+                            {
+                                const int iz = borderInterpolate(z + kz - 2, shape[0], borderType);
+                                const int iy = borderInterpolate(y + ky - 1, shape[1], borderType);
+                                const int ix = borderInterpolate(x + kx - 1, shape[2], borderType);
+                                if (iz >= 0 && iy >= 0 && ix >= 0)
+                                    expected += static_cast<double>(kernelZ(0, kz)) *
+                                                kernelY(ky, 0) * kernelX(0, kx) *
+                                                input.ptr<uchar>(iz, iy)[ix * cn + c];
+                            }
+                    if (depth == CV_8U)
+                        expected = saturate_cast<uchar>(expected);
+                    else if (depth == CV_16F)
+                        expected = static_cast<float>(hfloat(static_cast<float>(expected)));
+                    EXPECT_EQ(static_cast<float>(expected), actual.ptr<float>(z, y)[x * cn + c]);
+                }
+}
+
+INSTANTIATE_TEST_CASE_P(, Imgproc_SepFilter3D,
+    testing::Combine(testing::Values(Vec3i(4, 2, 5), Vec3i(1, 64, 5)),
+                     testing::Values(CV_8U, CV_16F, CV_32F), testing::Values(1, 3, 9),
+                     testing::Bool(), testing::Values(BORDER_CONSTANT, BORDER_REPLICATE,
+                                                       BORDER_REFLECT, BORDER_REFLECT_101)));
+
+TEST(Imgproc_SepFilter3D_Kernel, convertsToFloat)
+{
+    const int shape[] = {3, 4, 5};
+    Mat src(3, shape, CV_32F);
+    theRNG().fill(src, RNG::UNIFORM, 0, 1);
+    const Mat kernel64 = getGaussianKernel(3, 0.8);
+    Mat kernel32;
+    kernel64.convertTo(kernel32, CV_32F);
+
+    Mat actual, expected;
+    sepFilter3D(src, actual, kernel64, kernel64, kernel64);
+    sepFilter3D(src, expected, kernel32, kernel32, kernel32);
+
+    EXPECT_EQ(0., cvtest::norm(actual, expected, NORM_INF));
+    const Mat1d infinite(1, 1, 1e300);
+    EXPECT_THROW(sepFilter3D(src, actual, infinite, kernel64, kernel64), cv::Exception);
+}
+
+TEST(Imgproc_SepFilter3D_Uint8, roundsAfterAllPasses)
+{
+    const int shape[] = {1, 1, 5};
+    uchar values[] = {1, 2, 3, 6, 255};
+    Mat src(3, shape, CV_8U, values);
+    const Mat1f half(1, 1, 0.5f), twice(1, 1, 2.f);
+
+    sepFilter3D(src, src, half, half, twice);
+
+    // Rounding after each pass would give {0, 0, 2, 4, 128}.
+    EXPECT_EQ(0, values[0]);
+    EXPECT_EQ(1, values[1]);
+    EXPECT_EQ(2, values[2]);
+    EXPECT_EQ(3, values[3]);
+    EXPECT_EQ(128, values[4]);
+}
+
 class CV_FilterBaseTest : public cvtest::ArrayTest
 {
 public:
@@ -1378,16 +1486,6 @@ static void runFilter(const Mat& src, Mat& dst, int borderType, bool isSep)
         cv::filter2D(src, dst, -1, kernel, Point(-1, -1), 0, borderType);
     }
 }
-
-class ScopedThreadsGuard
-{
-public:
-    ScopedThreadsGuard() : old_threads(getNumThreads()) {}
-    ~ScopedThreadsGuard() { setNumThreads(old_threads); }
-    void set(int n) { setNumThreads(n); }
-private:
-    int old_threads;
-};
 
 TEST_P(ImgProc_ParallelFilter, accuracy)
 {

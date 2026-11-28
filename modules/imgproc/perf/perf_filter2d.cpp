@@ -140,4 +140,32 @@ PERF_TEST_P( ImgProc_ParallelFilter_Perf, filter2D_parallel,
     SANITY_CHECK_NOTHING();
 }
 
+typedef TestBaseWithParam< tuple<Vec3i, int, int> > ImgProc_SepFilter3D_Perf;
+
+PERF_TEST_P(ImgProc_SepFilter3D_Perf, volume,
+            Combine(Values(Vec3i(32, 256, 256), Vec3i(64, 128, 128),
+                           Vec3i(1, 512, 512), Vec3i(4, 512, 512)),
+                    Values(CV_8U, CV_16F, CV_32F), Values(1, 3, 9)))
+{
+    const Vec3i shape = get<0>(GetParam());
+    const int depth = get<1>(GetParam());
+    const int channels = get<2>(GetParam());
+    Mat samples(3, shape.val, CV_MAKETYPE(CV_8U, channels));
+    randu(samples, 0, 255);
+    Mat src;
+    samples.convertTo(src, depth);
+    Mat dst(3, shape.val, src.type());
+
+    const Mat kernelZ = getGaussianKernel(5, 0.75, CV_32F);
+    const Mat kernelY = getGaussianKernel(9, 1.25, CV_32F);
+    const Mat kernelX = getGaussianKernel(13, 1.75, CV_32F);
+    // The perf harness expects 2D inputs when counting bytes.
+    const Mat srcFlat = src.reshape(1, 1), dstFlat = dst.reshape(1, 1);
+    declare.in(srcFlat).out(dstFlat);
+
+    TEST_CYCLE() cv::sepFilter3D(src, dst, kernelZ, kernelY, kernelX);
+
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace
