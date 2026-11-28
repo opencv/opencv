@@ -94,6 +94,23 @@ cvBoxPoints( CvBox2D box, CvPoint2D32f pt[4] )
 }
 
 
+// Compare products of coordinate differences without signed overflow.
+// Each difference is at most UINT32_MAX in magnitude, so each unsigned
+// product fits in uint64 even when the signed cross product does not.
+static int compareCoordinateProducts(int64 a, int64 b, int64 c, int64 d)
+{
+    const uint64 p = static_cast<uint64>(a < 0 ? -a : a) *
+                     static_cast<uint64>(b < 0 ? -b : b);
+    const uint64 q = static_cast<uint64>(c < 0 ? -c : c) *
+                     static_cast<uint64>(d < 0 ? -d : d);
+    const bool p_negative = p != 0 && ((a < 0) != (b < 0));
+    const bool q_negative = q != 0 && ((c < 0) != (d < 0));
+    if (p_negative != q_negative)
+        return p_negative ? -1 : 1;
+    const int order = (p > q) - (p < q);
+    return p_negative ? -order : order;
+}
+
 double cv::pointPolygonTest( InputArray _contour, Point2f pt, bool measureDist )
 {
     CV_INSTRUMENT_REGION();
@@ -134,8 +151,9 @@ double cv::pointPolygonTest( InputArray _contour, Point2f pt, bool measureDist )
                 continue;
             }
 
-            int64 dist = static_cast<int64>(ip.y - v0.y)*(v.x - v0.x)
-                       - static_cast<int64>(ip.x - v0.x)*(v.y - v0.y);
+            int dist = compareCoordinateProducts(
+                static_cast<int64>(ip.y) - v0.y, static_cast<int64>(v.x) - v0.x,
+                static_cast<int64>(ip.x) - v0.x, static_cast<int64>(v.y) - v0.y);
             if( dist == 0 )
                 return 0;
             if( v.y < v0.y )
