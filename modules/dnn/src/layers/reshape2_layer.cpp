@@ -42,9 +42,6 @@ class Reshape2LayerImpl CV_FINAL : public Reshape2Layer
 {
 public:
     bool dynamicShapeSpec;
-    // ONNX 'allowzero' (opsets 14 to 23): when set, a 0 in the shape means a zero-size axis
-    // instead of "copy this axis from the input"
-    bool allowZero;
 
     static bool sameDims(const MatShape& a, const MatShape& b)
     {
@@ -106,6 +103,7 @@ public:
     {
         dynamicShapeSpec = true;
         setParamsFrom(params);
+        // ONNX 'allowzero', opsets 14 to 23
         allowZero = params.get<int>("allowzero", 0) != 0;
         if (params.has("shape"))
         {

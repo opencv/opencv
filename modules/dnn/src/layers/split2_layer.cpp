@@ -114,14 +114,31 @@ public:
         CV_Assert(0 <= axis_ && axis_ < inpDims);
         const bool blockC = isBlockChannelSplit(inpShape, axis_);
         const int C0 = blockC ? inpShape.back() : 1;
+        const int len = axisSize(inpShape, axis_);
         int totalSize_a = 0;
+
+        // One size may be -1 and takes the rest of the axis, as in Reshape. With a -1 the sizes
+        // also clamp like Slice ends: a part running past the end of the axis stops there.
+        int inferred = -1, known = 0;
+        for (size_t i = 0; i < noutputs; i++) {
+            if (split[i] == -1) {
+                CV_Assert(inferred < 0);
+                inferred = (int)i;
+            } else {
+                CV_Assert(split[i] >= 0);
+                known += split[i];
+            }
+        }
+        CV_Assert(inferred >= 0 || known <= len);
 
         outShapes.resize(noutputs);
         for (size_t i = 0; i < noutputs; i++) {
             MatShape outShape = inpShape;
-            int s = split[i];
+            int s = (int)i == inferred ? std::max(len - known, 0) : split[i];
+            if (inferred >= 0)
+                s = std::min(s, len - totalSize_a);
             CV_Assert(s >= 0);
-            CV_Assert(s <= axisSize(inpShape, axis_) - totalSize_a);
+            CV_Assert(s <= len - totalSize_a);
             if (blockC) {
                 outShape[axis_] = (s + C0 - 1) / C0;
                 outShape.C = s;
