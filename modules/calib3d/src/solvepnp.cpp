@@ -918,36 +918,30 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
         // on the order of the points, and it is never worse than EPnP alone.
         if (npoints == 4)
         {
-            Mat object64, image64;
-            opoints.convertTo(object64, CV_64F);
-            ipoints.convertTo(image64, CV_64F);
-            const std::vector<Point3d> object(object64.ptr<Point3d>(), object64.ptr<Point3d>() + 4);
-            const std::vector<Point2d> image(image64.ptr<Point2d>(), image64.ptr<Point2d>() + 4);
+            std::vector<Point3d> object;
+            std::vector<Point2d> image;
+            opoints.convertTo(object, CV_64F);
+            ipoints.convertTo(image, CV_64F);
 
             double bestError = squaredReprojectionError(object, image, cameraMatrix, distCoeffs, rvec, tvec);
             for (int first = 0; first < 4; first++)
             {
-                Mat opointsP3P(4, 1, opoints.type()), ipointsP3P(4, 1, ipoints.type());
-                for (int i = 0; i < 4; i++)
-                {
-                    opoints.row((first + i) % 4).copyTo(opointsP3P.row(i));
-                    ipoints.row((first + i) % 4).copyTo(ipointsP3P.row(i));
-                }
-
                 std::vector<Mat> rvecs, tvecs;
-                solveP3P(opointsP3P, ipointsP3P, _cameraMatrix, _distCoeffs, rvecs, tvecs, SOLVEPNP_P3P);
-                if (rvecs.empty())
-                    continue;
-
-                const double error = squaredReprojectionError(object, image, cameraMatrix, distCoeffs, rvecs[0], tvecs[0]);
-                if (cvIsNaN(error))
-                    continue;
-                if (error < bestError || cvIsNaN(bestError))
+                solveP3P(object, image, cameraMatrix, distCoeffs, rvecs, tvecs, SOLVEPNP_P3P);
+                if (!rvecs.empty())
                 {
-                    bestError = error;
-                    rvec = rvecs[0];
-                    tvec = tvecs[0];
+                    const double error = squaredReprojectionError(object, image, cameraMatrix, distCoeffs, rvecs[0], tvecs[0]);
+                    if (!cvIsNaN(error) && (error < bestError || cvIsNaN(bestError)))
+                    {
+                        bestError = error;
+                        rvec = rvecs[0];
+                        tvec = tvecs[0];
+                    }
                 }
+
+                // the next pass uses the next point as the 4th one
+                std::rotate(object.begin(), object.begin() + 1, object.end());
+                std::rotate(image.begin(), image.begin() + 1, image.end());
             }
         }
 
