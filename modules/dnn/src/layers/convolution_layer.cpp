@@ -156,7 +156,7 @@ public:
             inpShape.push_back(inputs[0].size[i]);
             outShape.push_back(outputs[0].size[i]);
         }
-        getConvPoolPaddings(inpShape, kernel_size, strides, padMode, pads_begin, pads_end);
+        getConvPoolPaddings(inpShape, kernel_size, strides, dilations, padMode, pads_begin, pads_end);
         if (pads_begin.size() == 2) {
             pad = Size(pads_begin[1], pads_begin[0]);
         }

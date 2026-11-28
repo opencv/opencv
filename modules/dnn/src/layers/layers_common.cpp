@@ -234,6 +234,13 @@ void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<size_t>&
                          const std::vector<size_t>& strides, const String &padMode,
                          std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end)
 {
+    getConvPoolPaddings(inp, kernel, strides, std::vector<size_t>(kernel.size(), 1), padMode, pads_begin, pads_end);
+}
+
+void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<size_t>& kernel,
+                         const std::vector<size_t>& strides, const std::vector<size_t>& dilations,
+                         const String &padMode, std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end)
+{
     if (padMode == "SAME" || padMode == "VALID")
     {
         pads_begin.assign(kernel.size(), 0);
@@ -241,12 +248,14 @@ void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<size_t>&
     }
     if (padMode == "SAME")
     {
-        CV_Assert_N(kernel.size() == strides.size(), kernel.size() == inp.size());
+        CV_Assert_N(kernel.size() == strides.size(), kernel.size() == inp.size(), kernel.size() == dilations.size());
         for (int i = 0; i < pads_begin.size(); i++) {
+            // A dilated kernel covers dilation * (kernel - 1) + 1 input values.
+            const size_t ksize = dilations[i] * (kernel[i] - 1) + 1;
             // There are test cases with stride > kernel.
-            if (strides[i] <= kernel[i])
+            if (strides[i] <= ksize)
             {
-                int pad = (kernel[i] - 1 - (inp[i] - 1 + strides[i]) % strides[i]) / 2;
+                int pad = (ksize - 1 - (inp[i] - 1 + strides[i]) % strides[i]) / 2;
                 pads_begin[i] = pads_end[i] = pad;
             }
         }

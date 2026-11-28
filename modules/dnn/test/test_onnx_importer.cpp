@@ -1597,6 +1597,17 @@ TEST_P(Test_ONNX_layers, Conv1d_bias)
     testONNXModels("conv1d_bias");
 }
 
+// auto_pad=SAME_UPPER with dilation: the padding must cover the dilated kernel
+TEST_P(Test_ONNX_layers, Conv1d_same_pad_dilation)
+{
+    testONNXModels("conv1d_same_pad_dilation");
+}
+
+TEST_P(Test_ONNX_layers, Conv2d_same_pad_dilation)
+{
+    testONNXModels("conv2d_same_pad_dilation");
+}
+
 TEST_P(Test_ONNX_layers, Conv1d_variable_weight)
 {
     if (backend == DNN_BACKEND_CUDA)
