@@ -2898,7 +2898,8 @@ or Triangle algorithm and uses it instead of the specified thresh.
 @note Currently, the Otsu's method is implemented only for CV_8UC1 and CV_16UC1 images,
 and the Triangle's method is implemented only for CV_8UC1 images.
 
-@param src input array (multiple-channel, CV_8U, CV_16S, CV_16U, CV_32F or CV_64F).
+@param src input array (multiple-channel, CV_8U, CV_16S, CV_16U, CV_32F, CV_64F, CV_16F
+or CV_16BF).
 @param dst output array of the same size  and type and the same number of channels as src.
 @param thresh threshold value.
 @param maxval maximum value to use with the #THRESH_BINARY and #THRESH_BINARY_INV thresholding

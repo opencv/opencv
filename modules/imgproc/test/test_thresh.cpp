@@ -114,7 +114,7 @@ TEST_P(Imgproc_Threshold_Masked_Fixed, threshold_mask_fixed)
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgproc_Threshold_Masked_Fixed,
     testing::Combine(
         testing::Values(false, true),//use roi
-        testing::Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),//depth
+        testing::Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F, CV_16F, CV_16BF),//depth
         testing::Values(1, 3),//channels
         testing::Values(THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV),// threshTypes
         testing::Values(0)
@@ -281,7 +281,7 @@ TEST_P(Imgproc_Threshold_Unsupported_Depth, umat)
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgproc_Threshold_Unsupported_Depth,
     testing::Combine(
-        testing::Values(CV_16F, CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U),//depth
+        testing::Values(CV_Bool, CV_64U, CV_64S, CV_32U),//depth
         testing::Values(THRESH_BINARY, THRESH_TRUNC)// threshTypes
     )
 );
@@ -333,5 +333,128 @@ TEST_P(Imgproc_Threshold_0D, regression)
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgproc_Threshold_0D, testing::Values(CV_8U, CV_16S, CV_16U, CV_32F, CV_64F));
+
+typedef testing::TestWithParam<int> Threshold_HalfFloat;
+
+TEST_P(Threshold_HalfFloat, vs_fp32)
+{
+    const int depth = GetParam();
+    const int types[] = { THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC,
+                          THRESH_TOZERO, THRESH_TOZERO_INV };
+    cv::RNG& rng = cv::theRNG();
+
+    for (int cn = 1; cn <= 4; cn++)
+    {
+        Mat s32(Size(53, 40), CV_MAKETYPE(CV_32F, cn)), full, wid;
+        rng.fill(s32, cv::RNG::UNIFORM, Scalar::all(-1), Scalar::all(1));
+        s32.convertTo(full, CV_MAKETYPE(depth, cn));
+        // non-continuous with an odd width, so the per-row tail runs
+        Mat src = full(Rect(3, 0, 47, 40));
+        src.convertTo(wid, CV_MAKETYPE(CV_32F, cn));
+
+        // 0.5 is exact; 0.3 rounds up on both depths; 0.1 rounds down on fp16
+        // and up on bf16, so both directions get exercised
+        const double threshes[] = { 0.5, 0.3, 0.1, 0.0, -0.3 };
+        const int nthresh = (int)(sizeof(threshes)/sizeof(threshes[0]));
+
+        for (int i = 0; i < 5; i++)
+            for (int t = 0; t < nthresh; t++)
+            {
+                SCOPED_TRACE(cv::format("depth=%d cn=%d type=%d thresh=%g",
+                                        depth, cn, types[i], threshes[t]));
+
+                Mat a, b, a32;
+                ASSERT_NO_THROW(cv::threshold(src, a, threshes[t], 1.0, types[i]));
+                ASSERT_EQ(depth, a.depth());
+                cv::threshold(wid, b, threshes[t], 1.0, types[i]);
+                a.convertTo(a32, CV_MAKETYPE(CV_32F, cn));
+
+                // TRUNC writes min(src, thresh), which rounds when thresh is not
+                // representable; the other four only select src, maxval or 0
+                const double tol = types[i] != THRESH_TRUNC ? 0.0 :
+                    (depth == CV_16F ? 1e-3 : 8e-3) * std::max(1.0, cvtest::norm(b, NORM_INF));
+                EXPECT_LE(cvtest::norm(a32, b, NORM_INF), tol);
+            }
+    }
+}
+
+
+// a pixel equal to the rounded threshold must follow the true threshold
+TEST_P(Threshold_HalfFloat, threshold_is_not_quantized)
+{
+    const int depth = GetParam();
+
+    // 0.3 is not representable; the nearest half-float value is above it
+    const double thresh = 0.3;
+    Mat probe32(1, 1, CV_32FC1, Scalar::all((float)thresh)), probe, roundTrip;
+    probe32.convertTo(probe, depth);
+    probe.convertTo(roundTrip, CV_32F);
+    const float rounded = roundTrip.at<float>(0, 0);
+    ASSERT_GT(rounded, (float)thresh) << "pick a threshold that rounds up for this depth";
+
+    Mat src(1, 1, CV_MAKETYPE(depth, 1));
+    probe.copyTo(src);
+
+    Mat dst, dst32;
+    cv::threshold(src, dst, thresh, 1.0, THRESH_BINARY);
+    dst.convertTo(dst32, CV_32F);
+
+    // rounded > thresh, so the pixel is above the threshold and takes maxval
+    EXPECT_EQ(1.f, dst32.at<float>(0, 0));
+}
+
+TEST_P(Threshold_HalfFloat, special_values)
+{
+    const int depth = GetParam();
+    const float inf = std::numeric_limits<float>::infinity();
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+    const float vals[] = { -inf, -1e4f, -1.f, -0.25f, -0.f, 0.f, 0.25f, 1.f, 1e4f, inf, nan };
+    const int nvals = (int)(sizeof(vals)/sizeof(vals[0]));
+    const int types[] = { THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC,
+                          THRESH_TOZERO, THRESH_TOZERO_INV };
+    const double threshes[] = { 0.0, -0.0, 0.3, -0.3, 1e10, -1e10 };
+
+    // long enough to go through the vector loop on every SIMD width
+    Mat s32(1, nvals * 8, CV_32FC1), src, x;
+    for (int j = 0; j < s32.cols; j++)
+        s32.at<float>(0, j) = vals[j % nvals];
+    s32.convertTo(src, depth);
+    src.convertTo(x, CV_32F);
+
+    for (double thresh : threshes)
+    {
+        Mat t32(1, 1, CV_32FC1, Scalar::all((float)thresh)), tq;
+        t32.convertTo(tq, depth);
+        tq.convertTo(t32, CV_32F);
+        const float tr = t32.at<float>(0, 0), t = (float)thresh;
+
+        for (int type : types)
+        {
+            SCOPED_TRACE(cv::format("depth=%d type=%d thresh=%g", depth, type, thresh));
+
+            Mat dst, d32;
+            cv::threshold(src, dst, thresh, 1.0, type);
+            dst.convertTo(d32, CV_32F);
+
+            for (int j = 0; j < x.cols; j++)
+            {
+                const float v = x.at<float>(0, j);
+                const bool gt = v > t, le = v <= t;
+                float expected = type == THRESH_BINARY     ? (gt ? 1.f : 0.f) :
+                                 type == THRESH_BINARY_INV ? (le ? 1.f : 0.f) :
+                                 type == THRESH_TRUNC      ? (gt ? tr : v) :
+                                 type == THRESH_TOZERO     ? (gt ? v : 0.f) :
+                                                             (le ? v : 0.f);
+                const float got = d32.at<float>(0, j);
+                if (cvIsNaN(expected))
+                    EXPECT_TRUE(cvIsNaN(got)) << "src=" << v;
+                else
+                    EXPECT_EQ(expected, got) << "src=" << v;
+            }
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, Threshold_HalfFloat, testing::Values(CV_16F, CV_16BF));
 
 }} // namespace

@@ -1324,6 +1324,117 @@ getThreshVal_Triangle_8u( const Mat& _src, const Mat& _mask = cv::Mat() )
     return thresh;
 }
 
+// maps fp16/bf16 bits to an int16 that orders like the float value, with -0 == +0
+static inline short halfKey(short v)
+{
+    short m = (short)(v & 0x7fff);
+    return v < 0 ? (short)-m : m;
+}
+
+template <int type>
+static inline short threshHalf1(short v, short K, short maxBits, short truncBits, short infBits)
+{
+    bool ok = (short)(v & 0x7fff) <= infBits;
+    bool gt = ok && halfKey(v) > K, le = ok && halfKey(v) <= K;
+    switch (type)
+    {
+    case THRESH_BINARY:     return gt ? maxBits : (short)0;
+    case THRESH_BINARY_INV: return le ? maxBits : (short)0;
+    case THRESH_TRUNC:      return gt ? truncBits : v;
+    case THRESH_TOZERO:     return gt ? v : (short)0;
+    default:                return le ? v : (short)0;
+    }
+}
+
+template <int type>
+static void threshHalfImpl(const Mat& _src, Mat& _dst, const Mat& _mask,
+                           short K, short maxBits, short truncBits, short infBits)
+{
+    Size roi = _src.size();
+    const int cn = _src.channels();
+    roi.width *= cn;
+    const short* src = _src.ptr<short>();
+    short* dst = _dst.ptr<short>();
+    size_t src_step = _src.step/sizeof(src[0]);
+    size_t dst_step = _dst.step/sizeof(dst[0]);
+
+    if( !_mask.empty() )
+    {
+        const uchar* mask = _mask.ptr<uchar>();
+        for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += _mask.step )
+            for( int j = 0; j < roi.width; j++ )
+                if( mask[j/cn] != 0 )
+                    dst[j] = threshHalf1<type>(src[j], K, maxBits, truncBits, infBits);
+        return;
+    }
+
+    if( _src.isContinuous() && _dst.isContinuous() )
+    {
+        roi.width *= roi.height;
+        roi.height = 1;
+    }
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int vlanes = VTraits<v_int16>::vlanes();
+    v_int16 vK = vx_setall_s16(K), vinf = vx_setall_s16(infBits), vabs = vx_setall_s16(0x7fff);
+    v_int16 vmax = vx_setall_s16(maxBits), vtrunc = vx_setall_s16(truncBits);
+#endif
+
+    for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+    {
+        int j = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        for( ; j <= roi.width - vlanes; j += vlanes )
+        {
+            v_int16 v = vx_load(src + j);
+            v_int16 m = v_and(v, vabs), s = v_shr<15>(v);
+            v_int16 key = v_sub(v_xor(m, s), s);
+            v_int16 ok = v_le(m, vinf);
+            v_int16 gt = v_and(v_gt(key, vK), ok), le = v_and(v_le(key, vK), ok);
+            switch (type)
+            {
+            case THRESH_BINARY:     v = v_and(gt, vmax); break;
+            case THRESH_BINARY_INV: v = v_and(le, vmax); break;
+            case THRESH_TRUNC:      v = v_select(gt, vtrunc, v); break;
+            case THRESH_TOZERO:     v = v_and(gt, v); break;
+            default:                v = v_and(le, v); break;
+            }
+            v_store(dst + j, v);
+        }
+#endif
+        for( ; j < roi.width; j++ )
+            dst[j] = threshHalf1<type>(src[j], K, maxBits, truncBits, infBits);
+    }
+}
+
+// compares the 16-bit pattern directly; nothing is converted to float per pixel
+template <typename T>
+static void threshHalf(const Mat& src, Mat& dst, const Mat& mask, float thresh, float maxval, int type)
+{
+    T t(thresh), mv(maxval);
+    short tBits, maxBits;
+    std::memcpy(&tBits, &t, sizeof(tBits));
+    std::memcpy(&maxBits, &mv, sizeof(maxBits));
+
+    // K is the largest representable value <= thresh, so the threshold is not quantized
+    short K = halfKey(tBits);
+    if( (float)t > thresh )
+        K--;
+    // -1 fails every pixel, as a NaN threshold does in fp32
+    short infBits = cvIsNaN(thresh) ? (short)-1 : (short)(std::is_same<T, hfloat>::value ? 0x7c00 : 0x7f80);
+
+    switch( type )
+    {
+    case THRESH_BINARY:     threshHalfImpl<THRESH_BINARY>(src, dst, mask, K, maxBits, tBits, infBits); break;
+    case THRESH_BINARY_INV: threshHalfImpl<THRESH_BINARY_INV>(src, dst, mask, K, maxBits, tBits, infBits); break;
+    case THRESH_TRUNC:      threshHalfImpl<THRESH_TRUNC>(src, dst, mask, K, maxBits, tBits, infBits); break;
+    case THRESH_TOZERO:     threshHalfImpl<THRESH_TOZERO>(src, dst, mask, K, maxBits, tBits, infBits); break;
+    case THRESH_TOZERO_INV: threshHalfImpl<THRESH_TOZERO_INV>(src, dst, mask, K, maxBits, tBits, infBits); break;
+    default:
+        CV_Error( cv::Error::StsBadArg, "" );
+    }
+}
+
 class ThresholdRunner : public ParallelLoopBody
 {
 public:
@@ -1390,6 +1501,10 @@ public:
             else
                 thresh_64f(srcStripe, dstStripe, thresh, maxval, thresholdType);
         }
+        else if( srcStripe.depth() == CV_16F )
+            threshHalf<hfloat>( srcStripe, dstStripe, useMask ? mask.rowRange(row0, row1) : Mat(), (float)thresh, (float)maxval, thresholdType );
+        else if( srcStripe.depth() == CV_16BF )
+            threshHalf<bfloat>( srcStripe, dstStripe, useMask ? mask.rowRange(row0, row1) : Mat(), (float)thresh, (float)maxval, thresholdType );
     }
 
 private:
@@ -1608,6 +1723,8 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
         ;
     else if( src.depth() == CV_64F )
         ;
+    else if( isHalfFloat(src.depth()) )
+        ;
     else
         CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
@@ -1758,6 +1875,8 @@ double cv::thresholdWithMask( InputArray _src, InputOutputArray _dst, InputArray
     else if( src.depth() == CV_32F )
         ;
     else if( src.depth() == CV_64F )
+        ;
+    else if( isHalfFloat(src.depth()) )
         ;
     else
         CV_Error( cv::Error::StsUnsupportedFormat, "" );
