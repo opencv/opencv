@@ -3867,4 +3867,99 @@ TEST_P(Core_MulScale, signed_min_times_min_exact_half_rounds_to_even)
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_MulScale, testing::Values(1, 7, 8, 15, 16, 37, 64));
 
+TEST(Core_Arithm, regression_31045_small_array_with_scalar)
+{
+    // Regression test for Issue #31045:
+    // When combining a 1x1 array with a 4-element scalar (or scalar passed as Mat),
+    // the output shape must remain 1x1, not accidentally expand to 4x1.
+    Mat a(1, 1, CV_64FC1, Scalar(0.5));
+    Mat s(4, 1, CV_64FC1, Scalar(1.0));
+    Mat dst;
+
+    // cv::add
+    cv::add(a, s, dst);
+    EXPECT_EQ(Size(1, 1), dst.size());
+    EXPECT_DOUBLE_EQ(1.5, dst.at<double>(0, 0));
+
+    // scalar as first operand
+    cv::add(s, a, dst);
+    EXPECT_EQ(Size(1, 1), dst.size());
+    EXPECT_DOUBLE_EQ(1.5, dst.at<double>(0, 0));
+
+    // cv::subtract
+    cv::subtract(a, s, dst);
+    EXPECT_EQ(Size(1, 1), dst.size());
+    EXPECT_DOUBLE_EQ(-0.5, dst.at<double>(0, 0));
+
+    // scalar as first operand in subtract
+    cv::subtract(s, a, dst);
+    EXPECT_EQ(Size(1, 1), dst.size());
+    EXPECT_DOUBLE_EQ(0.5, dst.at<double>(0, 0));
+
+    // cv::multiply
+    cv::multiply(a, s, dst);
+    EXPECT_EQ(Size(1, 1), dst.size());
+    EXPECT_DOUBLE_EQ(0.5, dst.at<double>(0, 0));
+
+    // cv::divide
+    cv::divide(a, s, dst);
+    EXPECT_EQ(Size(1, 1), dst.size());
+    EXPECT_DOUBLE_EQ(0.5, dst.at<double>(0, 0));
+
+    // scalar as first operand in divide
+    cv::divide(s, a, dst);
+    EXPECT_EQ(Size(1, 1), dst.size());
+    EXPECT_DOUBLE_EQ(2.0, dst.at<double>(0, 0));
+
+    // cv::absdiff
+    cv::absdiff(a, s, dst);
+    EXPECT_EQ(Size(1, 1), dst.size());
+    EXPECT_DOUBLE_EQ(0.5, dst.at<double>(0, 0));
+
+    // cv::bitwise_and (using uint8 1x1 array and 4x1 scalar)
+    Mat a_u8(1, 1, CV_8UC1, Scalar(5));
+    Mat s_u8(4, 1, CV_64FC1, Scalar(3.0));
+    cv::bitwise_and(a_u8, s_u8, dst);
+    EXPECT_EQ(Size(1, 1), dst.size());
+    EXPECT_EQ(1, dst.at<uchar>(0, 0));
+
+    // Legitimate 4x1 array with scalar must preserve 4x1 shape
+    Mat a_4x1(4, 1, CV_64FC1, Scalar(2.0));
+    cv::add(a_4x1, s, dst);
+    EXPECT_EQ(Size(1, 4), dst.size());
+    for (int i = 0; i < 4; i++)
+    {
+        EXPECT_DOUBLE_EQ(3.0, dst.at<double>(i, 0));
+    }
+
+    // Legitimate 4x1 array with scalar must preserve 4x1 shape (float)
+    Mat a_4x1_f(4, 1, CV_32FC1, Scalar(2.0));
+    cv::add(a_4x1_f, Scalar(1.0), dst);
+    EXPECT_EQ(Size(1, 4), dst.size());
+    for (int i = 0; i < 4; i++)
+    {
+        EXPECT_FLOAT_EQ(3.0f, dst.at<float>(i, 0));
+    }
+
+    // Legitimate 4x1 array with 1x1 array in bitwise_and
+    Mat a_4x1_u8(4, 1, CV_8UC1, Scalar(5));
+    Mat b_1x1_u8(1, 1, CV_8UC1, Scalar(3));
+    cv::bitwise_and(a_4x1_u8, b_1x1_u8, dst);
+    EXPECT_EQ(Size(1, 4), dst.size());
+    for (int i = 0; i < 4; i++)
+    {
+        EXPECT_EQ(1, dst.at<uchar>(i, 0));
+    }
+
+    // scalar as cv::Scalar (MATX) with 4x1 array (double)
+    cv::add(a_4x1, Scalar(1.0), dst);
+    EXPECT_EQ(Size(1, 4), dst.size());
+    EXPECT_DOUBLE_EQ(3.0, dst.at<double>(0, 0));
+
+    // scalar as first operand with 4x1 array
+    cv::add(Scalar(1.0), a_4x1, dst);
+    EXPECT_EQ(Size(1, 4), dst.size());
+    EXPECT_DOUBLE_EQ(3.0, dst.at<double>(0, 0));
+}
+
 }} // namespace

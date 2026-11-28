@@ -199,7 +199,19 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
     else if( (kind1 == _InputArray::MATX) + (kind2 == _InputArray::MATX) == 1 ||
         !psrc1->sameSize(*psrc2) || type1 != type2 )
     {
-        if( checkScalar(*psrc1, type2, kind1, kind2) )
+        bool is_scalar1 = checkScalar(*psrc1, type2, kind1, kind2);
+        bool is_scalar2 = checkScalar(*psrc2, type1, kind2, kind1);
+        bool swap12 = false;
+
+        if (is_scalar1)
+        {
+            if (!is_scalar2)
+                swap12 = true;
+            else if ((sz1.height == 4 || sz1.width == 4) && sz2 == Size(1, 1))
+                swap12 = true;
+        }
+
+        if (swap12)
         {
             // src1 is a scalar; swap it with src2
             swap(psrc1, psrc2);
@@ -208,7 +220,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
             swap(cn, cn2);
             swap(sz1, sz2);
         }
-        else if( !checkScalar(*psrc2, type1, kind2, kind1) )
+        else if( !is_scalar2 )
             CV_Error( cv::Error::StsUnmatchedSizes,
                       "The operation is neither 'array op array' (where arrays have the same size and type), "
                       "nor 'array op scalar', nor 'scalar op array'" );
@@ -643,7 +655,19 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         (kind1 == _InputArray::MATX && (sz1 == Size(1,4) || sz1 == Size(1,1))) ||
         (kind2 == _InputArray::MATX && (sz2 == Size(1,4) || sz2 == Size(1,1))) )
     {
-        if ((type1 == CV_64F && (sz1.height == 1 || sz1.height == 4)) && src1Scalar)
+        bool is_scalar1 = (type1 == CV_64F && (sz1.height == 1 || sz1.height == 4 || sz1.width == 4)) && src1Scalar;
+        bool is_scalar2 = (type2 == CV_64F && (sz2.height == 1 || sz2.height == 4 || sz2.width == 4)) && src2Scalar;
+        bool swap12 = false;
+
+        if (is_scalar1)
+        {
+            if (!is_scalar2)
+                swap12 = true;
+            else if ((sz1.height == 4 || sz1.width == 4) && sz2 == Size(1, 1))
+                swap12 = true;
+        }
+
+        if (swap12)
         {
             // src1 is a scalar; swap it with src2
             swap(psrc1, psrc2);
