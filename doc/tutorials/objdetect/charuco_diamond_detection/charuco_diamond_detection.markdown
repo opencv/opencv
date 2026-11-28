@@ -2,7 +2,7 @@ Detection of Diamond Markers {#tutorial_charuco_diamond_detection}
 ==============================
 
 @prev_tutorial{tutorial_charuco_detection}
-@next_tutorial{tutorial_aruco_calibration}
+@next_tutorial{tutorial_aruco_nested_detection}
 
 A ChArUco diamond marker (or simply diamond marker) is a chessboard composed by 3x3 squares and 4 ArUco markers inside the white squares.
 It is similar to a ChArUco board in appearance, however they are conceptually different.

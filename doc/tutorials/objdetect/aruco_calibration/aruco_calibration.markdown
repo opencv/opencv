@@ -1,7 +1,7 @@
 Calibration with ArUco and ChArUco {#tutorial_aruco_calibration}
 ==================================
 
-@prev_tutorial{tutorial_charuco_diamond_detection}
+@prev_tutorial{tutorial_aruco_nested_detection}
 @next_tutorial{tutorial_aruco_faq}
 
 The ArUco module can also be used to calibrate a camera. Camera calibration consists in obtaining the
