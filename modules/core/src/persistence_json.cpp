@@ -95,23 +95,21 @@ public:
 
     void write(const char* key, const char* str, bool quote)
     {
-        char buf[CV_FS_MAX_LEN*6+16];
-        char* data = (char*)str;
-        int i, len;
-
         if( !str )
             CV_Error( cv::Error::StsNullPtr, "Null string pointer" );
 
-        len = (int)strlen(str);
-        if( len > CV_FS_MAX_LEN )
-            CV_Error( cv::Error::StsBadArg, "The written string is too long" );
+        char* data = (char*)str;
+        const size_t len = strlen(str);
 
         if( quote || len == 0 || str[0] != str[len-1] || (str[0] != '\"' && str[0] != '\'') )
         {
             int need_quote = 1;
-            data = buf;
+            // Worst case is six bytes out per byte in, when every character becomes \u00XX.
+            if( escape_buf.size() < len*6 + 16 )
+                escape_buf.resize( len*6 + 16 );
+            data = escape_buf.data();
             *data++ = '\"';
-            for( i = 0; i < len; i++ )
+            for( size_t i = 0; i < len; i++ )
             {
                 char c = str[i];
                 const unsigned char byte = static_cast<unsigned char>(c);
@@ -140,7 +138,7 @@ public:
 
             *data++ = '\"';
             *data++ = '\0';
-            data = buf + !need_quote;
+            data = escape_buf.data() + !need_quote;
         }
 
         writeScalar( key, data);
@@ -304,6 +302,7 @@ public:
 
 protected:
     FileStorage_API* fs;
+    std::vector<char> escape_buf;  // kept across writes so short strings do not reallocate
 };
 
 class JSONParser : public FileStorageParser
@@ -569,7 +568,8 @@ public:
             }
             else
             {   /**************** normal string ****************/
-                int i = 0, sz;
+                std::string value_str;
+                int sz;
 
                 ptr = beg;
                 bool is_matching = false;
@@ -581,33 +581,22 @@ public:
                         {
                             sz = (int)(ptr - beg);
                             if( sz > 0 )
-                            {
-                                if (i + sz >= CV_FS_MAX_LEN)
-                                    CV_PARSE_ERROR_CPP("string is too long");
-                                memcpy(buf + i, beg, sz);
-                                i += sz;
-                            }
+                                value_str.append(beg, sz);
                             ptr++;
-                            if (i + 1 >= CV_FS_MAX_LEN)
-                                CV_PARSE_ERROR_CPP("string is too long");
                             switch ( *ptr )
                             {
                             case '\\':
                             case '\"':
-                            case '\'': { buf[i++] = *ptr; break; }
-                            case 'n' : { buf[i++] = '\n'; break; }
-                            case 'r' : { buf[i++] = '\r'; break; }
-                            case 't' : { buf[i++] = '\t'; break; }
-                            case 'b' : { buf[i++] = '\b'; break; }
-                            case 'f' : { buf[i++] = '\f'; break; }
+                            case '/' :
+                            case '\'': { value_str += *ptr;  break; }
+                            case 'n' : { value_str += '\n'; break; }
+                            case 'r' : { value_str += '\r'; break; }
+                            case 't' : { value_str += '\t'; break; }
+                            case 'b' : { value_str += '\b'; break; }
+                            case 'f' : { value_str += '\f'; break; }
                             case 'u' : {
                                 ptr++;
-                                std::string utf8;
-                                parseUnicodeEscapeToUtf8(ptr, utf8);
-                                if (i + (int)utf8.size() >= CV_FS_MAX_LEN)
-                                    CV_PARSE_ERROR_CPP("string is too long");
-                                memcpy(buf + i, utf8.data(), utf8.size());
-                                i += (int)utf8.size();
+                                parseUnicodeEscapeToUtf8(ptr, value_str);
                                 beg = ptr;
                                 continue;
                             }
@@ -622,12 +611,7 @@ public:
                         {
                             sz = (int)(ptr - beg);
                             if( sz > 0 )
-                            {
-                                if (i + sz >= CV_FS_MAX_LEN)
-                                    CV_PARSE_ERROR_CPP("string is too long");
-                                memcpy(buf + i, beg, sz);
-                                i += sz;
-                            }
+                                value_str.append(beg, sz);
                             ptr = fs->gets();
                             if ( !ptr || !*ptr )
                                 CV_PARSE_ERROR_CPP( "'\"' - right-quote of string is missing" );
@@ -639,12 +623,7 @@ public:
                         {
                             sz = (int)(ptr - beg);
                             if( sz > 0 )
-                            {
-                                if (i + sz >= CV_FS_MAX_LEN)
-                                    CV_PARSE_ERROR_CPP("string is too long");
-                                memcpy(buf + i, beg, sz);
-                                i += sz;
-                            }
+                                value_str.append(beg, sz);
                             beg = ptr;
                             is_matching = true;
                             break;
@@ -668,7 +647,10 @@ public:
                 else
                     ptr++;
 
-                node.setValue(FileNode::STRING, buf, i);
+                // setValue() takes the length as an int and adds a node header on top of it.
+                if (value_str.size() > (size_t)INT_MAX - 16)
+                    CV_PARSE_ERROR_CPP("string is too long");
+                node.setValue(FileNode::STRING, value_str.c_str(), (int)value_str.size());
             }
         }
         else if ( cv_isdigit(*ptr) || *ptr == '-' || *ptr == '+' || *ptr == '.' )
@@ -882,7 +864,6 @@ public:
     }
 
     FileStorage_API* fs;
-    char buf[CV_FS_MAX_LEN+1024];
 };
 
 Ptr<FileStorageEmitter> createJSONEmitter(FileStorage_API* fs)

@@ -5,6 +5,7 @@
 #include "precomp.hpp"
 #include "persistence_impl.hpp"
 #include "persistence_base64_encoding.hpp"
+#include "opencv2/core/utils/base64.private.hpp"
 
 namespace cv
 {
@@ -220,6 +221,21 @@ int base64::icvCalcStructSize(const char *dt, int initial_size) {
     size = cvAlign( size, static_cast<int>(elem_max_size) );
     return size;
 }
+
+namespace utils {
+
+String base64Encode(const uchar* data, size_t size)
+{
+    if (size == 0)
+        return String();
+    CV_Assert(data != NULL);
+
+    std::vector<uchar> encoded(base64::base64_encode_buffer_size(size));
+    const size_t len = base64::base64_encode(data, encoded.data(), 0, size);
+    return String(reinterpret_cast<const char*>(encoded.data()), len);
+}
+
+} // namespace utils
 
 size_t base64::base64_encode_buffer_size(size_t cnt, bool is_end_with_zero) {
     size_t additional = static_cast<size_t>(is_end_with_zero == true);
