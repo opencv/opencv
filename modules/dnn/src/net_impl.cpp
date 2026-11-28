@@ -909,7 +909,9 @@ Mat Net::Impl::forward(const String& outputName)
     setUpNet(pins);
     forwardToLayer(getLayerData(layerName));
 
-    return getBlob(layerName);
+    Mat output = getBlob(layerName);
+    correctOutputShape(pins[0], output);
+    return output;
 }
 
 
@@ -964,11 +966,15 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs, const String& outputNam
 
     if (outputBlobs.isUMat())
     {
-        getBlob(layerName).copyTo(outputBlobs);
+        Mat blob = getBlob(layerName);
+        correctOutputShape(pin, blob);
+        blob.copyTo(outputBlobs);
     }
     else if (outputBlobs.isMat())
     {
-        outputBlobs.assign(getBlob(layerName));
+        Mat blob = getBlob(layerName);
+        correctOutputShape(pin, blob);
+        outputBlobs.assign(blob);
     }
     else if (outputBlobs.isMatVector())
     {
@@ -987,12 +993,16 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs, const String& outputNam
             outputvec.resize(ld.outputBlobs.size());
             for (int i = 0; i < outputvec.size(); i++)
                 ld.outputBlobs[i].convertTo(outputvec[i], CV_32F);
+            for (int i = 0; i < outputvec.size(); i++)
+                correctOutputShape(LayerPin(pin.lid, i), outputvec[i]);
         }
         else
         {
             // Output depth can be CV_32F or CV_8S
             std::vector<Mat>& outputvec = *(std::vector<Mat>*)outputBlobs.getObj();
             outputvec = ld.outputBlobs;
+            for (int i = 0; i < (int)outputvec.size(); i++)
+                correctOutputShape(LayerPin(pin.lid, i), outputvec[i]);
         }
     }
     else if (outputBlobs.isUMatVector())
@@ -1051,6 +1061,13 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs,
 
     outputBlobs.create((int)matvec.size(), 1, CV_32F/*FIXIT*/, -1);  // allocate vector
     outputBlobs.assign(matvec);
+    if (outputBlobs.isMatVector())
+    {
+        // assign() re-creates the caller's Mats from their sizes, so the
+        // correction is applied to the assigned Mats, not to matvec.
+        for (int i = 0; i < (int)pins.size(); i++)
+            correctOutputShape(pins[i], outputBlobs.getMatRef(i));
+    }
 }
 
 
@@ -1082,6 +1099,7 @@ void Net::Impl::forward(std::vector<std::vector<Mat>>& outputBlobs,
         for (int j = 0; j < lp.size(); j++)
         {
             outputBlobs[i][j] = getBlob(lp[j]);
+            correctOutputShape(lp[j], outputBlobs[i][j]);
         }
     }
 }
@@ -1394,6 +1412,32 @@ void Net::Impl::setInputShape(const String& inputName, const MatShape& shape)
 }
 
 
+// A tensor that reaches an output through no-op layers alone (Identity,
+// which is also what the ONNX importer creates for a no-op Cast) is still
+// the input tensor that was fed; only its presentation as a (N, 1) Mat is
+// an artifact of blob allocation. Restore the declared 1D shape of the
+// source input for such outputs. Tensors produced by a computing layer
+// keep the usual presentation.
+void Net::Impl::correctOutputShape(const LayerPin& pin, Mat& blob) const
+{
+    if (blob.dims != 2 || blob.size[1] != 1)
+        return;
+    LayerPin src = pin;
+    while (src.lid > 0)
+    {
+        const LayerData& ld = getLayerData(src.lid);
+        if (ld.type != "Identity" || ld.inputBlobsId.empty())
+            return;
+        src = ld.inputBlobsId[0];
+    }
+    if (netInputLayer.empty() || netInputLayer->shapes.empty() ||
+        src.oid < 0 || src.oid >= (int)netInputLayer->shapes.size())
+        return;
+    const MatShape& declaredShape = netInputLayer->shapes[src.oid];
+    if (declaredShape.size() == 1 && declaredShape[0] > 1 && declaredShape[0] == blob.size[0])
+        blob.dims = 1;
+}
+
 void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor, const Scalar& mean)
 {
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
@@ -1407,6 +1451,48 @@ void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor
 
     Mat blob_ = blob.getMat();  // can't use InputArray directly due MatExpr stuff
     MatShape blobShape = shape(blob_);
+    // Honor the shape declared for this input (if any) when the blob holds
+    // the same elements under a different shape: a tensor declared as [5]
+    // in a model arrives as a (5, 1) Mat, and that shape would otherwise
+    // propagate through the whole net (an Identity layer returns (5, 1)).
+    int declaredDims = 0;
+    if (!netInputLayer->shapes.empty() && pin.oid < (int)netInputLayer->shapes.size())
+    {
+        const MatShape& declaredShape = netInputLayer->shapes[pin.oid];
+        bool isStaticShape = !declaredShape.empty() && declaredShape != blobShape;
+        size_t declaredTotal = 1;
+        for (size_t i = 0; isStaticShape && i < declaredShape.size(); ++i)
+        {
+            if (declaredShape[i] <= 0)
+                isStaticShape = false;
+            else
+                declaredTotal *= static_cast<size_t>(declaredShape[i]);
+        }
+        // Re-present only: the declared shape must be the fed shape with
+        // size-1 dimensions added or removed. Reshaping under a genuinely
+        // different shape with the same element count would reinterpret
+        // the elements, so such blobs are left as they were fed.
+        MatShape declaredCore, blobCore;
+        if (isStaticShape)
+        {
+            for (int dim : declaredShape)
+            {
+                if (dim != 1)
+                    declaredCore.push_back(dim);
+            }
+            for (int dim : blobShape)
+            {
+                if (dim != 1)
+                    blobCore.push_back(dim);
+            }
+        }
+        if (isStaticShape && declaredTotal == blob_.total() && declaredCore == blobCore)
+        {
+            blob_ = blob_.reshape(1, declaredShape);
+            blobShape = declaredShape;
+            declaredDims = static_cast<int>(declaredShape.size());
+        }
+    }
 
 #if 0  // TODO: DNNTestNetwork.MobileNet_SSD_Caffe_Different_Width_Height/0
     if (pin.lid == 0)
@@ -1444,6 +1530,8 @@ void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor
     bool oldShape = prevShape == blobShape;
 
     blob_.copyTo(netInputLayer->inputsData[pin.oid]);
+    if (declaredDims == 1)
+        netInputLayer->inputsData[pin.oid].dims = 1;  // copyTo normalizes a 1D shape back to (N, 1); restore the declared rank on the stored blob
     if (!oldShape)
         ld.outputBlobs[pin.oid] = netInputLayer->inputsData[pin.oid];
 

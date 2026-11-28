@@ -1239,8 +1239,10 @@ public:
                 wm.copyTo((const Mat&)weightsMat);
                 if (inputs.size() > 2)
                 {
-                    Mat biasMat = inputs[2].reshape(1, outCn);
-                    biasMat.col(0).copyTo(biasvec);
+                    // A bias fed as a network input keeps the model's declared
+                    // shape, which may be 1D; copy its values without going
+                    // through a 2D-only column view.
+                    inputs[2].reshape(1, (int)inputs[2].total()).copyTo(biasvec);
                 }
                 biasvec.resize(outCn + 2, 0);
             }
