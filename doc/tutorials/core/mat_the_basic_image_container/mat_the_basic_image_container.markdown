@@ -266,6 +266,55 @@ OpenCV offers support for output of other common OpenCV data structures too via 
     @snippet mat_the_basic_image_container.cpp out-vector-points
     ![](images/MatBasicContainerOut15.png)
 
+OpenCV 5.x: MatShape and 0D/1D matrices
+----------------------------------------
+
+OpenCV 5.x supports matrices with zero or one dimension, in addition to
+the usual two-dimensional and higher-dimensional matrices.
+
+**MatShape** represents the shape of a matrix or tensor. In OpenCV 5.x it
+replaces `MatSize`, which remains available as a compatibility alias.
+Unlike the old size representation, `MatShape` can also be used independently.
+It can be constructed from a list of dimension sizes, and
+`MatShape::scalar()` represents a zero-dimensional shape. Its `total()`
+method returns 1 for a scalar and 0 for an empty shape.
+
+**0D Mat (scalar):**
+
+A zero-dimensional matrix can be created by passing `MatShape::scalar()`
+to the `Mat` constructor. A scalar has `dims == 0` and
+`rows == cols == total() == 1`. A default-constructed `Mat()` is empty,
+not a scalar. Similarly, `Mat(1, 1, type)` creates a two-dimensional 1x1 matrix.
+
+**1D Mat (vector):**
+
+A one-dimensional matrix can be created by passing a one-element shape such
+as `MatShape{5}`. `dims` and `rows` are 1, while `cols` and `total()` are N for a 1D matrix with N elements.
+
+The following example demonstrates both forms:
+
+@code{.cpp}
+#include <opencv2/core.hpp>
+
+void example_0d_1d()
+{
+    // 0D Mat (scalar)
+    cv::Mat scalar(cv::MatShape::scalar(), CV_32F);
+    scalar.at<float>() = 3.14f;
+
+    // 1D Mat with five elements
+    cv::Mat vector = cv::Mat::ones(cv::MatShape{5}, CV_32F);
+
+    // Access elements of the 1D Mat
+    for (int i = 0; i < vector.total(); ++i)
+        vector.at<float>(i) = static_cast<float>(i);
+}
+@endcode
+
+Use `Mat::empty()` to distinguish an empty matrix from a scalar.
+For a scalar, `dims` is 0 and `total()` is 1. For a one-dimensional
+matrix, `dims` is 1.
+
 Most of the samples here have been included in a small console application. You can download it from
 [here](https://github.com/opencv/opencv/tree/5.x/samples/cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp)
 or in the core section of the cpp samples.
