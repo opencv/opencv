@@ -112,6 +112,21 @@ namespace cv {
 CV_EXPORTS
 cv::Mutex& getInitializationMutex();  // defined in core module
 
+static inline bool isHalfFloat(int depth)
+{
+    return depth == CV_16F || depth == CV_16BF;
+}
+
+// accumulation depth: at least floorDepth, and never a half float. The depth
+// enum is not ordered by width -- CV_16F is 7, above CV_32F -- so std::max on
+// depths alone picks a half float as the work type.
+static inline int workDepth(int d1, int d2, int floorDepth = CV_32F)
+{
+    if (isHalfFloat(d1)) d1 = CV_32F;
+    if (isHalfFloat(d2)) d2 = CV_32F;
+    return std::max(floorDepth, std::max(d1, d2));
+}
+
 }  // namespace cv
 
 #endif /*__OPENCV_PRECOMP_H__*/

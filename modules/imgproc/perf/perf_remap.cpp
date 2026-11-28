@@ -74,4 +74,79 @@ PERF_TEST_P( TestRemap, Remap,
     }
 }
 
+// INTER_CUBIC is not supported for half depths
+CV_ENUM(HalfRemapInter, INTER_LINEAR, INTER_LANCZOS4)
+
+typedef TestBaseWithParam< tuple<Size, MatType, HalfRemapInter> > TestRemapHalf;
+
+// mirrored map with a fractional offset, so every pixel is interpolated;
+// values in [0, 1) keep fp16 away from its overflow range
+static void halfRemapData(Size sz, int type, Mat& src, Mat& mapx, Mat& mapy)
+{
+    Mat src32(sz, CV_MAKETYPE(CV_32F, CV_MAT_CN(type)));
+    randu(src32, Scalar::all(0), Scalar::all(1));
+    src32.convertTo(src, type);
+
+    mapx.create(sz, CV_32FC1);
+    mapy.create(sz, CV_32FC1);
+    for (int j = 0; j < sz.height; ++j)
+        for (int i = 0; i < sz.width; ++i)
+        {
+            mapx.at<float>(j, i) = static_cast<float>(sz.width - i - 1) - 0.375f;
+            mapy.at<float>(j, i) = static_cast<float>(j) + 0.375f;
+        }
+}
+
+// the fp32 rows are the reference for the half rows
+PERF_TEST_P( TestRemapHalf, RemapHalf,
+             Combine(
+                Values( TYPICAL_MAT_SIZES ),
+                Values( CV_16FC1, CV_16FC3, CV_16BFC1, CV_16BFC3, CV_32FC1, CV_32FC3 ),
+                HalfRemapInter::all()
+             )
+)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    int inter = get<2>(GetParam());
+
+    Mat src, mapx, mapy, dst(sz, type);
+    halfRemapData(sz, type, src, mapx, mapy);
+
+    declare.in(src).out(dst);
+
+    TEST_CYCLE() remap(src, dst, mapx, mapy, inter);
+
+    SANITY_CHECK_NOTHING();
+}
+
+// convert to fp32, remap, convert back: the route available without native
+// half support, so the native half path has to beat it
+PERF_TEST_P( TestRemapHalf, RemapHalfViaFp32,
+             Combine(
+                Values( TYPICAL_MAT_SIZES ),
+                Values( CV_16FC1, CV_16FC3, CV_16BFC1, CV_16BFC3 ),
+                HalfRemapInter::all()
+             )
+)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    int inter = get<2>(GetParam());
+
+    Mat src, mapx, mapy, dst(sz, type), src32, dst32;
+    halfRemapData(sz, type, src, mapx, mapy);
+
+    declare.in(src).out(dst);
+
+    TEST_CYCLE()
+    {
+        src.convertTo(src32, CV_32F);
+        remap(src32, dst32, mapx, mapy, inter);
+        dst32.convertTo(dst, CV_MAT_DEPTH(type));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace

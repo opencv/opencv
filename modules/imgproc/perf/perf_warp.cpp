@@ -59,6 +59,70 @@ PERF_TEST_P( TestWarpAffine, WarpAffine,
     SANITY_CHECK(dst, 1);
 }
 
+// INTER_CUBIC is not supported for half depths
+CV_ENUM(HalfWarpInter, INTER_LINEAR, INTER_LANCZOS4)
+
+typedef TestBaseWithParam< tuple<Size, HalfWarpInter, MatType> > TestWarpAffineHalf;
+
+// values in [0, 1) keep fp16 away from its overflow range
+static Mat halfWarpSrc(Size sz, int type)
+{
+    Mat src32(sz, CV_MAKETYPE(CV_32F, CV_MAT_CN(type))), src;
+    randu(src32, Scalar::all(0), Scalar::all(1));
+    src32.convertTo(src, type);
+    return src;
+}
+
+// the fp32 rows are the reference for the half rows
+PERF_TEST_P( TestWarpAffineHalf, WarpAffineHalf,
+             Combine(
+                Values( szVGA, sz720p, sz1080p ),
+                HalfWarpInter::all(),
+                Values( CV_16FC1, CV_16FC3, CV_16BFC1, CV_16BFC3, CV_32FC1, CV_32FC3 )
+             )
+)
+{
+    Size sz = get<0>(GetParam()), szSrc(512, 512);
+    int interType = get<1>(GetParam());
+    int type = get<2>(GetParam());
+
+    Mat src = halfWarpSrc(szSrc, type), dst(sz, type);
+    Mat warpMat = getRotationMatrix2D(Point2f(src.cols/2.f, src.rows/2.f), 30., 2.2);
+    declare.in(src).out(dst);
+
+    TEST_CYCLE() warpAffine( src, dst, warpMat, sz, interType, BORDER_CONSTANT );
+
+    SANITY_CHECK_NOTHING();
+}
+
+// convert to fp32, warp, convert back: the route available without native
+// half support, so the native half path has to beat it
+PERF_TEST_P( TestWarpAffineHalf, WarpAffineHalfViaFp32,
+             Combine(
+                Values( szVGA, sz720p, sz1080p ),
+                HalfWarpInter::all(),
+                Values( CV_16FC1, CV_16FC3, CV_16BFC1, CV_16BFC3 )
+             )
+)
+{
+    Size sz = get<0>(GetParam()), szSrc(512, 512);
+    int interType = get<1>(GetParam());
+    int type = get<2>(GetParam());
+
+    Mat src = halfWarpSrc(szSrc, type), dst(sz, type), src32, dst32;
+    Mat warpMat = getRotationMatrix2D(Point2f(src.cols/2.f, src.rows/2.f), 30., 2.2);
+    declare.in(src).out(dst);
+
+    TEST_CYCLE()
+    {
+        src.convertTo(src32, CV_32F);
+        warpAffine( src32, dst32, warpMat, sz, interType, BORDER_CONSTANT );
+        dst32.convertTo(dst, CV_MAT_DEPTH(type));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
 PERF_TEST_P(TestWarpAffine, WarpAffineManyChannels,
             Combine(Values(Size(256, 256), Size(512, 512), Size(1024, 1024)),
                     Values(INTER_LINEAR), BorderMode::all(),
