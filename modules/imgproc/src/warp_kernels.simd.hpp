@@ -8082,89 +8082,63 @@ CV_ALWAYS_INLINE v_float32 v_fma(const v_int32& a, const v_float32& b, const v_f
 
 #endif
 
-// x86: fetch each lane's 4 taps with one 32-bit (C1) or 128-bit (C3, C4) load and transpose them
-// in registers instead of going through a scalar buffer (store-to-load forwarding stalls).
-// The C3 load reads 4 bytes past the last tap; like the NEON path above, this is safe because
-// inliers have iy0 < height - 5, so another row always follows.
+// x86: fetch the taps of each lane with 32-bit loads (4 bytes each) instead of going through
+// a scalar buffer, which stalls on store-to-load forwarding.
 // AVX-512 builds also take the AVX2 branch: this file sets CV__SIMD_FORCE_WIDTH 256.
 #if !CV_SIMD_FP16 && CV_SSE2 && (CV_SIMD_WIDTH == 16 || (CV_SIMD_WIDTH == 32 && CV_AVX2))
 
-// splits 4 packed 8-bit taps per 32-bit lane into 4 vectors of 32-bit integers
-static CV_ALWAYS_INLINE void bicubicSplit8u(const v_uint32& v, v_int32& t0, v_int32& t1,
-                                            v_int32& t2, v_int32& t3)
+// for each lane j, loads the 4 bytes at srcrow + ofs[j]
+static CV_ALWAYS_INLINE v_uint32 bicubicGather32(const uint8_t* srcrow, const int32_t* ofs)
 {
-    const v_uint32 mask = vx_setall_u32(0xFF);
-    t0 = v_reinterpret_as_s32(v_and(v, mask));
-    t1 = v_reinterpret_as_s32(v_and(v_shr<8>(v), mask));
-    t2 = v_reinterpret_as_s32(v_and(v_shr<16>(v), mask));
-    t3 = v_reinterpret_as_s32(v_shr<24>(v));
+#if CV_SIMD_WIDTH == 32
+    return v_reinterpret_as_u32(vx_lut_quads(srcrow, ofs));
+#else
+    // 128-bit v_lut_quads(const uchar*, const int*) is built from single bytes and is ~1.25x slower
+    int v[4];
+    for (int j = 0; j < 4; j++)
+        memcpy(&v[j], srcrow + ofs[j], sizeof(v[j]));
+    return v_uint32(_mm_setr_epi32(v[0], v[1], v[2], v[3]));
+#endif
+}
+
+// byte K of each 32-bit lane, as 32-bit integers
+template<int K>
+static CV_ALWAYS_INLINE v_int32 bicubicByte(const v_uint32& v)
+{
+    if constexpr (K == 3)
+        return v_reinterpret_as_s32(v_shr<24>(v));
+    else
+        return v_reinterpret_as_s32(v_and(v_shr<8*K>(v), vx_setall_u32(0xFF)));
 }
 
 #undef FETCH_INLIERS_8UC1
-#if CV_SIMD_WIDTH == 32
-#define FETCH_INLIERS_8UC1(row) \
-    bicubicSplit8u(v_reinterpret_as_u32(vx_lut_quads((const uchar*)src + row*srcstep, tl_ofs)), R0, R1, R2, R3)
-#else
-// 128-bit v_lut_quads(const uchar*, const int*) is built from single bytes and is ~1.25x slower
-static CV_ALWAYS_INLINE int bicubicLoad32(const uint8_t* ptr)
-{
-    int val;
-    memcpy(&val, ptr, sizeof(val));
-    return val;
-}
-static CV_ALWAYS_INLINE v_uint32 bicubicGather8uC1(const uint8_t* srcrow, const int32_t* ofs)
-{
-    return v_uint32(_mm_setr_epi32(
-        bicubicLoad32(srcrow + ofs[0]), bicubicLoad32(srcrow + ofs[1]),
-        bicubicLoad32(srcrow + ofs[2]), bicubicLoad32(srcrow + ofs[3])));
-}
-#define FETCH_INLIERS_8UC1(row) \
-    bicubicSplit8u(bicubicGather8uC1((const uint8_t*)src + row*srcstep, tl_ofs), R0, R1, R2, R3)
-#endif
+#define FETCH_INLIERS_8UC1(row) { \
+    v_uint32 _d0 = bicubicGather32((const uint8_t*)src + row*srcstep, tl_ofs); \
+    R0 = bicubicByte<0>(_d0); R1 = bicubicByte<1>(_d0); R2 = bicubicByte<2>(_d0); R3 = bicubicByte<3>(_d0); }
 
-#if CV_SSSE3
-// returns the taps of 3- or 4-channel pixels per channel, 4 packed 8-bit taps per 32-bit lane
-template<int CN>
-static CV_ALWAYS_INLINE void bicubicGather8uCn(const uint8_t* srcrow, const int32_t* ofs,
-                                               v_uint32& r, v_uint32& g, v_uint32& b, v_uint32& a)
-{
-    static_assert(CN == 3 || CN == 4, "");
-    const __m128i mask = CN == 3 ?
-        _mm_setr_epi8(0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11, -1, -1, -1, -1) :
-        _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
-    // with AVX2 the high half of p[j] holds pixel j + 4; v_transpose4x4 works within 128-bit halves
-    #define CV_BICUBIC_LOAD(j) _mm_loadu_si128((const __m128i*)(srcrow + ofs[j]))
-    v_uint32 p[4];
-    for (int j = 0; j < 4; j++)
-    {
-#if CV_SIMD_WIDTH == 32
-        __m256i v = _mm256_inserti128_si256(_mm256_castsi128_si256(CV_BICUBIC_LOAD(j)), CV_BICUBIC_LOAD(j + 4), 1);
-        p[j] = v_uint32(_mm256_shuffle_epi8(v, _mm256_broadcastsi128_si256(mask)));
-#else
-        p[j] = v_uint32(_mm_shuffle_epi8(CV_BICUBIC_LOAD(j), mask));
-#endif
-    }
-    #undef CV_BICUBIC_LOAD
-    v_transpose4x4(p[0], p[1], p[2], p[3], r, g, b, a);
-}
-
+// the 4 taps of a C3 row are 12 bytes: _d0 = r0 g0 b0 r1, _d1 = g1 b1 r2 g2, _d2 = b2 r3 g3 b3
 #undef FETCH_INLIERS_8UC3
 #define FETCH_INLIERS_8UC3(row) { \
-    v_uint32 _r, _g, _b, _a; \
-    bicubicGather8uCn<3>((const uint8_t*)src + row*srcstep, tl_ofs, _r, _g, _b, _a); \
-    bicubicSplit8u(_r, R0, R1, R2, R3); \
-    bicubicSplit8u(_g, G0, G1, G2, G3); \
-    bicubicSplit8u(_b, B0, B1, B2, B3); }
+    const uint8_t* _srcrow = (const uint8_t*)src + row*srcstep; \
+    v_uint32 _d0 = bicubicGather32(_srcrow, tl_ofs); \
+    v_uint32 _d1 = bicubicGather32(_srcrow + 4, tl_ofs); \
+    v_uint32 _d2 = bicubicGather32(_srcrow + 8, tl_ofs); \
+    R0 = bicubicByte<0>(_d0); G0 = bicubicByte<1>(_d0); B0 = bicubicByte<2>(_d0); R1 = bicubicByte<3>(_d0); \
+    G1 = bicubicByte<0>(_d1); B1 = bicubicByte<1>(_d1); R2 = bicubicByte<2>(_d1); G2 = bicubicByte<3>(_d1); \
+    B2 = bicubicByte<0>(_d2); R3 = bicubicByte<1>(_d2); G3 = bicubicByte<2>(_d2); B3 = bicubicByte<3>(_d2); }
 
+// the 4 taps of a C4 row are 16 bytes: _dk = rk gk bk ak
 #undef FETCH_INLIERS_8UC4
 #define FETCH_INLIERS_8UC4(row) { \
-    v_uint32 _r, _g, _b, _a; \
-    bicubicGather8uCn<4>((const uint8_t*)src + row*srcstep, tl_ofs, _r, _g, _b, _a); \
-    bicubicSplit8u(_r, R0, R1, R2, R3); \
-    bicubicSplit8u(_g, G0, G1, G2, G3); \
-    bicubicSplit8u(_b, B0, B1, B2, B3); \
-    bicubicSplit8u(_a, A0, A1, A2, A3); }
-#endif // CV_SSSE3
+    const uint8_t* _srcrow = (const uint8_t*)src + row*srcstep; \
+    v_uint32 _d0 = bicubicGather32(_srcrow, tl_ofs); \
+    v_uint32 _d1 = bicubicGather32(_srcrow + 4, tl_ofs); \
+    v_uint32 _d2 = bicubicGather32(_srcrow + 8, tl_ofs); \
+    v_uint32 _d3 = bicubicGather32(_srcrow + 12, tl_ofs); \
+    R0 = bicubicByte<0>(_d0); G0 = bicubicByte<1>(_d0); B0 = bicubicByte<2>(_d0); A0 = bicubicByte<3>(_d0); \
+    R1 = bicubicByte<0>(_d1); G1 = bicubicByte<1>(_d1); B1 = bicubicByte<2>(_d1); A1 = bicubicByte<3>(_d1); \
+    R2 = bicubicByte<0>(_d2); G2 = bicubicByte<1>(_d2); B2 = bicubicByte<2>(_d2); A2 = bicubicByte<3>(_d2); \
+    R3 = bicubicByte<0>(_d3); G3 = bicubicByte<1>(_d3); B3 = bicubicByte<2>(_d3); A3 = bicubicByte<3>(_d3); }
 
 #endif // x86
 
