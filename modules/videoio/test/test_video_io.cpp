@@ -1348,4 +1348,25 @@ TEST(Videoio_MJPEG, put_bits_no_heap_overflow)
     remove(filename.c_str());
 }
 
+// Regression test for GitHub issue #30943: low non-integer fps must not be rounded too much.
+TEST(Videoio_MJPEG, low_non_integer_fps_precision)
+{
+    const double fps = 1.0 / 60;
+    const std::string filename = cv::tempfile(".avi");
+    cv::Mat frame(2, 2, CV_8UC1, cv::Scalar::all(128));
+    int fourcc = cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
+    {
+        cv::VideoWriter writer;
+        ASSERT_NO_THROW(writer.open(filename, CAP_OPENCV_MJPEG, fourcc, fps, cv::Size(2, 2), false));
+        ASSERT_TRUE(writer.isOpened());
+        EXPECT_NO_THROW(writer.write(frame));
+    }
+    {
+        cv::VideoCapture cap(filename, CAP_OPENCV_MJPEG);
+        ASSERT_TRUE(cap.isOpened());
+        EXPECT_NEAR(fps, cap.get(CAP_PROP_FPS), 1e-5);
+    }
+    remove(filename.c_str());
+}
+
 } // namespace

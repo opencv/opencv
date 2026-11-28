@@ -4,6 +4,8 @@
 
 #include "precomp.hpp"
 #include "opencv2/videoio/container_avi.private.hpp"
+#include <algorithm>
+#include <cmath>
 #include <fstream>
 #include <limits>
 #include <typeinfo>
@@ -189,7 +191,6 @@ inline VideoInputStream& operator >> (VideoInputStream& is, RiffList& riff_list)
 static const int AVIH_STRH_SIZE = 56;
 static const int STRF_SIZE = 40;
 static const int AVI_DWFLAG = 0x00000910;
-static const int AVI_DWSCALE = 1;
 static const int AVI_DWQUALITY = -1;
 static const int JUNK_SEEK = 4096;
 static const int AVIIF_KEYFRAME = 0x10;
@@ -808,6 +809,8 @@ void BitStream::jflush(unsigned currval, int bitIdx)
 AVIWriteContainer::AVIWriteContainer() : strm(makePtr<BitStream>())
 {
     outfps = 0;
+    fpsRate = 0;
+    fpsScale = 1;
     height = 0;
     width = 0;
     channels = 0;
@@ -825,7 +828,16 @@ AVIWriteContainer::~AVIWriteContainer() {
 
 bool AVIWriteContainer::initContainer(const String& filename, double fps, Size size, bool iscolor)
 {
-    outfps = cvRound(fps);
+    outfps = fps;
+    // represent fps as fpsRate/fpsScale, keeping precision for low non-integer values
+    fpsRate = cvRound(fps);
+    fpsScale = 1;
+    const double fps_eps = std::min(0.001, fps * 1e-4);
+    while (fpsScale < 1000000 && std::abs((double)fpsRate / fpsScale - fps) > fps_eps)
+    {
+        fpsScale *= 10;
+        fpsRate = cvRound(fps * fpsScale);
+    }
     width = size.width;
     height = size.height;
     channels = iscolor ? 3 : 1;
@@ -881,8 +893,8 @@ void AVIWriteContainer::writeStreamHeader(Codecs codec_)
     strm->putInt(0);
     strm->putInt(0);
     strm->putInt(0);
-    strm->putInt(AVI_DWSCALE);
-    strm->putInt(outfps);
+    strm->putInt(fpsScale);
+    strm->putInt(fpsRate);
     strm->putInt(0);
 
     frameNumIndexes.push_back(strm->getPos());
