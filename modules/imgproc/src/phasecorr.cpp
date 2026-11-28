@@ -478,8 +478,8 @@ static Point2d weightedCentroid(InputArray _src, cv::Point peakLocation, cv::Siz
         {
             for(int x = minc; x <= maxc; x++)
             {
-                centroid.x   += (double)x*dataIn[x];
-                centroid.y   += (double)y*dataIn[x];
+                centroid.x   += (double)(x - peakLocation.x)*dataIn[x];
+                centroid.y   += (double)(y - peakLocation.y)*dataIn[x];
                 sumIntensity += (double)dataIn[x];
             }
 
@@ -494,8 +494,8 @@ static Point2d weightedCentroid(InputArray _src, cv::Point peakLocation, cv::Siz
         {
             for(int x = minc; x <= maxc; x++)
             {
-                centroid.x   += (double)x*dataIn[x];
-                centroid.y   += (double)y*dataIn[x];
+                centroid.x   += (double)(x - peakLocation.x)*dataIn[x];
+                centroid.y   += (double)(y - peakLocation.y)*dataIn[x];
                 sumIntensity += dataIn[x];
             }
 
@@ -506,12 +506,21 @@ static Point2d weightedCentroid(InputArray _src, cv::Point peakLocation, cv::Siz
     if(response)
         *response = sumIntensity;
 
-    sumIntensity += DBL_EPSILON; // prevent div0 problems...
+    if (!std::isfinite(sumIntensity))
+        return peakLocation;
+    if (sumIntensity == 0.0)
+    {
+        const double peak = type == CV_32FC1 ? src.at<float>(peakLocation) : src.at<double>(peakLocation);
+        // Preserve the legacy result for a zero-weight neighborhood.
+        return peak == 0.0 ? Point2d() : Point2d(peakLocation);
+    }
 
     centroid.x /= sumIntensity;
     centroid.y /= sumIntensity;
-
-    return centroid;
+    if (!(std::abs(centroid.x) <= (weightBoxSize.width >> 1) &&
+          std::abs(centroid.y) <= (weightBoxSize.height >> 1)))
+        return peakLocation;
+    return Point2d(peakLocation) + centroid;
 }
 
 }
