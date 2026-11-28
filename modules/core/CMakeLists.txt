@@ -18,6 +18,7 @@ ocv_add_dispatched_file(sum SSE2 AVX2 AVX512_SKX AVX512_ICL LASX)
 ocv_add_dispatched_file(reduce SSE2 SSSE3 AVX2 NEON_DOTPROD RVV)
 ocv_add_dispatched_file(norm SSE2 SSE4_1 AVX AVX2 AVX512_SKX AVX512_ICL NEON_DOTPROD LASX)
 ocv_add_dispatched_file(lut AVX512_ICL)
+ocv_add_dispatched_file(lapack AVX512_SKX AVX512_ICL)
 ocv_add_dispatched_file(transpose AVX AVX2 NEON RVV LASX)
 ocv_add_dispatched_file(dxt SSE2 AVX2 AVX512_ICL RVV)
 
