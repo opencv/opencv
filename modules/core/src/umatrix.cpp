@@ -1505,6 +1505,16 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
 
 UMat& UMat::operator = (const Scalar& s)
 {
+    if( empty() )
+        return *this;
+
+    const int64* is = (const int64*)&s.val[0];
+    if( is[0] == 0 && is[1] == 0 && is[2] == 0 && is[3] == 0 && channels() > 4 )
+    {
+        getMat(ACCESS_WRITE).setZero();
+        return *this;
+    }
+    CV_CheckLE(channels(), 4, "A non-zero cv::Scalar can only initialize matrices with at most 4 channels; use setTo(InputArray) instead");
     setTo(s);
     return *this;
 }
