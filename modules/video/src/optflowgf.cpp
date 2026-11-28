@@ -132,6 +132,14 @@ FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
 
     dst.create( height, width, CV_32FC(5));
 
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+    // Universal interleaved stores support up to four channels.
+    // Reuse planar scratch space to assemble the five-channel output.
+    const int simdLanes = VTraits<v_float32>::vlanes();
+    AutoBuffer<float> polyPlane(simdLanes * 5);
+    float* plane = polyPlane.data();
+#endif
+
     for( y = 0; y < height; y++ )
     {
         float g0 = g[0], g1, g2;
@@ -172,9 +180,8 @@ FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
         }
 
         x = 0;
-#if CV_RVV && CV_SIMD_SCALABLE && CV_SIMD_SCALABLE_64F
-        const int rvvLanes = VTraits<v_float32>::vlanes();
-        for (; x <= width - rvvLanes; x += rvvLanes)
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+        for (; x <= width - simdLanes; x += simdLanes)
         {
             v_float32 c0, c1, c2;
             v_load_deinterleave(row + x * 3, c0, c1, c2);
@@ -232,20 +239,26 @@ FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
             v_float32 r0 = v_cvt_f32(v_mul(b3_lo, ig11v), v_mul(b3_hi, ig11v));
             v_float32 r1 = v_cvt_f32(v_mul(b2_lo, ig11v), v_mul(b2_hi, ig11v));
             v_float32 r2 = v_cvt_f32(v_add(v_mul(b1_lo, ig03v), v_mul(b5_lo, ig33v)),
-                                     v_add(v_mul(b1_hi, ig03v), v_mul(b5_hi, ig33v)));
+                                    v_add(v_mul(b1_hi, ig03v), v_mul(b5_hi, ig33v)));
             v_float32 r3 = v_cvt_f32(v_add(v_mul(b1_lo, ig03v), v_mul(b4_lo, ig33v)),
-                                     v_add(v_mul(b1_hi, ig03v), v_mul(b4_hi, ig33v)));
+                                    v_add(v_mul(b1_hi, ig03v), v_mul(b4_hi, ig33v)));
             v_float32 r4 = v_cvt_f32(v_mul(b6_lo, ig55v), v_mul(b6_hi, ig55v));
 
-            // drow has five interleaved channels (CV_32FC(5)). Universal
-            // interleaved stores support up to four channels; retain the RVV store.
-            vfloat32m1x5_t result = vfloat32m1x5_t();
-            result = __riscv_vset_v_f32m1_f32m1x5(result, 0, r0);
-            result = __riscv_vset_v_f32m1_f32m1x5(result, 1, r1);
-            result = __riscv_vset_v_f32m1_f32m1x5(result, 2, r2);
-            result = __riscv_vset_v_f32m1_f32m1x5(result, 3, r3);
-            result = __riscv_vset_v_f32m1_f32m1x5(result, 4, r4);
-            __riscv_vsseg5e32_v_f32m1x5(drow + x * 5, result, VTraits<v_float32>::vlanes());
+            // Store the five planes, then interleave them in the output.
+            v_store(plane, r0);
+            v_store(plane + simdLanes, r1);
+            v_store(plane + simdLanes * 2, r2);
+            v_store(plane + simdLanes * 3, r3);
+            v_store(plane + simdLanes * 4, r4);
+            for (int lane = 0; lane < simdLanes; ++lane)
+            {
+                float* pixel = drow + (x + lane) * 5;
+                pixel[0] = plane[lane];
+                pixel[1] = plane[simdLanes + lane];
+                pixel[2] = plane[simdLanes * 2 + lane];
+                pixel[3] = plane[simdLanes * 3 + lane];
+                pixel[4] = plane[simdLanes * 4 + lane];
+            }
         }
 #endif
         for( ; x < width; x++ )
@@ -519,7 +532,7 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
     }
 #endif
 
-#if CV_RVV && CV_SIMD_SCALABLE
+#if CV_SIMD_SCALABLE
     // Expand each coefficient into contiguous memory once per function call.
     // Both blur passes reuse this buffer through ordinary vector loads.
     const int kernel_lanes = VTraits<v_float32>::vlanes();
@@ -546,7 +559,7 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
 
         x = 0;
 
-#if CV_RVV && CV_SIMD_SCALABLE
+#if CV_SIMD_SCALABLE
         // Load the pre-expanded coefficients from contiguous memory.
         const int lanes = VTraits<v_float32>::vlanes();
         for (; x <= width*5 - lanes; x += lanes)
@@ -627,7 +640,7 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
 
         // horizontal blur
         x = 0;
-#if CV_RVV && CV_SIMD_SCALABLE
+#if CV_SIMD_SCALABLE
         // Load the pre-expanded coefficients from contiguous memory.
         const int hlanes = VTraits<v_float32>::vlanes();
         for (; x <= width*5 - hlanes; x += hlanes)
