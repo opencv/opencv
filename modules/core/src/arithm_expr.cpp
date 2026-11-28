@@ -1235,6 +1235,23 @@ static constexpr int LOCAL_HDRS = 3;
 static constexpr int LOCAL_CONSTS = 4;
 static constexpr int LOCAL_OPS = 16;
 
+static void createOutputPreservingSingletonDims(
+    Mat& dst, const MatShape& shape, int type)
+{
+    if (!shape.empty() && !dst.empty() && dst.type() == type && dst.isContinuous())
+    {
+        bool sameShape = dst.dims == (int)shape.size();
+
+        for (int i = 0; sameShape && i < dst.dims; i++)
+            sameShape = dst.size[i] == shape[i];
+
+        if (!sameShape && dst.shape().squeeze() == shape.squeeze())
+            dst = dst.reshape(CV_MAT_CN(type), shape);
+    }
+
+    dst.create(shape, type);
+}
+
 #if defined(__GNUC__)
 #define CV_EW_NOINLINE __attribute__((noinline))
 #elif defined(_MSC_VER)
@@ -1387,7 +1404,10 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
             const MatShape rshape = r.size;
             for (int s = 1; s < nslots; s++)
                 if (arginfo[s].kind == OUTPUT)
-                    outputs[arginfo[s].index].create(rshape, CV_MAKETYPE(arginfo[s].depth, rcn));
+                    createOutputPreservingSingletonDims(
+    outputs[arginfo[s].index],
+    rshape,
+    CV_MAKETYPE(arginfo[s].depth, rcn));
             return;
         }
         if (ok && total <= EW_FASTPATH_MAX)
@@ -1395,7 +1415,10 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
             const MatShape rshape = r.size;   // spatial dims (channels separate), as a MatShape
             for (int s = 1; s < nslots; s++)
                 if (arginfo[s].kind == OUTPUT)
-                    outputs[arginfo[s].index].create(rshape, CV_MAKETYPE(arginfo[s].depth, rcn));
+                    createOutputPreservingSingletonDims(
+    outputs[arginfo[s].index],
+    rshape,
+    CV_MAKETYPE(arginfo[s].depth, rcn));
             const int ninsn = (int)prog.size();
 
             if (nbuffers == 0)
@@ -1478,7 +1501,10 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
             arr[narr++] = inputs[ai.index];
         }
         else if (ai.kind == TExpr::OUTPUT) {
-            outputs[ai.index].create(spatial, CV_MAKETYPE(ai.depth, rchannels));
+            createOutputPreservingSingletonDims(
+    outputs[ai.index],
+    spatial,
+    CV_MAKETYPE(ai.depth, rchannels));
             slotMap[s] = narr; arr[narr++] = &outputs[ai.index];
         }
         else if (ai.kind == TExpr::CONST && ai.depth == EW_DEPTH_NONE) {
