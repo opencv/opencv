@@ -2387,6 +2387,78 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
 
 #endif
 
+static bool isIntegerOrthogonalTransform(const Mat& M, const Size& dstSize, bool inverseMap)
+{
+    if (M.rows != 2 || M.cols != 3 || (M.type() != CV_32F && M.type() != CV_64F))
+        return false;
+
+    double values[6];
+    if (M.type() == CV_32F)
+    {
+        const float* row0 = M.ptr<float>(0);
+        const float* row1 = M.ptr<float>(1);
+        for (int i = 0; i < 3; ++i)
+        {
+            values[i] = row0[i];
+            values[i + 3] = row1[i];
+        }
+    }
+    else
+    {
+        const double* row0 = M.ptr<double>(0);
+        const double* row1 = M.ptr<double>(1);
+        for (int i = 0; i < 3; ++i)
+        {
+            values[i] = row0[i];
+            values[i + 3] = row1[i];
+        }
+    }
+
+    if (!inverseMap)
+    {
+        const double det = values[0] * values[4] - values[1] * values[3];
+        if (det == 0)
+            return false;
+
+        const double invDet = 1. / det;
+        const double m0 = values[0], m1 = values[1], m2 = values[2];
+        const double m3 = values[3], m4 = values[4], m5 = values[5];
+        values[0] = m4 * invDet;
+        values[1] = -m1 * invDet;
+        values[3] = -m3 * invDet;
+        values[4] = m0 * invDet;
+        values[2] = -values[0] * m2 - values[1] * m5;
+        values[5] = -values[3] * m2 - values[4] * m5;
+    }
+
+    static const double transforms[][4] = {
+        { 1.,  0.,  0.,  1.},
+        { 0., -1.,  1.,  0.},
+        {-1.,  0.,  0., -1.},
+        { 0.,  1., -1.,  0.},
+        { 0.,  1.,  1.,  0.}
+    };
+    static const int linearIndices[] = {0, 1, 3, 4};
+    const int abBits = MAX(10, static_cast<int>(INTER_BITS));
+    const int abScale = 1 << abBits;
+    // Leave one fixed-point unit for the separately rounded row and column offsets.
+    const double coordinateTolerance = 0.5 / INTER_TAB_SIZE - 1.0 / abScale;
+    const double maxX = dstSize.width > 0 ? dstSize.width - 1. : 0.;
+    const double maxY = dstSize.height > 0 ? dstSize.height - 1. : 0.;
+    for (size_t transform = 0; transform < sizeof(transforms) / sizeof(transforms[0]); ++transform)
+    {
+        const double xError = std::abs(values[linearIndices[0]] - transforms[transform][0]) * maxX +
+                              std::abs(values[linearIndices[1]] - transforms[transform][1]) * maxY +
+                              std::abs(values[2] - std::round(values[2]));
+        const double yError = std::abs(values[linearIndices[2]] - transforms[transform][2]) * maxX +
+                              std::abs(values[linearIndices[3]] - transforms[transform][3]) * maxY +
+                              std::abs(values[5] - std::round(values[5]));
+        if (xError < coordinateTolerance && yError < coordinateTolerance)
+            return true;
+    }
+    return false;
+}
+
 namespace hal {
 
 static void warpAffine(int src_type,
@@ -2622,6 +2694,19 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     if (borderType < 0 || borderType > BORDER_TRANSPARENT)
       CV_Error(Error::StsBadArg, "Unknown/unsupported border type");
 
+    Mat M0;
+    if (interpolation == INTER_LINEAR || interpolation == INTER_AREA ||
+        interpolation == INTER_CUBIC || interpolation == INTER_LANCZOS4)
+    {
+        M0 = _M0.getMat();
+        const Size dstSize = dsize.empty() ? _src.size() : dsize;
+        if (isIntegerOrthogonalTransform(M0, dstSize, (flags & WARP_INVERSE_MAP) != 0))
+        {
+            interpolation = INTER_NEAREST;
+            flags = (flags & ~INTER_MAX) | INTER_NEAREST;
+        }
+    }
+
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() &&
                _src.cols() <= SHRT_MAX && _src.rows() <= SHRT_MAX,
                ocl_warpTransform_cols4(_src, _dst, _M0, dsize, flags, borderType,
@@ -2631,7 +2716,9 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
                ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType,
                                  borderValue, OCL_OP_AFFINE))
 
-    Mat src = _src.getMat(), M0 = _M0.getMat();
+    Mat src = _src.getMat();
+    if (M0.empty())
+        M0 = _M0.getMat();
     _dst.create( dsize.empty() ? src.size() : dsize, src.type() );
     Mat dst = _dst.getMat();
     CV_Assert( src.cols > 0 && src.rows > 0 );

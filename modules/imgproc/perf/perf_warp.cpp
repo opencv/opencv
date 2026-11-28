@@ -75,6 +75,35 @@ PERF_TEST_P(TestWarpAffine, WarpAffineManyChannels,
     SANITY_CHECK_NOTHING();
 }
 
+typedef TestBaseWithParam<tuple<Size, MatType> > TestWarpAffineIntegerTranslation;
+
+PERF_TEST_P(TestWarpAffineIntegerTranslation, WarpAffineIntegerTranslation,
+            Combine(Values(szVGA, sz1080p),
+                    Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4)))
+{
+    const Size size = get<0>(GetParam());
+    const int type = get<1>(GetParam());
+    const int interpolation = INTER_LINEAR;
+    const int dx = 17, dy = 13;
+    const Matx23d matrix(1, 0, dx, 0, 1, -dy);
+    const Scalar border(13, 57, 131, 231);
+    Mat src(size, type), dst(size, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() warpAffine(src, dst, matrix, size, interpolation, BORDER_CONSTANT, border, ALGO_HINT_ACCURATE);
+
+    const int channels = CV_MAT_CN(type);
+    Mat borderPixel(1, channels, CV_8U);
+    for (int c = 0; c < channels; ++c)
+        borderPixel.ptr()[c] = saturate_cast<uchar>(border[c % 4]);
+    Mat expected(size, type);
+    expected.setTo(borderPixel);
+    Mat inner = expected(Rect(dx, 0, size.width - dx, size.height - dy));
+    src(Rect(0, dy, inner.cols, inner.rows)).copyTo(inner);
+    ASSERT_EQ(0., cvtest::norm(expected, dst, NORM_INF));
+    SANITY_CHECK_NOTHING();
+}
+
 PERF_TEST_P( TestWarpPerspective, WarpPerspective,
              Combine(
                 Values( szVGA, sz720p, sz1080p ),

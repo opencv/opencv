@@ -2149,6 +2149,9 @@ when the flag #WARP_INVERSE_MAP is set. Otherwise, the transformation is first i
 with #invertAffineTransform and then put in the formula above instead of M. The function cannot
 operate in-place.
 
+@note For integer-pixel translations, 90-, 180-, or 270-degree rotations, and transposition, the
+function uses #INTER_NEAREST regardless of the interpolation method specified in flags.
+
 @param src input image.
 @param dst output image that has the size dsize and the same type as src .
 @param M \f$2\times 3\f$ transformation matrix.
