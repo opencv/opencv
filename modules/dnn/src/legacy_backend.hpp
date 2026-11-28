@@ -222,7 +222,6 @@ public:
             // if dst already has been allocated with total(shape) elements,
             // it won't be recreated and pointer of dst.data remains the same.
             dst.create(shape, dtype);
-            dst.dims = shape.size();  // create() normalizes a 1D shape to (N, 1); restore the planned rank (as in the reuse path above)
             addHost(lp, dst);
         }
     }
@@ -296,7 +295,6 @@ public:
                     {
                         CV_Assert(ld.inputBlobs[0]->total() == total(shapes[index]));
                         ld.outputBlobs[index] = ld.inputBlobs[0]->reshape(1, shapes[index]);
-                        ld.outputBlobs[index].dims = shapes[index].size();  // reshape() normalizes a 1D shape to (N, 1); restore the planned rank
                         reuse(ld.inputBlobsId[0], blobPin);
                     }
                     else

@@ -153,6 +153,7 @@ struct Net::Impl : public detail::NetImplBase
 
     void setInputsNames(const std::vector<String>& inputBlobNames);
     void setInputShape(const String& inputName, const MatShape& shape);
+    void correctOutputShape(const LayerPin& pin, Mat& blob) const;
     virtual void setInput(InputArray blob, const String& name, double scalefactor, const Scalar& mean);
     Mat getParam(int layer, int numParam) const;
     void setParam(int layer, int numParam, const Mat& blob);
