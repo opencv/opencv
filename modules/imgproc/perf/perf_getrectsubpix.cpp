@@ -7,7 +7,7 @@
 
 namespace opencv_test {
 
-CV_ENUM(PatchDepth, CV_8U, CV_32F)
+CV_ENUM(PatchDepth, CV_8U, CV_32F, CV_16F, CV_16BF)
 
 typedef tuple<Size, MatType, PatchDepth> GetRectSubPixParams;
 typedef perf::TestBaseWithParam<GetRectSubPixParams> GetRectSubPix_Test;
@@ -87,7 +87,7 @@ static const Board g_boards[] = {
 PERF_TEST_P(GetRectSubPix_Test, getRectSubPix,
             testing::Combine(
                 testing::Values(Size(16, 16), Size(32, 32), Size(64, 64), Size(128, 128)),
-                testing::Values(CV_8UC1, CV_32FC1),
+                testing::Values(CV_8UC1, CV_32FC1, CV_16FC1, CV_16BFC1),
                 PatchDepth::all()
                 )
             )
@@ -96,9 +96,9 @@ PERF_TEST_P(GetRectSubPix_Test, getRectSubPix,
     int srcType    = get<1>(GetParam());
     int patchDepth = get<2>(GetParam());
 
-    // getRectSubPix supports only 8U->8U, 8U->32F and 32F->32F
-    if (CV_MAT_DEPTH(srcType) == CV_32F && patchDepth == CV_8U)
-        throw SkipTestException("getRectSubPix does not support 32F source with 8U patch");
+    // getRectSubPix supports the same depth as the source, or 32F for any source
+    if (patchDepth != CV_32F && patchDepth != CV_MAT_DEPTH(srcType))
+        throw SkipTestException("getRectSubPix does not support this source and patch depth combination");
 
     const size_t nboards = sizeof(g_boards) / sizeof(g_boards[0]);
     std::vector<Mat> srcs;
@@ -106,10 +106,10 @@ PERF_TEST_P(GetRectSubPix_Test, getRectSubPix,
     {
         Mat image = imread(getDataPath(g_boards[b].path), IMREAD_GRAYSCALE);
         ASSERT_FALSE(image.empty());
-        if (CV_MAT_DEPTH(srcType) == CV_32F)
+        if (CV_MAT_DEPTH(srcType) != CV_8U)
         {
             Mat f;
-            image.convertTo(f, CV_32F);
+            image.convertTo(f, srcType);
             srcs.push_back(f);
         }
         else

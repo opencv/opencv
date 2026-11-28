@@ -2551,7 +2551,8 @@ rectangle must be inside the image, parts of the rectangle may be outside.
 @param center Floating point coordinates of the center of the extracted rectangle within the
 source image. The center must be inside the image.
 @param patch Extracted patch that has the size patchSize and the same number of channels as src .
-@param patchType Depth of the extracted pixels. By default, they have the same depth as src .
+@param patchType Depth of the extracted pixels: the depth of src (CV_8U, CV_16F, CV_16BF, CV_32F)
+or CV_32F. By default, they have the same depth as src .
 
 @sa  warpAffine, warpPerspective
  */
@@ -2983,7 +2984,7 @@ convolves the source image with the kernel:
 
 Then, it downsamples the image by rejecting even rows and columns.
 
-@param src input image.
+@param src input image; depth CV_8U, CV_16U, CV_16S, CV_16F, CV_16BF, CV_32F or CV_64F.
 @param dst output image; it has the specified size and the same type as src.
 @param dstsize size of the output image.
 @param borderType Pixel extrapolation method, see #BorderTypes (#BORDER_CONSTANT isn't supported)
@@ -3003,7 +3004,7 @@ actually be used to construct the Laplacian pyramid. First, it upsamples the sou
 injecting even zero rows and columns and then convolves the result with the same kernel as in
 pyrDown multiplied by 4.
 
-@param src input image.
+@param src input image; depth CV_8U, CV_16U, CV_16S, CV_16F, CV_16BF, CV_32F or CV_64F.
 @param dst output image. It has the specified size and the same type as src .
 @param dstsize size of the output image.
 @param borderType Pixel extrapolation method, see #BorderTypes (only #BORDER_DEFAULT is supported)

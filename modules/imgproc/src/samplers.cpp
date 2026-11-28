@@ -321,6 +321,22 @@ void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
     else if( depth == CV_8U && ddepth == CV_32F )
         getRectSubPix_8u32f
         (image.ptr(), image.step, image.size(), patch.ptr<float>(), patch.step, patch.size(), center, cn);
+    else if( (depth == CV_16F || depth == CV_16BF) && (ddepth == depth || ddepth == CV_32F) )
+    {
+        int ix = cvFloor(center.x - (patchSize.width - 1)*0.5f);
+        int iy = cvFloor(center.y - (patchSize.height - 1)*0.5f);
+        int x0 = std::min(std::max(ix, 0), image.cols - 1);
+        int y0 = std::min(std::max(iy, 0), image.rows - 1);
+        int x1 = std::max(std::min(ix + patchSize.width + 1, image.cols), x0 + 1);
+        int y1 = std::max(std::min(iy + patchSize.height + 1, image.rows), y0 + 1);
+        Mat win32, patch32 = ddepth == CV_32F ? patch : Mat(patch.size(), CV_MAKETYPE(CV_32F, cn));
+        image(Rect(x0, y0, x1 - x0, y1 - y0)).convertTo(win32, CV_32F);
+        getRectSubPix_Cn_<float, float, float, nop<float>, nop<float> >
+        (win32.ptr<float>(), win32.step, win32.size(), patch32.ptr<float>(), patch32.step,
+         patch32.size(), center - Point2f((float)x0, (float)y0), cn);
+        if( ddepth != CV_32F )
+            patch32.convertTo(patch, ddepth);
+    }
     else if( depth == CV_32F && ddepth == CV_32F )
         getRectSubPix_Cn_<float, float, float, nop<float>, nop<float> >
         (image.ptr<float>(), image.step, image.size(), patch.ptr<float>(), patch.step, patch.size(), center, cn);
