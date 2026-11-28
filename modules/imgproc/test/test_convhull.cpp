@@ -434,6 +434,30 @@ TEST(Imgproc_ConvexHull, overflow)
     ASSERT_EQ(hull, hullf);
 }
 
+TEST(Imgproc_PointPolygonTest, large_integer_coordinates)
+{
+    const int bound = 2000000000;
+    std::vector<Point> square = {
+        Point(-bound, -bound), Point(bound, -bound),
+        Point(bound, bound), Point(-bound, bound)
+    };
+    std::vector<Point> triangle = {
+        Point(-bound, -bound), Point(bound, bound), Point(bound, -bound)
+    };
+    for (int winding = 0; winding < 2; ++winding)
+    {
+        EXPECT_EQ(1.0, pointPolygonTest(square, Point2f(0, 0), false));
+        EXPECT_EQ(-1.0, pointPolygonTest(square, Point2f(2100000000.0f, 0), false));
+        EXPECT_EQ(0.0, pointPolygonTest(square, Point2f(2000000000.0f, 0), false));
+        // The diagonal's individual products exceed INT64_MAX and cancel.
+        EXPECT_EQ(0.0, pointPolygonTest(triangle, Point2f(0, 0), false));
+        EXPECT_EQ(1.0, pointPolygonTest(triangle, Point2f(1000000000.0f, 0), false));
+        EXPECT_EQ(-1.0, pointPolygonTest(triangle, Point2f(-1000000000.0f, 0), false));
+        std::reverse(square.begin(), square.end());
+        std::reverse(triangle.begin(), triangle.end());
+    }
+}
+
 static
 bool checkMinAreaRect(const RotatedRect& rr, const Mat& c, double eps = 0.5f)
 {
