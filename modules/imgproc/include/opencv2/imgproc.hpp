@@ -1278,8 +1278,8 @@ In-place operation is supported.
 
 @note The median filter uses #BORDER_REPLICATE internally to cope with border pixels, see #BorderTypes
 
-@param src input 1-, 3-, or 4-channel image; when ksize is 3 or 5, the image depth should be
-CV_8U, CV_16U, or CV_32F, for larger aperture sizes, it can only be CV_8U.
+@param src Input image. CV_8U supports any channel count. With ksize 3 or 5, CV_16U and CV_32F
+1-, 3-, or 4-channel images are also supported.
 @param dst destination array of the same size and type as src.
 @param ksize aperture linear size; it must be odd and positive, for example: 1, 3, 5, 7 ... (ksize = 1 returns the image unchanged)
 @sa  bilateralFilter, blur, boxFilter, GaussianBlur
