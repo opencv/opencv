@@ -1273,6 +1273,36 @@ CV__DNN_INLINE_NS_BEGIN
      */
     CV_EXPORTS_W Net readNetFromONNX(const std::vector<uchar>& buffer, int engine=ENGINE_AUTO);
 
+    /** @brief Reads a network model from a graph JSON file (topology) and a
+     *         <a href="https://github.com/huggingface/safetensors">safetensors</a>
+     *         file (weights).
+     *
+     *  This avoids the need for an intermediate ONNX file: the graph JSON
+     *  describes the network topology (nodes, inputs, outputs, attributes)
+     *  and the safetensors file stores the trained weights.  An in-memory
+     *  ONNX model is constructed and forwarded to the standard ONNX importer,
+     *  so all operators supported by OpenCV's ONNX backend are available.
+     *
+     *  The graph JSON is a JSON object with optional "model_name" and
+     *  "inputs" / "outputs" / "nodes" arrays. Each node carries an ONNX
+     *  "op_type", its input/output tensor names and its ONNX attributes;
+     *  tensor names refer to graph inputs/outputs, other nodes' outputs or
+     *  initializer names in the safetensors file (the format produced by the
+     *  export tool, see modules/dnn/src/safetensors_importer.cpp for the
+     *  exact schema). The interface dtype vocabulary is float32 (default
+     *  when omitted), float64, float16, bfloat16, int8..int64, uint8..uint64
+     *  and bool, mapped to the corresponding ONNX tensor types for both
+     *  inputs and outputs.
+     *
+     *  @param graphJsonPath path to the graph JSON file describing the topology.
+     *  @param weightsPath path to the safetensors file with the trained weights.
+     *  @param engine select DNN engine to be used (ENGINE_OPENCV recommended).
+     *  @returns Network object ready to do forward, throws an exception on failure.
+     */
+    CV_EXPORTS_W Net readNetFromSafetensors(CV_WRAP_FILE_PATH const String& graphJsonPath,
+                                            CV_WRAP_FILE_PATH const String& weightsPath,
+                                            int engine=ENGINE_AUTO);
+
     /** @brief Creates blob from .pb file.
      *  @param path to the .pb file with input tensor.
      *  @returns Mat.
