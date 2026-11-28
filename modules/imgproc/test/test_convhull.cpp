@@ -450,7 +450,7 @@ TEST(Imgproc_PointPolygonTest, large_integer_coordinates)
         EXPECT_EQ(-1.0, pointPolygonTest(square, Point2f(2100000000.0f, 0), false));
         EXPECT_EQ(0.0, pointPolygonTest(square, Point2f(2000000000.0f, 0), false));
         // The diagonal's individual products exceed INT64_MAX and cancel.
-        EXPECT_EQ(0.0, pointPolygonTest(triangle, Point2f(0, 0), false));
+        EXPECT_EQ(0.0, pointPolygonTest(triangle, Point2f(1000000000.0f, 1000000000.0f), false));
         EXPECT_EQ(1.0, pointPolygonTest(triangle, Point2f(1000000000.0f, 0), false));
         EXPECT_EQ(-1.0, pointPolygonTest(triangle, Point2f(-1000000000.0f, 0), false));
         std::reverse(square.begin(), square.end());
