@@ -230,4 +230,58 @@ INSTANTIATE_TEST_CASE_P(RgbFormat, Imgcodecs_SunRaster_Color,
                                 cv::IMREAD_COLOR_RGB,
                                 cv::IMREAD_GRAYSCALE)));
 
+
+TEST(Imgcodecs_SunRaster, indexed_palette_respects_color_order)
+{
+    // Two palette entries: RGB (200, 10, 20) and (30, 40, 220).
+    const uint8_t palette[] = {200, 30, 10, 40, 20, 220};
+    for (int variant = 0; variant < 3; ++variant)
+    {
+        const bool one_bit = variant == 0;
+        const bool rle = variant == 2;
+        const int width = rle ? 4 : 2;
+        std::vector<uint8_t> buf = makeSunRasHeader(width, 1, one_bit ? 1 : 8,
+                                                   rle ? 4 : 2, rle ? 2 : 1, 1, 6);
+        buf.insert(buf.end(), palette, palette + sizeof(palette));
+        if (one_bit)
+        {
+            buf.push_back(0x40); // indices 0, 1, followed by padding bits
+            buf.push_back(0);    // 16-bit row alignment
+        }
+        else if (rle)
+        {
+            const uint8_t pixels[] = {0, 0x80, 2, 1}; // literal 0, then three 1s
+            buf.insert(buf.end(), pixels, pixels + sizeof(pixels));
+        }
+        else
+        {
+            buf.push_back(0);
+            buf.push_back(1);
+        }
+
+        const Mat bgr = imdecode(buf, IMREAD_COLOR);
+        const Mat rgb = imdecode(buf, IMREAD_COLOR_RGB);
+        const Mat gray = imdecode(buf, IMREAD_GRAYSCALE);
+        ASSERT_FALSE(bgr.empty()) << variant;
+        ASSERT_FALSE(rgb.empty()) << variant;
+        ASSERT_FALSE(gray.empty()) << variant;
+        ASSERT_EQ(CV_8UC3, bgr.type());
+        ASSERT_EQ(CV_8UC3, rgb.type());
+        ASSERT_EQ(width, bgr.cols);
+        ASSERT_EQ(width, rgb.cols);
+        ASSERT_EQ(1, bgr.rows);
+        ASSERT_EQ(1, rgb.rows);
+        EXPECT_EQ(Vec3b(20, 10, 200), bgr.at<Vec3b>(0, 0));
+        EXPECT_EQ(Vec3b(200, 10, 20), rgb.at<Vec3b>(0, 0));
+        for (int x = 1; x < width; ++x)
+        {
+            EXPECT_EQ(Vec3b(220, 40, 30), bgr.at<Vec3b>(0, x));
+            EXPECT_EQ(Vec3b(30, 40, 220), rgb.at<Vec3b>(0, x));
+        }
+        Mat expected_gray;
+        cvtColor(bgr, expected_gray, COLOR_BGR2GRAY);
+        EXPECT_EQ(0, norm(expected_gray, gray, NORM_INF));
+    }
+}
+
 }} // namespace opencv_test
