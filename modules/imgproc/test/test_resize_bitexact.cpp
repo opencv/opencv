@@ -240,4 +240,37 @@ TEST(Resize_Bitexact, Nearest8U)
     }
 }
 
+typedef testing::TestWithParam<int> Resize_Bitexact_2xUp;
+
+TEST_P(Resize_Bitexact_2xUp, vector_width)
+{
+    const int type = GetParam();
+    const int esz = (int)CV_ELEM_SIZE(type);
+    const int widths[] = { 1, 7, 8, 16, 17, 32, 33, 64, 65, 129 };
+    for (int sh = 3; sh <= 4; sh++)
+    for (int sw : widths)
+    {
+        Mat src(sh, sw, type);
+        for (int y = 0; y < src.rows; y++)
+        {
+            uchar* p = src.ptr(y);
+            for (int i = 0; i < sw * esz; i++)
+                p[i] = (uchar)(y * 97 + i * 13 + 1);
+        }
+
+        Mat ref(src.rows * 2, sw * 2, type);
+        for (int y = 0; y < ref.rows; y++)
+            for (int x = 0; x < ref.cols; x++)
+                memcpy(ref.ptr(y) + x * esz, src.ptr(y / 2) + (x / 2) * esz, esz);
+
+        Mat dst;
+        resize(src, dst, ref.size(), 0, 0, INTER_NEAREST_EXACT);
+        EXPECT_EQ(0, cvtest::norm(dst.reshape(1), ref.reshape(1), NORM_INF))
+            << "type=" << type << " sw=" << sw << " sh=" << sh;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, Resize_Bitexact_2xUp,
+    testing::Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_32SC1, CV_16UC3, CV_32SC2));
+
 }} // namespace
