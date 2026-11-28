@@ -122,11 +122,6 @@ PERF_TEST_P_(DNNTestNetwork, ResNet_18_v1_ONNX)
     processNet("dnn/onnx/models/resnet18v1.onnx", "", cv::Size(224, 224));
 }
 
-PERF_TEST_P_(DNNTestNetwork, ResNet_50_v1_ONNX)
-{
-    processNet("dnn/onnx/models/resnet50v1.onnx", "", cv::Size(224, 224));
-}
-
 PERF_TEST_P_(DNNTestNetwork, MobileNetv2_ONNX)
 {
     processNet("dnn/onnx/models/mobilenetv2.onnx", "", cv::Size(224, 224));

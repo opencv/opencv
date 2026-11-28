@@ -763,135 +763,96 @@ TEST_F(MultiViewTest, Hetero)
 
 struct RegisterCamerasTest: public MultiViewTest
 {
-    void filterPoints(const std::vector<std::vector<cv::Mat>>& image_points_all,
+    void filterPoints(const std::vector<cv::Mat>& image_points1,
+                      const std::vector<cv::Mat>& image_points2,
                       std::vector<cv::Mat>& visible_image_points1,
                       std::vector<cv::Mat>& visible_image_points2)
     {
-        for (size_t i = 0; i < std::min(image_points_all[0].size(), image_points_all[1].size()); i++)
+        for (size_t i = 0; i < std::min(image_points1.size(), image_points2.size()); i++)
         {
-            if(!image_points_all[0][i].empty() && !image_points_all[1][i].empty())
+            if(!image_points1[i].empty() && !image_points2[i].empty())
             {
-                visible_image_points1.push_back(image_points_all[0][i]);
-                visible_image_points2.push_back(image_points_all[1][i]);
+                visible_image_points1.push_back(image_points1[i]);
+                visible_image_points2.push_back(image_points2[i]);
             }
         }
     }
+
+    void registerAndValidate(const std::vector<cv::Vec3f>& board_pattern,
+                             const std::vector<cv::Mat>& image_points1, const Mat& K1, const Mat& dist1, cv::CameraModel model1,
+                             const std::vector<cv::Mat>& image_points2, const Mat& K2, const Mat& dist2, cv::CameraModel model2,
+                             const Mat& R_gt, const Mat& T_gt)
+    {
+        std::vector<cv::Mat> visible_image_points1, visible_image_points2;
+        filterPoints(image_points1, image_points2, visible_image_points1, visible_image_points2);
+        std::vector<std::vector<cv::Vec3f>> object_points(visible_image_points1.size(), board_pattern);
+
+        cv::Mat R, T, E, F;
+        cv::Mat rvec_reg, tvec_reg, per_view_err;
+        double rms = registerCameras(object_points, object_points, visible_image_points1, visible_image_points2,
+                                     K1, dist1, model1, K2, dist2, model2,
+                                     R, T, E, F, rvec_reg, tvec_reg, per_view_err);
+        CV_LOG_INFO(NULL, "Register RMS: "  << rms);
+        EXPECT_LE(rms, 1.);
+
+        CV_LOG_INFO(NULL, "R:" << R);
+        CV_LOG_INFO(NULL, "T:" << T);
+
+        validateCameraPose(R, T, R_gt, T_gt);
+    }
 };
 
-TEST_F(RegisterCamerasTest, hetero1)
+// cam_4 (fisheye) is registered against both pinhole cameras, so its intrinsics are calibrated once
+TEST_F(RegisterCamerasTest, hetero)
 {
     const string root = cvtest::TS::ptr()->get_data_path() + "cv/cameracalibration/multiview/3cams-hetero/";
-    const std::vector<std::string> cam_names = {"cam_7", "cam_4"};
-    std::vector<cv::Size> image_sizes = {{1920, 1080}, {2048, 2048}};
-    std::vector<cv::CameraModel> models = {cv::CALIB_MODEL_PINHOLE, cv::CALIB_MODEL_FISHEYE};
-    std::vector<int> flagsForIntrinsics = {cv::CALIB_RATIONAL_MODEL, cv::CALIB_RECOMPUTE_EXTRINSIC | cv::CALIB_FIX_SKEW};
+    const std::vector<std::string> cam_names = {"cam_7", "cam_4", "cam_8"};
+    std::vector<cv::Size> image_sizes = {{1920, 1080}, {2048, 2048}, {1920, 1080}};
+    std::vector<cv::CameraModel> models = {cv::CALIB_MODEL_PINHOLE, cv::CALIB_MODEL_FISHEYE, cv::CALIB_MODEL_PINHOLE};
+    std::vector<int> flagsForIntrinsics = {cv::CALIB_RATIONAL_MODEL, cv::CALIB_RECOMPUTE_EXTRINSIC | cv::CALIB_FIX_SKEW,
+                                           cv::CALIB_RATIONAL_MODEL};
     const int num_frames = 127;
     std::vector<cv::Vec3f> board_pattern = genAsymmetricObjectPoints();
 
-    double rs_1_gt_data[9] = {
+    double rs_74_gt_data[9] = {
         0.9923998627583629, 0.1102270543935739, 0.05470382872247866,
         -0.05295473891691575, -0.01873572048960163, 0.9984211377990636,
         0.1110779367085268, -0.9937298270945939, -0.01275628155556733
     };
-    cv::Mat R_gt(3, 3, CV_64FC1, rs_1_gt_data);
+    cv::Mat R_74_gt(3, 3, CV_64FC1, rs_74_gt_data);
+    double ts_74_gt_data[3] = {0.5132123397314717, -0.345554256449513, 0.7851208074917889};
+    cv::Mat T_74_gt(3, 1, CV_64FC1, ts_74_gt_data);
 
-    double ts_1_gt_data[3] = {0.5132123397314717, -0.345554256449513, 0.7851208074917889};
-    cv::Mat T_gt(3, 1, CV_64FC1, ts_1_gt_data);
-
-    std::vector<std::vector<cv::Mat>> image_points_all;
-    cv::Mat visibility;
-    loadImagePoints(root, cam_names, num_frames, image_points_all, visibility);
-    ASSERT_EQ(cam_names.size(), image_points_all.size());
-    ASSERT_TRUE(!image_points_all.empty());
-    for(size_t i = 0; i < cam_names.size(); i++)
-    {
-        ASSERT_TRUE(!image_points_all[i].empty());
-    }
-
-    cv::Mat K1, dist1;
-    double rms = calibrateMono(board_pattern, image_points_all[0], image_sizes[0], models[0], flagsForIntrinsics[0], K1, dist1);
-    CV_LOG_INFO(NULL, "Mono #1 RMS: "  << rms);
-    EXPECT_LE(rms, 1.);
-
-    cv::Mat K2, dist2;
-    rms = calibrateMono(board_pattern, image_points_all[1], image_sizes[1], models[1], flagsForIntrinsics[1], K2, dist2);
-    CV_LOG_INFO(NULL, "Mono #2 RMS: "  << rms);
-    EXPECT_LE(rms, 1.);
-
-    std::vector<cv::Mat> visible_image_points1, visible_image_points2;
-    filterPoints(image_points_all, visible_image_points1, visible_image_points2);
-    std::vector<std::vector<cv::Vec3f>> object_points(visible_image_points1.size(), board_pattern);
-
-    cv::Mat R, T, E, F;
-    cv::Mat rvec_reg, tvec_reg, per_view_err;
-    rms = registerCameras(object_points, object_points, visible_image_points1, visible_image_points2,
-                                 K1, dist1, cv::CALIB_MODEL_PINHOLE, K2, dist2, cv::CALIB_MODEL_FISHEYE,
-                                 R, T, E, F, rvec_reg, tvec_reg, per_view_err);
-    CV_LOG_INFO(NULL, "Register RMS: "  << rms);
-    EXPECT_LE(rms, 1.);
-
-    CV_LOG_INFO(NULL, "R:" << R);
-    CV_LOG_INFO(NULL, "T:" << T);
-
-    validateCameraPose(R, T, R_gt, T_gt);
-}
-
-TEST_F(RegisterCamerasTest, hetero2)
-{
-    const string root = cvtest::TS::ptr()->get_data_path() + "cv/cameracalibration/multiview/3cams-hetero/";
-    const std::vector<std::string> cam_names = {"cam_4", "cam_8"};
-    std::vector<cv::Size> image_sizes = {{2048, 2048}, {1920, 1080}};
-    std::vector<cv::CameraModel> models = {cv::CALIB_MODEL_FISHEYE, cv::CALIB_MODEL_PINHOLE};
-    std::vector<int> flagsForIntrinsics = { cv::CALIB_RECOMPUTE_EXTRINSIC | cv::CALIB_FIX_SKEW, cv::CALIB_RATIONAL_MODEL};
-    const int num_frames = 127;
-    std::vector<cv::Vec3f> board_pattern = genAsymmetricObjectPoints();
-
-    double rs_1_gt_data[9] = {
+    double rs_48_gt_data[9] = {
         0.9987381520324473, -0.03742623778583679, 0.0334870183804049,
         0.03272769253311544, -0.02072052049800844, -0.9992494974588425,
         0.03809201775004091, 0.999084549352801, -0.01946949994840527
     };
-    cv::Mat R_gt(3, 3, CV_64FC1, rs_1_gt_data);
-
-    double ts_1_gt_data[3] = {0.4660746974363485, 0.7703195273112146, 0.3243138654899712};
-    cv::Mat T_gt(3, 1, CV_64FC1, ts_1_gt_data);
+    cv::Mat R_48_gt(3, 3, CV_64FC1, rs_48_gt_data);
+    double ts_48_gt_data[3] = {0.4660746974363485, 0.7703195273112146, 0.3243138654899712};
+    cv::Mat T_48_gt(3, 1, CV_64FC1, ts_48_gt_data);
 
     std::vector<std::vector<cv::Mat>> image_points_all;
     cv::Mat visibility;
     loadImagePoints(root, cam_names, num_frames, image_points_all, visibility);
     ASSERT_EQ(cam_names.size(), image_points_all.size());
-    ASSERT_TRUE(!image_points_all.empty());
     for(size_t i = 0; i < cam_names.size(); i++)
     {
         ASSERT_TRUE(!image_points_all[i].empty());
     }
 
-    cv::Mat K1, dist1;
-    double rms = calibrateMono(board_pattern, image_points_all[0], image_sizes[0], models[0], flagsForIntrinsics[0], K1, dist1);
-    CV_LOG_INFO(NULL, "Mono #1 RMS: "  << rms);
-    EXPECT_LE(rms, 1.);
+    std::vector<cv::Mat> Ks(cam_names.size()), dists(cam_names.size());
+    for(size_t i = 0; i < cam_names.size(); i++)
+    {
+        double rms = calibrateMono(board_pattern, image_points_all[i], image_sizes[i], models[i], flagsForIntrinsics[i], Ks[i], dists[i]);
+        CV_LOG_INFO(NULL, "Mono " << cam_names[i] << " RMS: "  << rms);
+        EXPECT_LE(rms, 1.);
+    }
 
-    cv::Mat K2, dist2;
-    rms = calibrateMono(board_pattern, image_points_all[1], image_sizes[1], models[1], flagsForIntrinsics[1], K2, dist2);
-    CV_LOG_INFO(NULL, "Mono #2 RMS: "  << rms);
-    EXPECT_LE(rms, 1.);
-
-    std::vector<cv::Mat> visible_image_points1, visible_image_points2;
-    filterPoints(image_points_all, visible_image_points1, visible_image_points2);
-    std::vector<std::vector<cv::Vec3f>> object_points(visible_image_points1.size(), board_pattern);
-
-    cv::Mat R, T, E, F;
-    cv::Mat rvec_reg, tvec_reg, per_view_err;
-    rms = registerCameras(object_points, object_points, visible_image_points1, visible_image_points2,
-                                 K1, dist1, cv::CALIB_MODEL_FISHEYE, K2, dist2, cv::CALIB_MODEL_PINHOLE,
-                                 R, T, E, F, rvec_reg, tvec_reg, per_view_err);
-    CV_LOG_INFO(NULL, "Register RMS: "  << rms);
-    EXPECT_LE(rms, 1.);
-
-    CV_LOG_INFO(NULL, "R:" << R);
-    CV_LOG_INFO(NULL, "T:" << T);
-
-    validateCameraPose(R, T, R_gt, T_gt);
+    registerAndValidate(board_pattern, image_points_all[0], Ks[0], dists[0], models[0],
+                        image_points_all[1], Ks[1], dists[1], models[1], R_74_gt, T_74_gt);
+    registerAndValidate(board_pattern, image_points_all[1], Ks[1], dists[1], models[1],
+                        image_points_all[2], Ks[2], dists[2], models[2], R_48_gt, T_48_gt);
 }
 
 }}

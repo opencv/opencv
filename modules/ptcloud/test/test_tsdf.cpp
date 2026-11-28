@@ -1301,13 +1301,15 @@ TEST_P(VolumeTestFixture, raycast_normals)
     raycast_test();
 }
 
-//TODO: this test should run just 1 time, not 4
-TEST_P(VolumeTestFixture, fetch_points_normals)
+// The fetch tests do not read FrameSizeType, so they are instantiated with one value of it
+class VolumeFetchTestFixture : public VolumeTestFixture {};
+
+TEST_P(VolumeFetchTestFixture, fetch_points_normals)
 {
     fetch_points_normals_test();
 }
-//TODO: this test should run just 1 time, not 4
-TEST_P(VolumeTestFixture, fetch_normals)
+
+TEST_P(VolumeFetchTestFixture, fetch_normals)
 {
     fetch_normals_test();
 }
@@ -1326,6 +1328,21 @@ INSTANTIATE_TEST_CASE_P(Volume, VolumeTestFixture,
         ),
         VolumeTestSrcTypeEnum::all(),
         FrameSizeTypeEnum::all()
+    )
+);
+
+INSTANTIATE_TEST_CASE_P(Volume, VolumeFetchTestFixture,
+    ::testing::Combine(
+        ::testing::Values(
+            PlatformVolumeType {PlatformType::CPU, VolumeType::TSDF},
+            PlatformVolumeType {PlatformType::CPU, VolumeType::HashTSDF},
+            PlatformVolumeType {PlatformType::CPU, VolumeType::ColorTSDF},
+            PlatformVolumeType {PlatformType::CPU, VolumeType::ColorHashTSDF},
+            PlatformVolumeType {PlatformType::GPU, VolumeType::TSDF},
+            PlatformVolumeType {PlatformType::GPU, VolumeType::HashTSDF}
+        ),
+        VolumeTestSrcTypeEnum::all(),
+        ::testing::Values(FrameSizeTypeEnum(FrameSizeType::DEFAULT))
     )
 );
 

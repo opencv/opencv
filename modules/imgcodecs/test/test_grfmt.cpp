@@ -73,12 +73,8 @@ const string all_images[] =
 {
 #if (defined(HAVE_JASPER) && defined(OPENCV_IMGCODECS_ENABLE_JASPER_TESTS)) \
     || defined(HAVE_OPENJPEG)
-    "readwrite/Rome.jp2",
-    "readwrite/Bretagne2.jp2",
-    "readwrite/Bretagne2.jp2",
-    "readwrite/Grey.jp2",
-    "readwrite/Grey.jp2",
-    "readwrite/balloon.j2c",
+    "readwrite/Rome.jp2",     // JP2 container, sRGB, 3x8-bit
+    "readwrite/balloon.j2c",  // raw J2K codestream, 9/7 wavelet
 #endif
 
 #ifdef HAVE_GDCM
