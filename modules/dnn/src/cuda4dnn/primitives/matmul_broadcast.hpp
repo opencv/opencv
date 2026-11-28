@@ -25,7 +25,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     public:
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
-        MatMulBroadcastOp(csl::Stream stream_, csl::cublas::Handle handle, const Mat &B, const Mat &bias, float beta_, bool _transA, bool _transB,
+        MatMulBroadcastOp(csl::Stream stream_, csl::cublas::Handle handle, const Mat &B, const Mat &bias, float alpha_, float beta_, bool _transA, bool _transB,
                  const std::vector<size_t> &A_offsets_, const std::vector<size_t> &B_offsets_, std::vector<size_t> &C_offsets_,
                  size_t batch_)
             : stream(std::move(stream_)), cublasHandle(std::move(handle)), A_offsets(A_offsets_), B_offsets(B_offsets_), C_offsets(C_offsets_), batch(batch_)
@@ -42,6 +42,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             transA = _transA;
             transB = _transB;
+            alpha = alpha_;
             beta = beta_;
         }
 
@@ -64,7 +65,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
             auto output = output_wrapper->getSpan();
 
-            csl::tensor_ops::gemmBatched<T>(cublasHandle, batch, 0.f, output, C_offsets, 1.f, transA, input_A, A_offsets, transB, input_B, B_offsets);
+            csl::tensor_ops::gemmBatched<T>(cublasHandle, batch, 0.f, output, C_offsets, alpha, transA, input_A, A_offsets, transB, input_B, B_offsets);
 
             // add bias if exists
             if (!bias_tensor.empty() || inputs.size() >= 3) {
@@ -97,7 +98,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                                                                 : csl::TensorView<T>(input_B_tensor);
             auto output = csl::spanOf<T>(outputs[0]);
 
-            csl::tensor_ops::gemmBatched<T>(cublasHandle, batch, 0.f, output, C_offsets, 1.f, transA, input_A, A_offsets, transB, input_B, B_offsets);
+            csl::tensor_ops::gemmBatched<T>(cublasHandle, batch, 0.f, output, C_offsets, alpha, transA, input_A, A_offsets, transB, input_B, B_offsets);
 
             if (!bias_tensor.empty())
                 kernels::eltwise_sum_2<T>(stream, output, output, csl::TensorView<T>(bias_tensor));
@@ -109,7 +110,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         csl::Tensor<T> input_B_tensor;
         csl::Tensor<T> bias_tensor;
         bool transA, transB;
-        float beta;
+        float alpha, beta;
 
         std::vector<size_t> A_offsets;
         std::vector<size_t> B_offsets;
